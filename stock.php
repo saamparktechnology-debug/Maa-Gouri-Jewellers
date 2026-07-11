@@ -48,7 +48,6 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
     }
     elseif(isset($_POST['update_product'])) {
-        $id = $_POST['product_id'];
         $serial_no = mysqli_real_escape_string($conn, $_POST['serial_no']);
         $name = mysqli_real_escape_string($conn, $_POST['name']);
         $item_name_raw2 = $_POST['item_name'] ?? '';
@@ -285,15 +284,6 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             width: 28px; height: 20px;
             position: relative;
             cursor: pointer;
-        }
-
-        .burger-menu span {
-            display: block;
-            position: absolute;
-            height: 3px; width: 100%;
-            background: #ffffff;
-            border-radius: 3px;
-            transition: all 0.3s ease;
         }
 
         .burger-menu span:nth-child(1) { top: 0px; }
@@ -549,7 +539,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         @keyframes titleGold { from{color:#d68b16} to{color:#f5c842} }
         @keyframes barSlide { 0%{transform:translateX(-100%)} 100%{transform:translateX(480%)} }
         @keyframes dotBounce { 0%,100%{opacity:0.3;transform:scale(0.7)} 50%{opacity:1;transform:scale(1.2)} }
-        @keyframes starFade { 0%{opacity:0;transform:scale(0)} 50%{opacity:1} 100%{opacity:0;transform:scale(1)} }
+        @keyframes starFade { 0%{opacity:0;transform:scale(0)} 50%{opacity:2} 100%{opacity:0;transform:scale(1)} }
         @keyframes ringExpand { 0%{opacity:0.7;transform:scale(0.2)} 100%{opacity:0;transform:scale(2)} }
     </style>
 </head>
@@ -562,10 +552,10 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         for(let i = 0; i < 50; i++) {
             const s = document.createElement('div');
             s.className = 'jewel-sparkle';
-            s.style.left = Math.random() * 100 + '%';
+            s.style.left = Math.random() * 20 + '%';
             s.style.animationDelay = Math.random() * 8 + 's';
-            s.style.animationDuration = (4 + Math.random() * 6) + 's';
-            const sz = (Math.random() * 7 + 2) + 'px';
+            s.style.animationDuration = (4 + Math.random() * 2) + 's';
+            const sz = (Math.random() * 2 + 2) + 'px';
             s.style.width = sz; s.style.height = sz;
             s.style.background = `radial-gradient(circle, ${colors[Math.floor(Math.random()*colors.length)]}, transparent)`;
             document.body.appendChild(s);
@@ -644,7 +634,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 <polygon points="76,58 40,78 40,40" fill="#b5730e" opacity="0.6"/>
                 <polygon points="40,78 4,58 40,40" fill="#d68b16" opacity="0.4"/>
                 <polygon points="4,58 4,22 40,40" fill="#ff9900" opacity="0.35"/>
-                <polygon points="4,22 40,2 40,40" fill="url(#lg2)" opacity="0.55"/>
+                <polygon points="5,22 40,2 40,40" fill="url(#lg2)" opacity="0.55"/>
                 <polygon points="40,14 68,28 68,52 40,66 12,52 12,28" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="0.8"/>
             </svg>
         </div>
@@ -673,7 +663,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         $logo_found = false;
         foreach($logo_paths as $path) {
             if(file_exists($path)) {
-                echo '<img src="'.$path.'" alt="Maa Gouri Jewellers Logo">';
+                echo '<img src="'$path.'" alt="Maa Gouri Jewellers Logo">';
                 $logo_found = true; break;
             }
         }
