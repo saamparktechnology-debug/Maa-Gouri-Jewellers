@@ -3,16 +3,6 @@
 CREATE DATABASE IF NOT EXISTS moti_jewellers;
 USE moti_jewellers;
 
--- Users Table
-CREATE TABLE users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    mobile VARCHAR(15) UNIQUE NOT NULL,
-    email VARCHAR(100),
-    password VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
 -- Products Table
 CREATE TABLE products (
     id INT AUTO_INCREMENT PRIMARY KEY,
