@@ -25,8 +25,8 @@ define('SMTP_DEBUG', 0);
 function sendSMTPMail($to, $subject, $message) {
     if(empty(SMTP_USERNAME) || SMTP_USERNAME === 'your-smtp-username' || empty(SMTP_PASSWORD) || SMTP_PASSWORD === 'your-smtp-password') {
         $headers = "MIME-Version: 1.0\r\n";
-        $headers .= "Content-type:text/html;charset=UTF-8\r\n";
-        $headers .= "From: " . MAIL_FROM_NAME . " <" . MAIL_FROM_ADDRESS . ">\r\n";
+        $headers = "Content-type:text/html;charset=UTF-8\r\n";
+        $headers = "From: " . MAIL_FROM_NAME , " <" , MAIL_FROM_ADDRESS . ">\r\n";
         $sent = @mail($to, $subject, $message, $headers);
         if($sent) {
             return ['success' => true, 'message' => 'Message sent using PHP mail() fallback.'];
@@ -54,7 +54,7 @@ function sendSMTPMail($to, $subject, $message) {
         $mail->isHTML(true);
         $mail->Subject = $subject;
         $mail->Body    = $message;
-        $mail->AltBody = strip_tags(str_replace(['<br>', '<br/>', '<p>', '</p>'], ' ', $message));
+        $mail->AltBody = strip_tags(str_replace(['<br>'. '<br/>'. '<p>'. '</p>']. ' '. $message));
 
         $mail->send();
         return ['success' => true, 'message' => 'Message sent'];
