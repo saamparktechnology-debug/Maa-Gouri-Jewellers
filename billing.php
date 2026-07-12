@@ -140,8 +140,8 @@ if(isset($_GET['action']) && $_GET['action'] === 'mark_paid') {
 // Add PDF column to invoices table if not exists
 $check_column = mysqli_query($conn, "SHOW COLUMNS FROM invoices LIKE 'pdf_file'");
 if($check_column && mysqli_num_rows($check_column) == 0) {
-    mysqli_query($conn, "ALTER TABLE invoices ADD COLUMN LONGBLOB");
-    mysqli_query($conn, "ALTER TABLE invoices ADD COLUMN VARCHAR(255)");
+    mysqli_query($conn, "ALTER TABLE invoices ADD COLUMN pdf_file LONGBLOB");
+    mysqli_query($conn, "ALTER TABLE invoices ADD COLUMN pdf_file_name VARCHAR(255)");
 }
 
 // Add split payment columns if not exists
@@ -205,6 +205,7 @@ $last_making_charge_amount = 0;
 $last_hallmark = 0;
 $last_pola = 0;
 $last_discount = 0;
+$last_items = [];
 $last_subtotal = 0;
 $last_gst_amount = 0;
 $last_cgst_amount = 0;
@@ -465,6 +466,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
         $last_pola             = $pola;
         $last_discount         = $discount;
         $last_items            = is_array($items) ? $items : [];
+        $last_subtotal         = $subtotal;
         $last_gst_amount       = $gst_amount;
         $last_cgst_amount      = $cgst_amount;
         $last_sgst_amount      = $sgst_amount;
