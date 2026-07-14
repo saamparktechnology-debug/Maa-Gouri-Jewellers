@@ -38,14 +38,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['send_otp'])) {
                 $mail->Host       = 'smtp.gmail.com';
                 $mail->SMTPAuth   = true;
 
-                $mail->Username   = 'csuraj156@gmail.com';
-                $mail->Password   = 'hetuzclnzbrrfkth';
+                $mail->Username   = 'santudhara157@gmail.com';
+                $mail->Password   = 'gieoszdkzsouypho';
 
                 $mail->SMTPSecure = 'tls';
                 $mail->Port       = 587;
                 $mail->SMTPDebug  = 0; // production: debug off
 
-                $mail->setFrom('csuraj156@gmail.com', 'Gouri Jewellers');
+                $mail->setFrom('santudhara157@gmail.com', 'Gouri Jewellers');
                 $mail->addAddress($email, $user['name']);
                 $mail->isHTML(true);
                 $mail->Subject = '🔐 Password Reset OTP - Gouri Jewellers';
@@ -342,4 +342,4 @@ function checkMatch() {
 }
 </script>
 </body>
-</html>
+</html> 
