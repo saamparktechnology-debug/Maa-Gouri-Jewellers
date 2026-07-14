@@ -1,5 +1,6 @@
 <!-- moti-jewellers/forgot_password.php -->
 <?php
+
 session_start();
 require_once 'config/database.php';
 
@@ -11,6 +12,7 @@ require 'vendor/phpmailer/phpmailer/src/SMTP.php';
 
 $error   = '';
 $success = '';
+$debugInfo = ''; // yahan technical detail store hogi
 
 // step: 'email' → 'otp' → 'reset' → done
 $step = $_SESSION['fp_step'] ?? 'email';
@@ -36,12 +38,21 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['send_otp'])) {
                 $mail->isSMTP();
                 $mail->Host       = 'smtp.gmail.com';
                 $mail->SMTPAuth   = true;
-                $mail->Username   = 'santudhara157@gmail.com';
-                $mail->Password   = 'gieoszdkzsouypho';
+
+                $mail->Username   = 'csuraj156@gmail.com';
+                $mail->Password   = 'hetuzclnzbrrfkth';
+
                 $mail->SMTPSecure = 'tls';
                 $mail->Port       = 587;
 
-                $mail->setFrom('santudhara157@gmail.com', 'Gouri Jewellers');
+                // ── Debug output ko capture karo (screen pe dikhega) ──
+                $mail->SMTPDebug  = 2;
+                $debugOutput = '';
+                $mail->Debugoutput = function($str, $level) use (&$debugOutput) {
+                    $debugOutput .= htmlspecialchars($str) . "\n";
+                };
+
+                $mail->setFrom('csuraj156@gmail.com', 'Gouri Jewellers');
                 $mail->addAddress($email, $user['name']);
                 $mail->isHTML(true);
                 $mail->Subject = '🔐 Password Reset OTP - Gouri Jewellers';
@@ -69,11 +80,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['send_otp'])) {
                 $_SESSION['fp_name']  = $user['name'];
                 $step    = 'otp';
                 $success = "✅ OTP sent to <strong>$email</strong>. Please check your inbox.";
+                $debugInfo = $debugOutput; // success ke case me bhi dikha do
 
             } catch (Exception $e) {
-                // OTP DB mein save hai, but email nahi gaya
                 $error = "❌ CAN'T OTP send: " . $mail->ErrorInfo;
-                // DB se delete kar do
+                $debugInfo = $debugOutput; // fail hone ka poora reason yahan
                 mysqli_query($conn, "DELETE FROM otp_logins WHERE email = '$email' AND is_used = 0");
             }
 
@@ -84,7 +95,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['send_otp'])) {
         $error = "❌ Email address not found!";
     }
 }
-// <meta name="author" content="MANU GUPTA">
 
 // ── STEP 2: Verify OTP ───────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['verify_otp'])) {
@@ -100,7 +110,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['verify_otp'])) {
             "SELECT * FROM otp_logins WHERE email='$email' AND otp='$otp' AND is_used=0 AND expires_at > NOW()");
         if (mysqli_num_rows($chk) > 0) {
             $rec = mysqli_fetch_assoc($chk);
-            // Mark OTP used
             mysqli_query($conn, "UPDATE otp_logins SET is_used=1 WHERE id={$rec['id']}");
             $_SESSION['fp_step']         = 'reset';
             $_SESSION['fp_otp_verified'] = true;
@@ -137,7 +146,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['reset_password'])) {
             $upd = mysqli_query($conn, "UPDATE users SET password='$hashed' WHERE email='$email_esc'");
 
             if ($upd) {
-                // Clear all fp session data
                 unset($_SESSION['fp_step'], $_SESSION['fp_email'],
                       $_SESSION['fp_name'], $_SESSION['fp_otp_verified']);
                 $step    = 'done';
@@ -178,17 +186,14 @@ $step = $_SESSION['fp_step'] ?? $step;
         <!-- Step Indicator -->
         <?php if ($step !== 'done'): ?>
         <div class="flex items-center justify-center gap-2 px-6 pt-5 pb-2">
-            <!-- Step 1 -->
             <div class="step-dot <?php echo in_array($step,['otp','reset']) ? 'step-done' : ($step==='email' ? 'step-active' : 'step-idle'); ?>">
                 <?php echo in_array($step,['otp','reset']) ? '✓' : '1'; ?>
             </div>
             <div class="h-0.5 w-10 <?php echo in_array($step,['otp','reset','done']) ? 'bg-green-500' : 'bg-gray-200'; ?>"></div>
-            <!-- Step 2 -->
             <div class="step-dot <?php echo $step==='reset' ? 'step-done' : ($step==='otp' ? 'step-active' : 'step-idle'); ?>">
                 <?php echo $step==='reset' ? '✓' : '2'; ?>
             </div>
             <div class="h-0.5 w-10 <?php echo $step==='reset' ? 'bg-green-500' : 'bg-gray-200'; ?>"></div>
-            <!-- Step 3 -->
             <div class="step-dot <?php echo $step==='reset' ? 'step-active' : 'step-idle'; ?>">3</div>
         </div>
         <div class="flex justify-center gap-8 text-xs text-gray-400 pb-3">
@@ -209,8 +214,14 @@ $step = $_SESSION['fp_step'] ?? $step;
                 </div>
             <?php endif; ?>
 
+            <!-- 🔍 DEBUG BOX: mail bhejne ka technical log yahan dikhega -->
+            <?php if ($debugInfo): ?>
+                <div style="background:#111827;color:#a3e635;font-size:11px;padding:10px;border-radius:8px;margin-bottom:16px;max-height:250px;overflow-y:auto;white-space:pre-wrap;font-family:monospace;">
+<?php echo $debugInfo; ?>
+                </div>
+            <?php endif; ?>
+
             <?php if ($step === 'email'): ?>
-            <!-- ── STEP 1: Email ── -->
             <h3 class="text-lg font-bold text-gray-800 mb-4"><i class="fas fa-envelope mr-2 text-purple-500"></i>Enter Your Email</h3>
             <form method="POST">
                 <div class="mb-4">
@@ -230,7 +241,6 @@ $step = $_SESSION['fp_step'] ?? $step;
             </form>
 
             <?php elseif ($step === 'otp'): ?>
-            <!-- ── STEP 2: OTP ── -->
             <h3 class="text-lg font-bold text-gray-800 mb-1"><i class="fas fa-shield-alt mr-2 text-purple-500"></i>Verify OTP</h3>
             <p class="text-xs text-gray-400 mb-4">OTP sent to <strong><?php echo htmlspecialchars($_SESSION['fp_email'] ?? ''); ?></strong></p>
             <form method="POST">
@@ -258,7 +268,6 @@ $step = $_SESSION['fp_step'] ?? $step;
             </div>
 
             <?php elseif ($step === 'reset'): ?>
-            <!-- ── STEP 3: New Password ── -->
             <h3 class="text-lg font-bold text-gray-800 mb-1"><i class="fas fa-lock mr-2 text-purple-500"></i>Set New Password</h3>
             <p class="text-xs text-gray-400 mb-4">For account: <strong><?php echo htmlspecialchars($_SESSION['fp_email'] ?? ''); ?></strong></p>
             <form method="POST">
@@ -294,7 +303,6 @@ $step = $_SESSION['fp_step'] ?? $step;
             </form>
 
             <?php elseif ($step === 'done'): ?>
-            <!-- ── DONE ── -->
             <div class="text-center py-4">
                 <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <i class="fas fa-check-circle text-green-500 text-4xl"></i>
@@ -327,11 +335,9 @@ function togglePass(inputId, iconId) {
     else { inp.type = 'password'; ico.classList.replace('fa-eye-slash','fa-eye'); }
 }
 
-// Live password match check
 const newP  = document.getElementById('newPass');
 const conP  = document.getElementById('confPass');
 const msg   = document.getElementById('matchMsg');
-const btn   = document.getElementById('resetBtn');
 
 if (conP) {
     conP.addEventListener('input', checkMatch);

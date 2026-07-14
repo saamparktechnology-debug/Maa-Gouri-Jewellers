@@ -75,6 +75,21 @@ $database = 'gouri';
         mysqli_query($conn, "ALTER TABLE invoices ADD COLUMN account_paid DECIMAL(10,2) DEFAULT 0");
     }
 
+    // Ensure paid_amount, balance_amount, payment_method columns exist
+    $chk_paid = mysqli_query($conn, "SHOW COLUMNS FROM invoices LIKE 'paid_amount'");
+    if($chk_paid && mysqli_num_rows($chk_paid) == 0) {
+        mysqli_query($conn, "ALTER TABLE invoices ADD COLUMN paid_amount DECIMAL(10,2) DEFAULT 0");
+        mysqli_query($conn, "ALTER TABLE invoices ADD COLUMN balance_amount DECIMAL(10,2) DEFAULT 0");
+    }
+    $chk_method = mysqli_query($conn, "SHOW COLUMNS FROM invoices LIKE 'payment_method'");
+    if($chk_method && mysqli_num_rows($chk_method) == 0) {
+        mysqli_query($conn, "ALTER TABLE invoices ADD COLUMN payment_method VARCHAR(20) DEFAULT 'Cash'");
+    }
+    $chk_status = mysqli_query($conn, "SHOW COLUMNS FROM invoices LIKE 'payment_status'");
+    if($chk_status && mysqli_num_rows($chk_status) == 0) {
+        mysqli_query($conn, "ALTER TABLE invoices ADD COLUMN payment_status VARCHAR(20) DEFAULT 'unpaid'");
+    }
+
     // Update gst_type ENUM to include gst_3 and gst_18 (migration from old schema)
     $chk_gst = mysqli_query($conn, "SHOW COLUMNS FROM invoices LIKE 'gst_type'");
     if($chk_gst && mysqli_num_rows($chk_gst) > 0) {
