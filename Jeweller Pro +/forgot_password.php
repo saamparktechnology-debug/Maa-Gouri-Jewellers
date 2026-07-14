@@ -12,7 +12,6 @@ require 'vendor/phpmailer/phpmailer/src/SMTP.php';
 
 $error   = '';
 $success = '';
-$debugInfo = ''; // yahan technical detail store hogi
 
 // step: 'email' → 'otp' → 'reset' → done
 $step = $_SESSION['fp_step'] ?? 'email';
@@ -44,13 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['send_otp'])) {
 
                 $mail->SMTPSecure = 'tls';
                 $mail->Port       = 587;
-
-                // ── Debug output ko capture karo (screen pe dikhega) ──
-                $mail->SMTPDebug  = 2;
-                $debugOutput = '';
-                $mail->Debugoutput = function($str, $level) use (&$debugOutput) {
-                    $debugOutput .= htmlspecialchars($str) . "\n";
-                };
+                $mail->SMTPDebug  = 0; // production: debug off
 
                 $mail->setFrom('csuraj156@gmail.com', 'Gouri Jewellers');
                 $mail->addAddress($email, $user['name']);
@@ -80,11 +73,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['send_otp'])) {
                 $_SESSION['fp_name']  = $user['name'];
                 $step    = 'otp';
                 $success = "✅ OTP sent to <strong>$email</strong>. Please check your inbox.";
-                $debugInfo = $debugOutput; // success ke case me bhi dikha do
 
             } catch (Exception $e) {
                 $error = "❌ CAN'T OTP send: " . $mail->ErrorInfo;
-                $debugInfo = $debugOutput; // fail hone ka poora reason yahan
                 mysqli_query($conn, "DELETE FROM otp_logins WHERE email = '$email' AND is_used = 0");
             }
 
@@ -211,13 +202,6 @@ $step = $_SESSION['fp_step'] ?? $step;
             <?php if ($success): ?>
                 <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg mb-4 text-sm flex items-start gap-2">
                     <i class="fas fa-check-circle mt-0.5"></i><span><?php echo $success; ?></span>
-                </div>
-            <?php endif; ?>
-
-            <!-- 🔍 DEBUG BOX: mail bhejne ka technical log yahan dikhega -->
-            <?php if ($debugInfo): ?>
-                <div style="background:#111827;color:#a3e635;font-size:11px;padding:10px;border-radius:8px;margin-bottom:16px;max-height:250px;overflow-y:auto;white-space:pre-wrap;font-family:monospace;">
-<?php echo $debugInfo; ?>
                 </div>
             <?php endif; ?>
 
