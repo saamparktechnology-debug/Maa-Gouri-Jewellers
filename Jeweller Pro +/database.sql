@@ -1,6 +1,7 @@
 
 -- Create Database
-
+CREATE DATABASE IF NOT EXISTS `gouri` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
+USE `gouri`;
 -- Users Table
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,

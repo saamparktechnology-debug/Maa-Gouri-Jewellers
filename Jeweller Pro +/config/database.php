@@ -1,8 +1,8 @@
 <?php
 $host = 'localhost';
-$user = 'gouriUser';
-$password = 'prc@1234';
-$database = 'gouribilling';
+$user = 'root';
+$password = '';
+$database = 'gouri';
 
     $conn = mysqli_connect($host, $user, $password, $database);
 
