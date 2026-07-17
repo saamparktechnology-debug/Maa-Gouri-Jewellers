@@ -159,7 +159,7 @@ function pct($part, $total) {
             <img src="assets/images/moti-removebg-preview.png" alt="Logo" style="width:100%;height:100%;object-fit:cover;">
         </div>
         <div>
-            <div style="color:#fff;font-size:13px;font-weight:700;">GOURI JEWELLERS</div>
+            <div style="color:#fff;font-size:13px;font-weight:700;">MAA GOURI JEWELLERS</div>
             <div style="color:#c8a25a;font-size:10px;">Premium Since 2026</div>
         </div>
     </div>
@@ -173,11 +173,11 @@ function pct($part, $total) {
 
         <div class="nav-section">ANALYTICS</div>
         <a href="reports.php"   class="nav-item"> Reports</a>
-        <a href="income.php"    class="nav-item"> Income &amp; Exp</a>
+        <a href="income_expenses.php"    class="nav-item"> Income &amp; Exp</a>
 
         <div class="nav-section">TOOLS</div>
         <a href="whatsapp.php"  class="nav-item"> WhatsApp</a>
-        <a href="sanchay.php"   class="nav-item"> Sanchay</a>
+        <!-- <a href="sanchay.php"   class="nav-item"> Sanchay</a> -->
         <a href="purchase.php"  class="nav-item"> Purchase</a>
         <a href="contacts.php"  class="nav-item"> Contacts</a>
         <a href="accounts.php"  class="nav-item active"> Accounts</a>

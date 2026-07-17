@@ -2,6 +2,41 @@
 session_start();
 require_once 'config/database.php';
 
+// AJAX: Delete an invoice (and its line items)
+if(isset($_GET['action']) && $_GET['action'] === 'delete_invoice') {
+    header('Content-Type: application/json');
+    if(!isset($_SESSION['user_id'])) {
+        echo json_encode(['success' => false, 'message' => 'Not logged in.']);
+        exit();
+    }
+    if($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
+        exit();
+    }
+    $invoice_no = mysqli_real_escape_string($conn, trim($_POST['invoice_no'] ?? ''));
+    if(empty($invoice_no)) {
+        echo json_encode(['success' => false, 'message' => 'Invoice number required.']);
+        exit();
+    }
+    $findRes = mysqli_query($conn, "SELECT id FROM invoices WHERE invoice_no = '$invoice_no' LIMIT 1");
+    if(!$findRes || mysqli_num_rows($findRes) === 0) {
+        echo json_encode(['success' => false, 'message' => 'Invoice not found.']);
+        exit();
+    }
+    $invRow = mysqli_fetch_assoc($findRes);
+    $invoice_id = intval($invRow['id']);
+
+    mysqli_query($conn, "DELETE FROM invoice_items WHERE invoice_id = $invoice_id");
+    $del = mysqli_query($conn, "DELETE FROM invoices WHERE id = $invoice_id");
+
+    if($del) {
+        echo json_encode(['success' => true, 'message' => 'Invoice ' . $invoice_no . ' deleted successfully.']);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Error deleting invoice: ' . mysqli_error($conn)]);
+    }
+    exit();
+}
+
 if(!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
@@ -89,7 +124,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <meta name="author" content="MANU GUPTA">
+    <meta name="author" content="MANU GUPTA Suraj Chandra">
     <meta name="description" content="Reports and Analytics for Gouri Jewellers">
     <title>Reports - Maa Gouri Jewellers</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
@@ -846,10 +881,16 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         <td class="text-center"><?php echo $status_badge; ?></td>
                         <td class="text-center text-xs" style="color:#6b7280;white-space:nowrap;"><?php echo date('d M Y', strtotime($bill['created_at'])); ?></td>
                         <td class="text-center">
-                            <a href="view_pdf.php?invoice_no=<?php echo urlencode($bill['invoice_no']); ?>" target="_blank"
-                               class="btn-jewel" style="padding:3px 10px;font-size:10px;border-radius:20px;">
-                               🖨️ Print
-                            </a>
+                            <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;">
+                                <a href="view_pdf.php?invoice_no=<?php echo urlencode($bill['invoice_no']); ?>" target="_blank"
+                                   class="btn-jewel" style="padding:3px 10px;font-size:10px;border-radius:20px;">
+                                   🖨️ Print
+                                </a>
+                                <button type="button" onclick="deleteInvoice('<?php echo htmlspecialchars(addslashes($bill['invoice_no'])); ?>', this)"
+                                   style="padding:3px 10px;font-size:10px;border-radius:20px;background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;border:none;cursor:pointer;font-weight:700;">
+                                   🗑️ Delete
+                                </button>
+                            </div>
                         </td>
                     </tr>
                     <?php endforeach; endif; ?>
@@ -895,38 +936,76 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         document.getElementById(id).classList.toggle('open');
     }
 
+    /* ── Delete Invoice ── */
+    function deleteInvoice(invoiceNo, btn) {
+        if(!confirm('⚠️ Are you sure you want to delete Invoice ' + invoiceNo + '? This cannot be undone.')) return;
+        btn.disabled = true;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = 'Deleting...';
+
+        fetch(window.location.pathname + '?action=delete_invoice', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            credentials: 'same-origin',
+            body: 'invoice_no=' + encodeURIComponent(invoiceNo)
+        })
+        .then(r => r.json())
+        .then(data => {
+            if(data.success) {
+                const row = btn.closest('tr');
+                if(row) {
+                    row.style.transition = 'opacity 0.3s, height 0.3s';
+                    row.style.opacity = '0';
+                    setTimeout(() => row.remove(), 300);
+                }
+            } else {
+                alert(data.message || 'Could not delete invoice.');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        })
+        .catch(() => {
+            alert('Network error. Please try again.');
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+        });
+    }
+
     /* ── Chart ── */
     const labels    = <?php echo json_encode(array_column($daily_sales,'date')); ?>;
     const salesData = <?php echo json_encode(array_column($daily_sales,'total')); ?>;
-    new Chart(document.getElementById('salesChart').getContext('2d'), {
-        type: 'line',
-        data: {
-            labels,
-            datasets: [{
-                label: 'Sales (₹)', data: salesData,
-                borderColor: '#d68b16', backgroundColor: 'rgba(214,139,22,0.1)',
-                borderWidth: 3, tension: 0.4, fill: true,
-                pointRadius: 5, pointHoverRadius: 8,
-                pointBackgroundColor: '#d68b16', pointBorderColor: '#800020',
-                pointBorderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: true,
-            plugins: {
-                legend: { labels: { font: { size: 12, weight: 'bold' }, color: '#800020' } },
-                tooltip: { backgroundColor: '#fdf6e3', titleColor: '#800020', bodyColor: '#7a4e0a', borderColor: '#d68b16', borderWidth: 1,
-                    callbacks: { label: ctx => '💰 ₹ ' + ctx.raw.toLocaleString('en-IN') }
-                }
+    const salesChartCanvas = document.getElementById('salesChart');
+    if(salesChartCanvas) {
+        new Chart(salesChartCanvas.getContext('2d'), {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Sales (₹)', data: salesData,
+                    borderColor: '#d68b16', backgroundColor: 'rgba(214,139,22,0.1)',
+                    borderWidth: 3, tension: 0.4, fill: true,
+                    pointRadius: 5, pointHoverRadius: 8,
+                    pointBackgroundColor: '#d68b16', pointBorderColor: '#800020',
+                    pointBorderWidth: 2
+                }]
             },
-            scales: {
-                y: { beginAtZero: true, grid: { color: 'rgba(181,115,14,0.1)' },
-                    ticks: { callback: v => '₹' + v.toLocaleString('en-IN'), color:'#7a4e0a', font:{size:11} } },
-                x: { grid: { color: 'rgba(181,115,14,0.1)' },
-                    ticks: { color:'#7a4e0a', font:{size:11} } }
+            options: {
+                responsive: true, maintainAspectRatio: true,
+                plugins: {
+                    legend: { labels: { font: { size: 12, weight: 'bold' }, color: '#800020' } },
+                    tooltip: { backgroundColor: '#fdf6e3', titleColor: '#800020', bodyColor: '#7a4e0a', borderColor: '#d68b16', borderWidth: 1,
+                        callbacks: { label: ctx => '💰 ₹ ' + ctx.raw.toLocaleString('en-IN') }
+                    }
+                },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: 'rgba(181,115,14,0.1)' },
+                        ticks: { callback: v => '₹' + v.toLocaleString('en-IN'), color:'#7a4e0a', font:{size:11} } },
+                    x: { grid: { color: 'rgba(181,115,14,0.1)' },
+                        ticks: { color:'#7a4e0a', font:{size:11} } }
+                }
             }
-        }
-    });
+        });
+    }
 
     /* ── Excel Export ── */
     const billsData = <?php echo json_encode($bills_rows); ?>;

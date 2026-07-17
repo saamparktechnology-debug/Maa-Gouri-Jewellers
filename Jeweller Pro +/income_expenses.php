@@ -85,7 +85,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <meta name="author" content="MANU GUPTA">
+    <meta name="author" content="MANU GUPTA Suraj Chandra">
     <meta name="description" content="Income and Expense Management for Gouri Jewellers">
     <title>Income &amp; Expenses — Maa Gouri Jewellers</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">

@@ -228,6 +228,16 @@ $last_is_split = 0;
 
 $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-preview.png','moti-removebg-preview.png'];
 
+// Ensure products table has the columns this page expects (self-heal if missing)
+$chk_item_name = mysqli_query($conn, "SHOW COLUMNS FROM products LIKE 'item_name'");
+if($chk_item_name && mysqli_num_rows($chk_item_name) == 0) {
+    mysqli_query($conn, "ALTER TABLE products ADD COLUMN item_name VARCHAR(255) DEFAULT '' AFTER name");
+}
+$chk_serial_no = mysqli_query($conn, "SHOW COLUMNS FROM products LIKE 'serial_no'");
+if($chk_serial_no && mysqli_num_rows($chk_serial_no) == 0) {
+    mysqli_query($conn, "ALTER TABLE products ADD COLUMN serial_no VARCHAR(50) UNIQUE AFTER id");
+}
+
 // Fetch products from DB
 $all_products = [];
 $products_result = mysqli_query($conn, "SELECT id, name, item_name, serial_no, category, price, quantity FROM products ORDER BY category, item_name, name");
@@ -755,7 +765,7 @@ window.addEventListener('load', function() {
         <a href="index.php" >
             <i class="fas fa-home"></i> HOME
         </a>
-        <a href="billing.php">
+        <a href="billing.php"class="active">
             <i class="fas fa-receipt" class="active"></i> BILLING
         </a>
         <a href="stock.php">

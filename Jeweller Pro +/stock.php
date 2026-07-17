@@ -93,7 +93,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <meta name="author" content="MANU GUPTA">
+    <meta name="author" content="MANU GUPTA Suraj Chandra">
     <meta name="description" content="Live Stock Management for Gouri Jewellers">
     <title>Live Stock - gouri JEWELLERS</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
@@ -691,14 +691,14 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     <nav class="sidebar-nav">
         <div class="sidebar-section-label">Main Menu</div>
 
-        <a href="index.php" class="active">
+        <a href="index.php" >
             <i class="fas fa-home"></i> Home
         </a>
         <a href="billing.php">
             <i class="fas fa-receipt"></i> BILLING
         </a>
         <a href="stock.php">
-            <i class="fas fa-boxes"></i> STOCK
+            <i class="fas fa-boxes" class="active"></i> STOCK
         </a>
         <a href="customers.php">
             <i class="fas fa-users"></i> CUSTOMERS
@@ -1008,7 +1008,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     <footer style="background:linear-gradient(0deg,#f5e6c8,#fdf6e3);border-top:2px solid #d68b16;padding:20px;margin-top:40px;text-align:center;">
         <p class="text-xs" style="color:#7a4e0a;">
             &copy; 2026 Gouri JEWELLERS &nbsp;|&nbsp; CRAFTED WITH ELEGANCE &nbsp;|&nbsp;
-            Developed by <a href="https://saamparktechnologyresearch.in/" target="_blank" style="text-decoration:underline;color:#800020;">STR</a>
+            Developed by <a href="https://saamparktechnologyresearch.in/" target="_blank" style="text-decoration:underline;color:#800020;">Saampark Technology</a>
         </p>
     </footer>
 </div><!-- end .page-wrapper -->

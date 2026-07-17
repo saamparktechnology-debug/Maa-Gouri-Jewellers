@@ -156,7 +156,7 @@ $step = $_SESSION['fp_step'] ?? $step;
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <meta name="author" content="MANU GUPTA">
+    <meta name="author" content="MANU GUPTA Suraj Chandra">
     <meta name="description" content="Forgot Password for Gouri Jewellers">
     <title>Forgot Password - GOURI JEWELLERS</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">

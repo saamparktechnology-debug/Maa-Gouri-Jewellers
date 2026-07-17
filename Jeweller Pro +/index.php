@@ -4,6 +4,7 @@ require_once 'config/database.php';
 
 $is_logged_in = isset($_SESSION['user_id']);
 $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
+$logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-preview.png','moti-removebg-preview.png'];
 
 $daily_sales = [];
 $top_products = [];
@@ -100,7 +101,7 @@ if($is_logged_in) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <meta name="author" content="MANU GUPTA">
+    <meta name="author" content="MANU GUPTA Suraj Chandra">
     <meta name="description" content="Gouri Jewellers - Premium Jewellery Management System">
     <title>Gouri Jewellers - Premium Jewellery Management System</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
@@ -643,7 +644,7 @@ if($is_logged_in) {
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Tools</div>
         <a href="whatsapp_automation.php"><i class="fab fa-whatsapp"></i> WHATSAPP</a>
-        <a href="sbook.php"><i class="fas fa-book"></i> SANCHAY</a>
+        <!-- <a href="sbook.php"><i class="fas fa-book"></i> SANCHAY</a> -->
         <a href="purchase.php"><i class="fas fa-shopping-cart"></i> PURCHASE</a>
         <a href="accounts.php"><i class="fas fa-file-invoice-dollar"></i> ACCOUNTS</a>
     </nav>
@@ -1118,7 +1119,7 @@ if($is_logged_in) {
             });
         }
 
-        // <meta name="author" content="MANU GUPTA">
+        // <meta name="author" content="MANU GUPTA Suraj Chandra">
         const customerTrendCtx = document.getElementById('customerTrendChart');
         if(customerTrendCtx) {
             new Chart(customerTrendCtx, {

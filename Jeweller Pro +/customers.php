@@ -165,7 +165,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <meta name="author" content="MANU GUPTA">
+    <meta name="author" content="MANU GUPTA Suraj Chandra">
     <meta name="description" content="Customer Management for Gouri Jewellers">
     <title>Customers - GOURI JEWELLERS</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
@@ -584,7 +584,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Tools</div>
         <a href="whatsapp_automation.php"><i class="fab fa-whatsapp"></i> WHATSAPP</a>
-        <a href="sbook.php"><i class="fas fa-book"></i> SANCHARI</a>
+        <!-- <a href="sbook.php"><i class="fas fa-book"></i> SANCHARI</a> -->
         <a href="purchase.php">
             <i class="fas fa-book"></i> PURCHASE
         </a>
@@ -637,7 +637,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 <i class="fas fa-exclamation-circle mr-2"></i> <?php echo $error_message; ?>
             </div>
         <?php endif; ?>
-    <!-- <meta name="author" content="MANU GUPTA"> -->
+    <!-- <meta name="author" content="MANU GUPTA Suraj Chandra"> -->
         <!-- Filter Bar -->
         <div class="jewel-card p-4 mb-5">
             <div class="filter-wrap flex flex-col md:flex-row justify-between items-center gap-4">
@@ -754,7 +754,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     <footer class="footer-jewel">
         <p class="text-xs" style="color:#7a4e0a;">
             &copy; 2026 GOURI JEWELLERS &nbsp;|&nbsp; CRAFTED WITH ELEGANCE &nbsp;|&nbsp;
-            Developed by <a href="https://saamparktechnologyresearch.in/" target="_blank" style="text-decoration:underline;color:#800020;">STR</a>
+            Developed by <a href="https://saamparktechnologyresearch.in/" target="_blank" style="text-decoration:underline;color:#800020;">Saampark Technology</a>
         </p>
     </footer>
 </div><!-- end .page-wrapper -->
