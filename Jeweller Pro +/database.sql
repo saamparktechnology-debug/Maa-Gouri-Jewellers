@@ -1,164 +1,129 @@
--- =====================================================
--- Maa Gouri Jewellers / Jeweller Pro +  --  database.sql
--- Full schema, matching the live `gouri` database
--- Regenerated: 2026-07-17
--- =====================================================
+-- phpMyAdmin SQL Dump
+-- version 5.2.1
+-- https://www.phpmyadmin.net/
+--
+-- Host: 127.0.0.1
+-- Generation Time: Jul 18, 2026 at 05:34 AM
+-- Server version: 10.4.32-MariaDB
+-- PHP Version: 8.2.12
 
-CREATE DATABASE IF NOT EXISTS `gouri` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;
-USE `gouri`;
+SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+START TRANSACTION;
+SET time_zone = "+00:00";
+
+
+/*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
+/*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
+/*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
+/*!40101 SET NAMES utf8mb4 */;
+
+--
+-- Database: `gouri`
+--
 
 -- --------------------------------------------------------
--- Users (login accounts)
--- --------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `users` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(100) NOT NULL,
-  `mobile` VARCHAR(15) NOT NULL,
-  `email` VARCHAR(100) DEFAULT NULL,
-  `password` VARCHAR(255) NOT NULL,
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `mobile` (`mobile`)
+
+--
+-- Table structure for table `advance_customers`
+--
+
+CREATE TABLE `advance_customers` (
+  `id` int(11) NOT NULL,
+  `customer_id` int(11) DEFAULT NULL,
+  `customer_name` varchar(100) DEFAULT NULL,
+  `customer_mobile` varchar(15) DEFAULT NULL,
+  `advance_amount` decimal(10,2) DEFAULT 0.00,
+  `advance_date` date DEFAULT NULL,
+  `due_date` date DEFAULT NULL,
+  `reminder_days` int(11) DEFAULT 3,
+  `status` varchar(20) DEFAULT 'active',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
--- Customers
--- --------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `customers` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `name` VARCHAR(100) NOT NULL,
-  `mobile` VARCHAR(15) NOT NULL,
-  `email` VARCHAR(100) DEFAULT NULL,
-  `address` VARCHAR(255) DEFAULT '',
-  `gst_number` VARCHAR(20) DEFAULT '',
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `mobile` (`mobile`)
+
+--
+-- Table structure for table `customers`
+--
+
+CREATE TABLE `customers` (
+  `id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `mobile` varchar(15) NOT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `address` varchar(255) DEFAULT '',
+  `gst_number` varchar(20) DEFAULT '',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
--- Advance / due-tracking customers
+
+--
+-- Stand-in structure for view `customer_due_summary`
+-- (See below for the actual view)
+--
+CREATE TABLE `customer_due_summary` (
+`customer_id` int(11)
+,`customer_name` varchar(100)
+,`customer_mobile` varchar(15)
+,`total_invoices` bigint(21)
+,`total_due` decimal(32,2)
+,`last_invoice_date` timestamp
+,`days_overdue` int(7)
+);
+
 -- --------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `advance_customers` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `customer_id` INT(11) DEFAULT NULL,
-  `customer_name` VARCHAR(100) DEFAULT NULL,
-  `customer_mobile` VARCHAR(15) DEFAULT NULL,
-  `advance_amount` DECIMAL(10,2) DEFAULT 0.00,
-  `advance_date` DATE DEFAULT NULL,
-  `due_date` DATE DEFAULT NULL,
-  `reminder_days` INT(11) DEFAULT 3,
-  `status` VARCHAR(20) DEFAULT 'active',
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
+
+--
+-- Table structure for table `due_update_history`
+--
+
+CREATE TABLE `due_update_history` (
+  `id` int(11) NOT NULL,
+  `invoice_id` int(11) NOT NULL,
+  `previous_balance` decimal(10,2) NOT NULL,
+  `new_balance` decimal(10,2) NOT NULL,
+  `amount_paid` decimal(10,2) NOT NULL,
+  `payment_date` date NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
--- Products (stock items)
--- --------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `products` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `serial_no` VARCHAR(50) DEFAULT NULL,
-  `name` VARCHAR(200) NOT NULL,
-  `item_name` VARCHAR(255) DEFAULT '',
-  `weight` VARCHAR(20) DEFAULT NULL,
-  `category` VARCHAR(50) DEFAULT NULL,
-  `price` DECIMAL(10,2) NOT NULL,
-  `quantity` INT(11) DEFAULT 0,
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `serial_no` (`serial_no`)
+
+--
+-- Table structure for table `expenses`
+--
+
+CREATE TABLE `expenses` (
+  `id` int(11) NOT NULL,
+  `expense_date` date NOT NULL,
+  `category` varchar(50) NOT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `description` text DEFAULT NULL,
+  `payment_method` enum('cash','card','upi','bank') DEFAULT 'cash',
+  `bill_no` varchar(50) DEFAULT NULL,
+  `vendor_name` varchar(100) DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
--- Invoices
--- --------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `invoices` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `invoice_no` VARCHAR(50) NOT NULL,
-  `customer_name` VARCHAR(100) DEFAULT NULL,
-  `customer_mobile` VARCHAR(15) DEFAULT NULL,
-  `gst_type` ENUM('gst_3','gst_18','non_gst') DEFAULT 'non_gst',
-  `subtotal` DECIMAL(10,2) DEFAULT NULL,
-  `gst_amount` DECIMAL(10,2) DEFAULT NULL,
-  `total_amount` DECIMAL(10,2) DEFAULT NULL,
-  `created_by` INT(11) DEFAULT NULL,
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `payment_status` VARCHAR(20) DEFAULT 'pending',
-  `account_paid` DECIMAL(10,2) DEFAULT 0.00,
-  `paid_amount` DECIMAL(10,2) DEFAULT 0.00,
-  `balance_amount` DECIMAL(10,2) DEFAULT 0.00,
-  `payment_method` VARCHAR(20) DEFAULT 'Cash',
-  `reminder_sent` TINYINT(1) DEFAULT 0,
-  `pdf_file` LONGBLOB DEFAULT NULL,
-  `pdf_file_name` VARCHAR(255) DEFAULT NULL,
-  `cash_paid` DECIMAL(10,2) DEFAULT 0.00,
-  `upi_paid` DECIMAL(10,2) DEFAULT 0.00,
-  `cheque_paid` DECIMAL(10,2) DEFAULT 0.00,
-  `old_gold_value` DECIMAL(10,2) DEFAULT 0.00,
-  `due_date` DATE DEFAULT NULL,
-  `customer_address` VARCHAR(255) DEFAULT '',
-  `customer_gstin` VARCHAR(20) DEFAULT '',
-  `round_off` DECIMAL(10,2) DEFAULT 0.00,
-  `is_split` TINYINT(1) DEFAULT 0,
-  `bill_type` VARCHAR(10) DEFAULT 'invoice',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `invoice_no` (`invoice_no`),
-  KEY `created_by` (`created_by`),
-  CONSTRAINT `invoices_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`)
+
+--
+-- Table structure for table `expense_categories`
+--
+
+CREATE TABLE `expense_categories` (
+  `id` int(11) NOT NULL,
+  `category_name` varchar(50) NOT NULL,
+  `status` enum('active','inactive') DEFAULT 'active'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
--- Invoice Items
--- --------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `invoice_items` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `invoice_id` INT(11) DEFAULT NULL,
-  `product_id` INT(11) DEFAULT NULL,
-  `quantity` DECIMAL(10,3) DEFAULT NULL,
-  `price` DECIMAL(10,2) DEFAULT NULL,
-  `total` DECIMAL(10,2) DEFAULT NULL,
-  `product_name` VARCHAR(200) DEFAULT NULL,
-  `serial_no` VARCHAR(100) DEFAULT NULL,
-  `hsn_code` VARCHAR(50) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `invoice_id` (`invoice_id`),
-  KEY `product_id` (`product_id`),
-  CONSTRAINT `invoice_items_ibfk_1` FOREIGN KEY (`invoice_id`) REFERENCES `invoices` (`id`),
-  CONSTRAINT `invoice_items_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+--
+-- Dumping data for table `expense_categories`
+--
 
--- --------------------------------------------------------
--- Expenses
--- --------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `expenses` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `expense_date` DATE NOT NULL,
-  `category` VARCHAR(50) NOT NULL,
-  `amount` DECIMAL(10,2) NOT NULL,
-  `description` TEXT DEFAULT NULL,
-  `payment_method` ENUM('cash','card','upi','bank') DEFAULT 'cash',
-  `bill_no` VARCHAR(50) DEFAULT NULL,
-  `vendor_name` VARCHAR(100) DEFAULT NULL,
-  `created_by` INT(11) DEFAULT NULL,
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `idx_date` (`expense_date`),
-  KEY `idx_category` (`category`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
--- Expense Categories
--- --------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `expense_categories` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `category_name` VARCHAR(50) NOT NULL,
-  `status` ENUM('active','inactive') DEFAULT 'active',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `category_name` (`category_name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
-INSERT IGNORE INTO `expense_categories` (`id`, `category_name`, `status`) VALUES
+INSERT INTO `expense_categories` (`id`, `category_name`, `status`) VALUES
 (1, 'Purchase', 'active'),
 (2, 'Rent', 'active'),
 (3, 'Electricity Bill', 'active'),
@@ -170,36 +135,41 @@ INSERT IGNORE INTO `expense_categories` (`id`, `category_name`, `status`) VALUES
 (9, 'Other Expenses', 'active');
 
 -- --------------------------------------------------------
--- Income
--- --------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `income` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `income_date` DATE NOT NULL,
-  `source` VARCHAR(100) NOT NULL,
-  `category` VARCHAR(50) NOT NULL,
-  `amount` DECIMAL(10,2) NOT NULL,
-  `description` TEXT DEFAULT NULL,
-  `payment_method` ENUM('cash','card','upi','bank') DEFAULT 'cash',
-  `invoice_no` VARCHAR(50) DEFAULT NULL,
-  `created_by` INT(11) DEFAULT NULL,
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `idx_date` (`income_date`),
-  KEY `idx_category` (`category`)
+
+--
+-- Table structure for table `income`
+--
+
+CREATE TABLE `income` (
+  `id` int(11) NOT NULL,
+  `income_date` date NOT NULL,
+  `source` varchar(100) NOT NULL,
+  `category` varchar(50) NOT NULL,
+  `amount` decimal(10,2) NOT NULL,
+  `description` text DEFAULT NULL,
+  `payment_method` enum('cash','card','upi','bank') DEFAULT 'cash',
+  `invoice_no` varchar(50) DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
--- Income Categories
--- --------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `income_categories` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `category_name` VARCHAR(50) NOT NULL,
-  `status` ENUM('active','inactive') DEFAULT 'active',
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `category_name` (`category_name`)
+
+--
+-- Table structure for table `income_categories`
+--
+
+CREATE TABLE `income_categories` (
+  `id` int(11) NOT NULL,
+  `category_name` varchar(50) NOT NULL,
+  `status` enum('active','inactive') DEFAULT 'active'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-INSERT IGNORE INTO `income_categories` (`id`, `category_name`, `status`) VALUES
+--
+-- Dumping data for table `income_categories`
+--
+
+INSERT INTO `income_categories` (`id`, `category_name`, `status`) VALUES
 (1, 'Sales Income', 'active'),
 (2, 'Interest Income', 'active'),
 (3, 'Rental Income', 'active'),
@@ -207,232 +177,653 @@ INSERT IGNORE INTO `income_categories` (`id`, `category_name`, `status`) VALUES
 (5, 'Other Income', 'active');
 
 -- --------------------------------------------------------
--- OTP Logins
--- --------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `otp_logins` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `email` VARCHAR(100) NOT NULL,
-  `otp` VARCHAR(6) NOT NULL,
-  `expires_at` DATETIME NOT NULL,
-  `is_used` TINYINT(1) DEFAULT 0,
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `idx_email` (`email`),
-  KEY `idx_otp` (`otp`)
+
+--
+-- Table structure for table `invoices`
+--
+
+CREATE TABLE `invoices` (
+  `id` int(11) NOT NULL,
+  `invoice_no` varchar(50) NOT NULL,
+  `customer_name` varchar(100) DEFAULT NULL,
+  `customer_mobile` varchar(15) DEFAULT NULL,
+  `gst_type` enum('gst_3','gst_18','non_gst') DEFAULT 'non_gst',
+  `subtotal` decimal(10,2) DEFAULT NULL,
+  `gst_amount` decimal(10,2) DEFAULT NULL,
+  `total_amount` decimal(10,2) DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `payment_status` varchar(20) DEFAULT 'pending',
+  `account_paid` decimal(10,2) DEFAULT 0.00,
+  `paid_amount` decimal(10,2) DEFAULT 0.00,
+  `balance_amount` decimal(10,2) DEFAULT 0.00,
+  `payment_method` varchar(20) DEFAULT 'Cash',
+  `reminder_sent` tinyint(1) DEFAULT 0,
+  `pdf_file` longblob DEFAULT NULL,
+  `pdf_file_name` varchar(255) DEFAULT NULL,
+  `cash_paid` decimal(10,2) DEFAULT 0.00,
+  `upi_paid` decimal(10,2) DEFAULT 0.00,
+  `cheque_paid` decimal(10,2) DEFAULT 0.00,
+  `old_gold_value` decimal(10,2) DEFAULT 0.00,
+  `due_date` date DEFAULT NULL,
+  `customer_address` varchar(255) DEFAULT '',
+  `customer_gstin` varchar(20) DEFAULT '',
+  `round_off` decimal(10,2) DEFAULT 0.00,
+  `is_split` tinyint(1) DEFAULT 0,
+  `bill_type` varchar(10) DEFAULT 'invoice'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
--- Password Resets
--- --------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `password_resets` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `email` VARCHAR(100) NOT NULL,
-  `otp` VARCHAR(6) NOT NULL,
-  `expires_at` DATETIME NOT NULL,
-  `is_used` TINYINT(1) DEFAULT 0,
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `idx_email` (`email`),
-  KEY `idx_otp` (`otp`)
+
+--
+-- Table structure for table `invoice_items`
+--
+
+CREATE TABLE `invoice_items` (
+  `id` int(11) NOT NULL,
+  `invoice_id` int(11) DEFAULT NULL,
+  `product_id` int(11) DEFAULT NULL,
+  `quantity` decimal(10,3) DEFAULT NULL,
+  `price` decimal(10,2) DEFAULT NULL,
+  `total` decimal(10,2) DEFAULT NULL,
+  `product_name` varchar(200) DEFAULT NULL,
+  `serial_no` varchar(100) DEFAULT NULL,
+  `hsn_code` varchar(50) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
--- Purchase Entries
+
+--
+-- Table structure for table `otp_logins`
+--
+
+CREATE TABLE `otp_logins` (
+  `id` int(11) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `otp` varchar(6) NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `is_used` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `otp_logins`
+--
+
+INSERT INTO `otp_logins` (`id`, `email`, `otp`, `expires_at`, `is_used`, `created_at`) VALUES
+(2, 'csuraj156@gmail.com', '929524', '2026-07-14 11:05:38', 1, '2026-07-14 05:25:38'),
+(4, 'csuraj156@gmail.com', '273225', '2026-07-14 11:39:15', 1, '2026-07-14 05:59:15'),
+(7, 'csuraj156@gmail.com', '859690', '2026-07-15 00:01:30', 1, '2026-07-14 18:21:30'),
+(8, 'csuraj156@gmail.com', '958238', '2026-07-15 00:07:50', 0, '2026-07-14 18:27:50'),
+(9, 'skmehebubali34@gmail.com', '709954', '2026-07-15 00:13:51', 1, '2026-07-14 18:33:51');
+
 -- --------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `purchase_entries` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `purchase_no` VARCHAR(50) NOT NULL,
-  `purchase_date` DATE NOT NULL,
-  `invoice_no` VARCHAR(100) NOT NULL,
-  `invoice_date` DATE NOT NULL,
-  `ref_no` VARCHAR(100) DEFAULT NULL,
-  `ref_date` DATE DEFAULT NULL,
-  `payment_mode` VARCHAR(50) DEFAULT 'NEFT/RTGS',
-  `supplier_name` VARCHAR(200) NOT NULL,
-  `supplier_addr` VARCHAR(500) DEFAULT NULL,
-  `supplier_gstin` VARCHAR(20) DEFAULT NULL,
-  `supplier_pan` VARCHAR(20) DEFAULT NULL,
-  `supplier_state` VARCHAR(100) DEFAULT NULL,
-  `supplier_state_code` VARCHAR(5) DEFAULT NULL,
-  `supplier_mobile` VARCHAR(20) DEFAULT NULL,
-  `supplier_email` VARCHAR(100) DEFAULT NULL,
-  `buyer_name` VARCHAR(200) DEFAULT ' GOURI JEWELLERS',
-  `buyer_addr` VARCHAR(500) DEFAULT NULL,
-  `buyer_gstin` VARCHAR(20) DEFAULT NULL,
-  `buyer_pan` VARCHAR(20) DEFAULT NULL,
-  `material_type` ENUM('Gold','Silver','Diamond','Platinum') NOT NULL,
-  `description` VARCHAR(300) DEFAULT NULL,
-  `hsn_sac` VARCHAR(20) DEFAULT NULL,
-  `qty` DECIMAL(12,4) NOT NULL,
-  `unit` VARCHAR(10) DEFAULT 'gm',
-  `rate_per_unit` DECIMAL(12,4) NOT NULL,
-  `tax_type` ENUM('CGST_SGST','IGST') DEFAULT 'CGST_SGST',
-  `cgst_pct` DECIMAL(5,2) DEFAULT 1.50,
-  `sgst_pct` DECIMAL(5,2) DEFAULT 1.50,
-  `igst_pct` DECIMAL(5,2) DEFAULT 3.00,
-  `subtotal` DECIMAL(14,2) DEFAULT NULL,
-  `cgst_amt` DECIMAL(14,2) DEFAULT 0.00,
-  `sgst_amt` DECIMAL(14,2) DEFAULT 0.00,
-  `igst_amt` DECIMAL(14,2) DEFAULT 0.00,
-  `gst_total` DECIMAL(14,2) DEFAULT NULL,
-  `total_amount` DECIMAL(14,2) DEFAULT NULL,
-  `amount_words` VARCHAR(500) DEFAULT NULL,
-  `notes` TEXT DEFAULT NULL,
-  `created_by` INT(11) DEFAULT NULL,
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `purchase_no` (`purchase_no`)
+
+--
+-- Table structure for table `password_resets`
+--
+
+CREATE TABLE `password_resets` (
+  `id` int(11) NOT NULL,
+  `email` varchar(100) NOT NULL,
+  `otp` varchar(6) NOT NULL,
+  `expires_at` datetime NOT NULL,
+  `is_used` tinyint(1) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
--- Purchase Items
+
+--
+-- Table structure for table `products`
+--
+
+CREATE TABLE `products` (
+  `id` int(11) NOT NULL,
+  `serial_no` varchar(50) DEFAULT NULL,
+  `name` varchar(200) NOT NULL,
+  `item_name` varchar(255) DEFAULT '',
+  `weight` varchar(20) DEFAULT NULL,
+  `category` varchar(50) DEFAULT NULL,
+  `price` decimal(10,2) NOT NULL,
+  `quantity` int(11) DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `products`
+--
+
+INSERT INTO `products` (`id`, `serial_no`, `name`, `item_name`, `weight`, `category`, `price`, `quantity`, `created_at`) VALUES
+(1, 'SN0001', 'Gold Necklace', '', NULL, 'Gold', 45000.00, 10, '2026-07-14 03:20:05'),
+(2, 'SN0002', 'Diamond Ring', '', NULL, 'Diamond', 85000.00, 5, '2026-07-14 03:20:05'),
+(3, 'SN0003', 'Silver Earrings', '', NULL, 'Silver', 3500.00, 25, '2026-07-14 03:20:05'),
+(4, 'SN0004', 'Gold Bangles', '', NULL, 'Gold', 28000.00, 8, '2026-07-14 03:20:05'),
+(5, 'SN0005', 'Platinum Chain', '', NULL, 'Platinum', 125000.00, 3, '2026-07-14 03:20:05'),
+(6, 'SN0006', 'Ruby Pendant', '', NULL, 'Gemstone', 32000.00, 6, '2026-07-14 03:20:05'),
+(7, 'SN0007', 'Gold Mangalsutra', '', NULL, 'Gold', 65000.00, 4, '2026-07-14 03:20:05');
+
 -- --------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `purchase_items` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `purchase_id` INT(11) NOT NULL,
-  `material_type` ENUM('Gold','Silver','Diamond','Platinum') NOT NULL,
-  `huid_code` VARCHAR(50) DEFAULT '',
-  `description` VARCHAR(300) DEFAULT NULL,
-  `hsn_sac` VARCHAR(20) DEFAULT NULL,
-  `qty` DECIMAL(12,4) NOT NULL,
-  `unit` VARCHAR(10) DEFAULT 'gm',
-  `rate_per_unit` DECIMAL(12,4) NOT NULL,
-  `tax_type` ENUM('CGST_SGST','IGST') DEFAULT 'CGST_SGST',
-  `cgst_pct` DECIMAL(5,2) DEFAULT 1.50,
-  `sgst_pct` DECIMAL(5,2) DEFAULT 1.50,
-  `igst_pct` DECIMAL(5,2) DEFAULT 3.00,
-  `subtotal` DECIMAL(14,2) DEFAULT NULL,
-  `cgst_amt` DECIMAL(14,2) DEFAULT 0.00,
-  `sgst_amt` DECIMAL(14,2) DEFAULT 0.00,
-  `igst_amt` DECIMAL(14,2) DEFAULT 0.00,
-  `gst_total` DECIMAL(14,2) DEFAULT NULL,
-  `total_amount` DECIMAL(14,2) DEFAULT NULL,
-  `amount_words` VARCHAR(500) DEFAULT NULL,
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  KEY `idx_purchase_id` (`purchase_id`),
-  CONSTRAINT `purchase_items_ibfk_1` FOREIGN KEY (`purchase_id`) REFERENCES `purchase_entries` (`id`)
+
+--
+-- Table structure for table `purchase_entries`
+--
+
+CREATE TABLE `purchase_entries` (
+  `id` int(11) NOT NULL,
+  `purchase_no` varchar(50) NOT NULL,
+  `purchase_date` date NOT NULL,
+  `invoice_no` varchar(100) NOT NULL,
+  `invoice_date` date NOT NULL,
+  `ref_no` varchar(100) DEFAULT NULL,
+  `ref_date` date DEFAULT NULL,
+  `payment_mode` varchar(50) DEFAULT 'NEFT/RTGS',
+  `supplier_name` varchar(200) NOT NULL,
+  `supplier_addr` varchar(500) DEFAULT NULL,
+  `supplier_gstin` varchar(20) DEFAULT NULL,
+  `supplier_pan` varchar(20) DEFAULT NULL,
+  `supplier_state` varchar(100) DEFAULT NULL,
+  `supplier_state_code` varchar(5) DEFAULT NULL,
+  `supplier_mobile` varchar(20) DEFAULT NULL,
+  `supplier_email` varchar(100) DEFAULT NULL,
+  `buyer_name` varchar(200) DEFAULT ' GOURI JEWELLERS',
+  `buyer_addr` varchar(500) DEFAULT NULL,
+  `buyer_gstin` varchar(20) DEFAULT NULL,
+  `buyer_pan` varchar(20) DEFAULT NULL,
+  `material_type` enum('Gold','Silver','Diamond','Platinum') NOT NULL,
+  `description` varchar(300) DEFAULT NULL,
+  `hsn_sac` varchar(20) DEFAULT NULL,
+  `qty` decimal(12,4) NOT NULL,
+  `unit` varchar(10) DEFAULT 'gm',
+  `rate_per_unit` decimal(12,4) NOT NULL,
+  `tax_type` enum('CGST_SGST','IGST') DEFAULT 'CGST_SGST',
+  `cgst_pct` decimal(5,2) DEFAULT 1.50,
+  `sgst_pct` decimal(5,2) DEFAULT 1.50,
+  `igst_pct` decimal(5,2) DEFAULT 3.00,
+  `subtotal` decimal(14,2) DEFAULT NULL,
+  `cgst_amt` decimal(14,2) DEFAULT 0.00,
+  `sgst_amt` decimal(14,2) DEFAULT 0.00,
+  `igst_amt` decimal(14,2) DEFAULT 0.00,
+  `gst_total` decimal(14,2) DEFAULT NULL,
+  `total_amount` decimal(14,2) DEFAULT NULL,
+  `amount_words` varchar(500) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_by` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
--- Reminder Settings
--- --------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `reminder_settings` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `reminder_type` VARCHAR(50) DEFAULT 'due',
-  `days_before` INT(11) DEFAULT 0,
-  `reminder_time` TIME DEFAULT '10:00:00',
-  `is_active` INT(11) DEFAULT 1,
-  `template_id` INT(11) DEFAULT NULL,
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-INSERT IGNORE INTO `reminder_settings` (`id`, `reminder_type`, `days_before`, `reminder_time`, `is_active`, `template_id`) VALUES
-(1, 'due', -7, '10:00:00', 1, 1),
-(2, 'due', -3, '10:00:00', 1, 2),
-(3, 'due', 0, '10:00:00', 1, 3);
+--
+-- Table structure for table `purchase_items`
+--
 
--- --------------------------------------------------------
--- Stock Metal (gold/silver/diamond/platinum stock ledger)
--- --------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `stock_metal` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `material_type` ENUM('Gold','Silver','Diamond','Platinum') NOT NULL,
-  `unit` VARCHAR(10) DEFAULT 'gm',
-  `qty_available` DECIMAL(14,4) DEFAULT 0.0000,
-  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`),
-  UNIQUE KEY `uq_material` (`material_type`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
-INSERT IGNORE INTO `stock_metal` (`material_type`, `unit`, `qty_available`) VALUES
-('Gold', 'gm', 0.0000),
-('Silver', 'gm', 0.0000),
-('Diamond', 'gm', 0.0000),
-('Platinum', 'gm', 0.0000);
-
--- --------------------------------------------------------
--- WhatsApp Logs
--- --------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `whatsapp_logs` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `recipient_number` VARCHAR(20) NOT NULL,
-  `recipient_name` VARCHAR(100) DEFAULT NULL,
-  `message_type` VARCHAR(50) DEFAULT NULL,
-  `message_content` TEXT DEFAULT NULL,
-  `status` VARCHAR(20) DEFAULT 'pending',
-  `api_response` TEXT DEFAULT NULL,
-  `sent_at` TIMESTAMP NULL DEFAULT NULL,
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  `media_file_path` TEXT DEFAULT NULL,
-  `media_file_name` VARCHAR(255) DEFAULT NULL,
-  PRIMARY KEY (`id`),
-  KEY `idx_recipient` (`recipient_number`),
-  KEY `idx_status` (`status`)
+CREATE TABLE `purchase_items` (
+  `id` int(11) NOT NULL,
+  `purchase_id` int(11) NOT NULL,
+  `material_type` enum('Gold','Silver','Diamond','Platinum') NOT NULL,
+  `huid_code` varchar(50) DEFAULT '',
+  `description` varchar(300) DEFAULT NULL,
+  `hsn_sac` varchar(20) DEFAULT NULL,
+  `qty` decimal(12,4) NOT NULL,
+  `unit` varchar(10) DEFAULT 'gm',
+  `rate_per_unit` decimal(12,4) NOT NULL,
+  `tax_type` enum('CGST_SGST','IGST') DEFAULT 'CGST_SGST',
+  `cgst_pct` decimal(5,2) DEFAULT 1.50,
+  `sgst_pct` decimal(5,2) DEFAULT 1.50,
+  `igst_pct` decimal(5,2) DEFAULT 3.00,
+  `subtotal` decimal(14,2) DEFAULT NULL,
+  `cgst_amt` decimal(14,2) DEFAULT 0.00,
+  `sgst_amt` decimal(14,2) DEFAULT 0.00,
+  `igst_amt` decimal(14,2) DEFAULT 0.00,
+  `gst_total` decimal(14,2) DEFAULT NULL,
+  `total_amount` decimal(14,2) DEFAULT NULL,
+  `amount_words` varchar(500) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
--- WhatsApp Settings
+
+--
+-- Table structure for table `reminder_settings`
+--
+
+CREATE TABLE `reminder_settings` (
+  `id` int(11) NOT NULL,
+  `reminder_type` varchar(50) DEFAULT 'due',
+  `days_before` int(11) DEFAULT 0,
+  `reminder_time` time DEFAULT '10:00:00',
+  `is_active` int(11) DEFAULT 1,
+  `template_id` int(11) DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `reminder_settings`
+--
+
+INSERT INTO `reminder_settings` (`id`, `reminder_type`, `days_before`, `reminder_time`, `is_active`, `template_id`, `created_at`) VALUES
+(1, 'due', -7, '10:00:00', 1, 1, '2026-07-14 03:20:06'),
+(2, 'due', -3, '10:00:00', 1, 2, '2026-07-14 03:20:06'),
+(3, 'due', 0, '10:00:00', 1, 3, '2026-07-14 03:20:06');
+
 -- --------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `whatsapp_settings` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `api_type` VARCHAR(50) DEFAULT 'greenapi',
-  `api_url` VARCHAR(255) DEFAULT NULL,
-  `api_token` VARCHAR(255) DEFAULT NULL,
-  `instance_id` VARCHAR(100) DEFAULT NULL,
-  `phone_number_id` VARCHAR(100) DEFAULT NULL,
-  `access_token` TEXT DEFAULT NULL,
-  `status` VARCHAR(20) DEFAULT 'inactive',
-  `last_updated` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `reminder_days` INT(11) DEFAULT 3,
-  PRIMARY KEY (`id`)
+
+--
+-- Table structure for table `stock_metal`
+--
+
+CREATE TABLE `stock_metal` (
+  `id` int(11) NOT NULL,
+  `material_type` enum('Gold','Silver','Diamond','Platinum') NOT NULL,
+  `unit` varchar(10) DEFAULT 'gm',
+  `qty_available` decimal(14,4) DEFAULT 0.0000,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `stock_metal`
+--
+
+INSERT INTO `stock_metal` (`id`, `material_type`, `unit`, `qty_available`, `updated_at`) VALUES
+(1, 'Gold', 'gm', 0.0000, '2026-07-17 06:33:22'),
+(2, 'Silver', 'gm', 0.0000, '2026-07-17 06:33:22'),
+(3, 'Diamond', 'gm', 0.0000, '2026-07-17 06:33:22'),
+(4, 'Platinum', 'gm', 0.0000, '2026-07-17 06:33:22');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `users`
+--
+
+CREATE TABLE `users` (
+  `id` int(11) NOT NULL,
+  `name` varchar(100) NOT NULL,
+  `mobile` varchar(15) NOT NULL,
+  `email` varchar(100) DEFAULT NULL,
+  `password` varchar(255) NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `users`
+--
+
+INSERT INTO `users` (`id`, `name`, `mobile`, `email`, `password`, `created_at`) VALUES
+(1, 'Admin User', '9876543210', 'supriyodas@gmail.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', '2026-07-14 03:20:05'),
+(3, 'Admin User', '96472 91299', 'skmehebubali34@gmail.com', '$2y$10$GGITBjRGqCcthD8EC0Yodewm50mdCped8VrYKX.yA8m/sSHzf6ZQK', '2026-07-14 03:24:07'),
+(4, 'Admin User', '9064292987', 'csuraj156@gmail.com', '$2y$10$Bw/gQSwmLrhHMXDTAz1MteP1DoVYGi7/AtYUNTU1EVq5/yn4P5afu', '2026-07-17 05:26:44');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `whatsapp_logs`
+--
+
+CREATE TABLE `whatsapp_logs` (
+  `id` int(11) NOT NULL,
+  `recipient_number` varchar(20) NOT NULL,
+  `recipient_name` varchar(100) DEFAULT NULL,
+  `message_type` varchar(50) DEFAULT NULL,
+  `message_content` text DEFAULT NULL,
+  `status` varchar(20) DEFAULT 'pending',
+  `api_response` text DEFAULT NULL,
+  `sent_at` timestamp NULL DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `media_file_path` text DEFAULT NULL,
+  `media_file_name` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
--- WhatsApp Templates
--- --------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `whatsapp_templates` (
-  `id` INT(11) NOT NULL AUTO_INCREMENT,
-  `template_name` VARCHAR(100) NOT NULL,
-  `template_type` VARCHAR(50) DEFAULT 'custom',
-  `message_content` TEXT NOT NULL,
-  `variables` TEXT DEFAULT NULL,
-  `status` VARCHAR(20) DEFAULT 'active',
-  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
+
+--
+-- Table structure for table `whatsapp_settings`
+--
+
+CREATE TABLE `whatsapp_settings` (
+  `id` int(11) NOT NULL,
+  `api_type` varchar(50) DEFAULT 'greenapi',
+  `api_url` varchar(255) DEFAULT NULL,
+  `api_token` varchar(255) DEFAULT NULL,
+  `instance_id` varchar(100) DEFAULT NULL,
+  `phone_number_id` varchar(100) DEFAULT NULL,
+  `access_token` text DEFAULT NULL,
+  `status` varchar(20) DEFAULT 'inactive',
+  `last_updated` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `reminder_days` int(11) DEFAULT 3
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
-INSERT IGNORE INTO `whatsapp_templates` (`id`, `template_name`, `template_type`, `message_content`, `status`) VALUES
-(1, 'Due Reminder - 7 Days', 'due_reminder', 'Dear {name}, this is a friendly reminder that you have a pending payment of Rs.{amount} from Gouri Jewellers. Please clear your dues within 7 days to avoid late fees. Thank you!', 'active'),
-(2, 'Due Reminder - 3 Days', 'due_reminder', 'URGENT: Dear {name}, your payment of Rs.{amount} at Gouri Jewellers is due in 3 days. Late payment charges may apply. Please settle at your earliest convenience.', 'active'),
-(3, 'Due Reminder - Overdue', 'due_reminder', 'OVERDUE ALERT: Dear {name}, your payment of Rs.{amount} at Gouri Jewellers is now OVERDUE by {days} days. Please make the payment immediately. Contact us for assistance.', 'active'),
-(4, 'Payment Received', 'custom', 'Dear {name}, thank you for your payment of Rs.{amount}. Your account is now up to date. Thank you for choosing Gouri Jewellers!', 'active'),
-(5, 'Festival Greeting', 'festival_greeting', 'Wishing you and your family a very Happy {festival}! Enjoy special discounts on your next purchase at Gouri Jewellers.', 'active');
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `whatsapp_templates`
+--
+
+CREATE TABLE `whatsapp_templates` (
+  `id` int(11) NOT NULL,
+  `template_name` varchar(100) NOT NULL,
+  `template_type` varchar(50) DEFAULT 'custom',
+  `message_content` text NOT NULL,
+  `variables` text DEFAULT NULL,
+  `status` varchar(20) DEFAULT 'active',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `whatsapp_templates`
+--
+
+INSERT INTO `whatsapp_templates` (`id`, `template_name`, `template_type`, `message_content`, `variables`, `status`, `created_at`) VALUES
+(1, 'Due Reminder - 7 Days', 'due_reminder', 'Dear {name}, this is a friendly reminder that you have a pending payment of ₹{amount} from Moti Jewellers. Please clear your dues within 7 days to avoid late fees. Thank you!', NULL, 'active', '2026-07-14 03:20:06'),
+(2, 'Due Reminder - 3 Days', 'due_reminder', 'URGENT: Dear {name}, your payment of ₹{amount} at Moti Jewellers is due in 3 days. Late payment charges may apply. Please settle at your earliest convenience.', NULL, 'active', '2026-07-14 03:20:06'),
+(3, 'Due Reminder - Overdue', 'due_reminder', 'OVERDUE ALERT: Dear {name}, your payment of ₹{amount} at Moti Jewellers is now OVERDUE by {days} days. Please make the payment immediately. Contact us for assistance.', NULL, 'active', '2026-07-14 03:20:06'),
+(4, 'Payment Received', 'custom', 'Dear {name}, thank you for your payment of ₹{amount}. Your account is now up to date. Thank you for choosing Moti Jewellers!', NULL, 'active', '2026-07-14 03:20:06'),
+(5, 'Festival Greeting', 'festival_greeting', 'Wishing you and your family a very Happy {festival}! Enjoy special discounts on your next purchase at Moti Jewellers.', NULL, 'active', '2026-07-14 03:20:06');
 
 -- --------------------------------------------------------
--- View: customer_due_summary
--- (Pending-payment summary per customer, used by due_list.php)
--- --------------------------------------------------------
-DROP VIEW IF EXISTS `customer_due_summary`;
-CREATE ALGORITHM=UNDEFINED SQL SECURITY DEFINER VIEW `customer_due_summary` AS
-SELECT
-  `c`.`id` AS `customer_id`,
-  `c`.`name` AS `customer_name`,
-  `c`.`mobile` AS `customer_mobile`,
-  COUNT(`i`.`id`) AS `total_invoices`,
-  SUM(`i`.`total_amount`) AS `total_due`,
-  MAX(`i`.`created_at`) AS `last_invoice_date`,
-  TO_DAYS(CURDATE()) - TO_DAYS(IFNULL(MAX(`i`.`created_at`), CURDATE())) AS `days_overdue`
-FROM `customers` `c`
-LEFT JOIN `invoices` `i` ON `c`.`mobile` = `i`.`customer_mobile`
-WHERE `i`.`payment_status` IS NULL OR `i`.`payment_status` = 'pending'
-GROUP BY `c`.`id`, `c`.`name`, `c`.`mobile`
-HAVING `total_due` > 0;
 
--- --------------------------------------------------------
--- Default admin login (mobile: 96472 91299, password: 123456)
--- Change this password after first login.
--- --------------------------------------------------------
-INSERT IGNORE INTO `users` (`name`, `mobile`, `email`, `password`) VALUES
-('Admin User', '96472 91299', 'admin@gourijewellers.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi');
+--
+-- Structure for view `customer_due_summary`
+--
+DROP TABLE IF EXISTS `customer_due_summary`;
+
+CREATE ALGORITHM=UNDEFINED DEFINER=`root`@`localhost` SQL SECURITY DEFINER VIEW `customer_due_summary`  AS SELECT `c`.`id` AS `customer_id`, `c`.`name` AS `customer_name`, `c`.`mobile` AS `customer_mobile`, count(`i`.`id`) AS `total_invoices`, sum(`i`.`total_amount`) AS `total_due`, max(`i`.`created_at`) AS `last_invoice_date`, to_days(curdate()) - to_days(ifnull(max(`i`.`created_at`),curdate())) AS `days_overdue` FROM (`customers` `c` left join `invoices` `i` on(`c`.`mobile` = `i`.`customer_mobile`)) WHERE `i`.`payment_status` is null OR `i`.`payment_status` = 'pending' GROUP BY `c`.`id`, `c`.`name`, `c`.`mobile` HAVING `total_due` > 0 ;
+
+--
+-- Indexes for dumped tables
+--
+
+--
+-- Indexes for table `advance_customers`
+--
+ALTER TABLE `advance_customers`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `customers`
+--
+ALTER TABLE `customers`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `mobile` (`mobile`);
+
+--
+-- Indexes for table `due_update_history`
+--
+ALTER TABLE `due_update_history`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `expenses`
+--
+ALTER TABLE `expenses`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_date` (`expense_date`),
+  ADD KEY `idx_category` (`category`);
+
+--
+-- Indexes for table `expense_categories`
+--
+ALTER TABLE `expense_categories`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `category_name` (`category_name`);
+
+--
+-- Indexes for table `income`
+--
+ALTER TABLE `income`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_date` (`income_date`),
+  ADD KEY `idx_category` (`category`);
+
+--
+-- Indexes for table `income_categories`
+--
+ALTER TABLE `income_categories`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `category_name` (`category_name`);
+
+--
+-- Indexes for table `invoices`
+--
+ALTER TABLE `invoices`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `invoice_no` (`invoice_no`),
+  ADD KEY `created_by` (`created_by`);
+
+--
+-- Indexes for table `invoice_items`
+--
+ALTER TABLE `invoice_items`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `invoice_id` (`invoice_id`),
+  ADD KEY `product_id` (`product_id`);
+
+--
+-- Indexes for table `otp_logins`
+--
+ALTER TABLE `otp_logins`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_email` (`email`),
+  ADD KEY `idx_otp` (`otp`);
+
+--
+-- Indexes for table `password_resets`
+--
+ALTER TABLE `password_resets`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_email` (`email`),
+  ADD KEY `idx_otp` (`otp`);
+
+--
+-- Indexes for table `products`
+--
+ALTER TABLE `products`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `serial_no` (`serial_no`);
+
+--
+-- Indexes for table `purchase_entries`
+--
+ALTER TABLE `purchase_entries`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `purchase_no` (`purchase_no`);
+
+--
+-- Indexes for table `purchase_items`
+--
+ALTER TABLE `purchase_items`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_purchase_id` (`purchase_id`);
+
+--
+-- Indexes for table `reminder_settings`
+--
+ALTER TABLE `reminder_settings`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `stock_metal`
+--
+ALTER TABLE `stock_metal`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uq_material` (`material_type`);
+
+--
+-- Indexes for table `users`
+--
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `mobile` (`mobile`);
+
+--
+-- Indexes for table `whatsapp_logs`
+--
+ALTER TABLE `whatsapp_logs`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `idx_recipient` (`recipient_number`),
+  ADD KEY `idx_status` (`status`);
+
+--
+-- Indexes for table `whatsapp_settings`
+--
+ALTER TABLE `whatsapp_settings`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `whatsapp_templates`
+--
+ALTER TABLE `whatsapp_templates`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- AUTO_INCREMENT for dumped tables
+--
+
+--
+-- AUTO_INCREMENT for table `advance_customers`
+--
+ALTER TABLE `advance_customers`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `customers`
+--
+ALTER TABLE `customers`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `due_update_history`
+--
+ALTER TABLE `due_update_history`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `expenses`
+--
+ALTER TABLE `expenses`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `expense_categories`
+--
+ALTER TABLE `expense_categories`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+
+--
+-- AUTO_INCREMENT for table `income`
+--
+ALTER TABLE `income`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `income_categories`
+--
+ALTER TABLE `income_categories`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- AUTO_INCREMENT for table `invoices`
+--
+ALTER TABLE `invoices`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
+-- AUTO_INCREMENT for table `invoice_items`
+--
+ALTER TABLE `invoice_items`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `otp_logins`
+--
+ALTER TABLE `otp_logins`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+
+--
+-- AUTO_INCREMENT for table `password_resets`
+--
+ALTER TABLE `password_resets`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `products`
+--
+ALTER TABLE `products`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
+-- AUTO_INCREMENT for table `purchase_entries`
+--
+ALTER TABLE `purchase_entries`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `purchase_items`
+--
+ALTER TABLE `purchase_items`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `reminder_settings`
+--
+ALTER TABLE `reminder_settings`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT for table `stock_metal`
+--
+ALTER TABLE `stock_metal`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+
+--
+-- AUTO_INCREMENT for table `users`
+--
+ALTER TABLE `users`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `whatsapp_logs`
+--
+ALTER TABLE `whatsapp_logs`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `whatsapp_settings`
+--
+ALTER TABLE `whatsapp_settings`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `whatsapp_templates`
+--
+ALTER TABLE `whatsapp_templates`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+
+--
+-- Constraints for dumped tables
+--
+
+--
+-- Constraints for table `invoices`
+--
+ALTER TABLE `invoices`
+  ADD CONSTRAINT `invoices_ibfk_1` FOREIGN KEY (`created_by`) REFERENCES `users` (`id`);
+
+--
+-- Constraints for table `invoice_items`
+--
+ALTER TABLE `invoice_items`
+  ADD CONSTRAINT `invoice_items_ibfk_1` FOREIGN KEY (`invoice_id`) REFERENCES `invoices` (`id`),
+  ADD CONSTRAINT `invoice_items_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`);
+
+--
+-- Constraints for table `purchase_items`
+--
+ALTER TABLE `purchase_items`
+  ADD CONSTRAINT `purchase_items_ibfk_1` FOREIGN KEY (`purchase_id`) REFERENCES `purchase_entries` (`id`);
+COMMIT;
+
+/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
+/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
+/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
