@@ -512,7 +512,7 @@ nav.nav-gold span{color:#fff!important;}
         </div>
         <div class="md:col-span-2">
             <label class="field-label">Address</label>
-            <input name="supplier_addr" class="form-input" placeholder="Vill+P.O., District, State, PIN">
+            <input name="supplier_addr" class="form-input" placeholder="India, West Bengal">
         </div>
         <div>
             <label class="field-label">GSTIN</label>
@@ -551,7 +551,7 @@ nav.nav-gold span{color:#fff!important;}
         </div>
         <div class="md:col-span-2">
             <label class="field-label">Address</label>
-            <input name="buyer_addr" class="form-input" placeholder="Hamirpur, Debra, Kharagpur, Paschim Medinipur">
+            <input name="buyer_addr" class="form-input" placeholder="India, West Bengal">
         </div>
         <div>
             <label class="field-label">PAN</label>

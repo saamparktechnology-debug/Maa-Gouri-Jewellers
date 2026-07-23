@@ -223,6 +223,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
 }
 
 // ── Fetch all invoices with a due balance ─────────────────────────────────────
+$search_term = trim($_GET['search'] ?? '');
+$search_where = "";
+if ($search_term !== '') {
+    $s = mysqli_real_escape_string($conn, $search_term);
+    $search_where = " AND (i.customer_name LIKE '%$s%' OR i.customer_mobile LIKE '%$s%' OR i.invoice_no LIKE '%$s%' OR c.email LIKE '%$s%')";
+}
+
 $q = "SELECT i.id, i.invoice_no, i.customer_name, i.customer_mobile,
              COALESCE(c.email, '') AS customer_email,
              i.balance_amount, i.due_date,
@@ -230,7 +237,7 @@ $q = "SELECT i.id, i.invoice_no, i.customer_name, i.customer_mobile,
       FROM invoices i
       LEFT JOIN invoice_items ii ON ii.invoice_id = i.id
       LEFT JOIN customers c      ON c.mobile = i.customer_mobile
-      WHERE i.balance_amount > 0
+      WHERE i.balance_amount > 0 $search_where
       GROUP BY i.id
       ORDER BY i.due_date IS NULL, i.due_date ASC, i.created_at DESC";
 
@@ -707,14 +714,36 @@ function closeSidebar() {
         <p>Pending invoices — update amount or due date, then save. Send email reminders directly.</p>
     </div>
 
-    <!-- Navigation Buttons -->
-    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center;">
-        <a href="reports.php" class="btn-back">
-            <i class="fas fa-arrow-left mr-1"></i> Back to Reports
-        </a>
-        <a href="due_list.php?action=export_due_history" onclick="showLoadingOverlay()" class="btn btn-export">
-            Export Due History
-        </a>
+    <!-- Navigation Buttons & Search Bar -->
+    <div class="mb-4 flex flex-col md:flex-row gap-3 justify-between items-stretch md:items-center">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <a href="reports.php" class="btn-back">
+                <i class="fas fa-arrow-left mr-1"></i> Back to Reports
+            </a>
+            <a href="due_list.php?action=export_due_history" onclick="showLoadingOverlay()" class="btn btn-export">
+                Export Due History
+            </a>
+        </div>
+
+        <!-- Search Bar -->
+        <form method="GET" action="due_list.php" class="flex flex-1 md:max-w-md gap-2 items-center">
+            <div class="relative flex-1">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-amber-700 pointer-events-none">
+                    <i class="fas fa-search"></i>
+                </span>
+                <input type="text" name="search" value="<?php echo htmlspecialchars($search_term); ?>"
+                    placeholder="Search customer, mobile, invoice..."
+                    class="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-yellow-600/30 focus:outline-none focus:border-amber-600 bg-white shadow-sm">
+            </div>
+            <button type="submit" class="btn-gold py-2 px-4 text-xs font-bold rounded-xl flex items-center gap-1 shadow-sm">
+                <i class="fas fa-search"></i> Search
+            </button>
+            <?php if ($search_term !== ''): ?>
+            <a href="due_list.php" class="py-2 px-3 text-xs font-bold rounded-xl border border-gray-300 text-gray-700 bg-gray-100 hover:bg-gray-200 flex items-center gap-1">
+                <i class="fas fa-times"></i> Clear
+            </a>
+            <?php endif; ?>
+        </form>
     </div>
 
     <?php if ($message): ?>

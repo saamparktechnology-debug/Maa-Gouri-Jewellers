@@ -72,17 +72,21 @@ if($has_hsn) {
     $items_sql .= "COALESCE(p.hsn, p.hsn_code, ii.hsn_code, '') AS hsn_code ";
 } elseif($has_hsn_code) {
     $items_sql .= "COALESCE(p.hsn_code, ii.hsn_code, '') AS hsn_code ";
+$col_huid_check = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'huid_code'")) > 0;
+if($col_huid_check) {
+    $items_sql = "SELECT ii.*, COALESCE(ii.product_name, p.name, p.item_name, 'Jewellery Item') AS product_name, COALESCE(ii.serial_no, p.serial_no, '') AS serial_no, COALESCE(ii.hsn_code, p.hsn_code, '') AS hsn_code, COALESCE(ii.huid_code, '') AS huid_code FROM invoice_items ii LEFT JOIN products p ON ii.product_id = p.id WHERE ii.invoice_id = " . intval($inv['id']);
 } else {
-    $items_sql .= "COALESCE(ii.hsn_code, '') AS hsn_code ";
+    $items_sql = "SELECT ii.*, COALESCE(ii.product_name, p.name, p.item_name, 'Jewellery Item') AS product_name, COALESCE(ii.serial_no, p.serial_no, '') AS serial_no, COALESCE(ii.hsn_code, p.hsn_code, '') AS hsn_code FROM invoice_items ii LEFT JOIN products p ON ii.product_id = p.id WHERE ii.invoice_id = " . intval($inv['id']);
 }
-$items_sql .= " FROM invoice_items ii LEFT JOIN products p ON ii.product_id = p.id WHERE ii.invoice_id = " . intval($inv['id']);
 $items_res = mysqli_query($conn, $items_sql);
 $items = [];
 if($items_res) {
     while($row = mysqli_fetch_assoc($items_res)) $items[] = $row;
 }
 
-$is_gst   = ($inv['gst_type'] === 'gst');
+$is_gst            = (strpos($inv['gst_type'] ?? '', 'gst') === 0 && $inv['gst_type'] !== 'non_gst');
+$gst_rate_percent  = ($inv['gst_type'] === 'gst_18') ? '18%' : ($inv['gst_type'] === 'gst_3' ? '3%' : 'GST');
+$half_rate_percent = ($inv['gst_type'] === 'gst_18') ? '9%' : '1.5%';
 $gst_total= floatval($inv['gst_amount'] ?? 0);
 $cgst     = round($gst_total / 2, 2);
 $sgst     = round($gst_total / 2, 2);
@@ -205,9 +209,9 @@ table.items tfoot td.r{text-align:right;font-weight:700;}
 
     <?php if($is_gst): ?>
     <div class="gst-strip">
-        <span>GST: <strong>Regular (3%)</strong></span>
-        <span>CGST: <strong>1.5%</strong></span>
-        <span>SGST: <strong>1.5%</strong></span>
+        <span>GST: <strong>Tax Invoice (<?php echo $gst_rate_percent; ?>)</strong></span>
+        <span>CGST: <strong><?php echo $half_rate_percent; ?></strong></span>
+        <span>SGST: <strong><?php echo $half_rate_percent; ?></strong></span>
         <?php if($gstin !== ''): ?>
         <span>Customer GSTIN: <strong><?php echo htmlspecialchars($gstin); ?></strong></span>
         <?php endif; ?>
@@ -234,7 +238,7 @@ table.items tfoot td.r{text-align:right;font-weight:700;}
                 <strong>Invoice No:</strong> <?php echo htmlspecialchars($invoice_no); ?><br>
                 <strong>Date:</strong> <?php echo $date_fmt; ?><br>
                 <strong>Payment Mode:</strong> <?php echo ucfirst($inv['payment_method'] ?? 'Cash'); ?><br>
-                <strong>Bill Type:</strong> <?php echo $is_gst ? '📄 GST (3%)' : '📋 Non-GST'; ?><br>
+                <strong>Bill Type:</strong> <?php echo $is_gst ? '📄 Tax Invoice (' . $gst_rate_percent . ')' : '📋 Non-GST'; ?><br>
                 <?php if($gstin !== ''): ?>
                 <strong>Customer GSTIN:</strong> <?php echo htmlspecialchars($gstin); ?><br>
                 <?php endif; ?>
@@ -262,13 +266,19 @@ table.items tfoot td.r{text-align:right;font-weight:700;}
             $name   = htmlspecialchars($it['product_name'] ?? 'Item');
             $serial = htmlspecialchars($it['serial_no'] ?? '—');
             $hsn    = htmlspecialchars($it['hsn_code'] ?? '7113');
+            $huid   = htmlspecialchars($it['huid_code'] ?? '');
             $qty    = floatval($it['quantity']);
             $price  = floatval($it['price']);
             $amount = floatval($it['total']);
         ?>
             <tr>
                 <td><?php echo $idx+1; ?></td>
-                <td><strong><?php echo $name; ?></strong></td>
+                <td>
+                    <strong><?php echo $name; ?></strong>
+                    <?php if(!empty($huid)): ?>
+                        <br><span style="font-size:10px;color:#059669;font-weight:600;">🏷️ HUID: <?php echo $huid; ?></span>
+                    <?php endif; ?>
+                </td>
                 <td style="font-size:10px;color:#777;"><?php echo $serial; ?></td>
                 <?php if($is_gst): ?><td><?php echo $hsn; ?></td><?php endif; ?>
                 <td class="r"><?php echo number_format($qty, 3); ?></td>
@@ -281,8 +291,8 @@ table.items tfoot td.r{text-align:right;font-weight:700;}
             <?php $colspan = $is_gst ? 5 : 4; ?>
             <tr><td colspan="<?php echo $colspan;?>"></td><td>Subtotal</td><td class="r">₹<?php echo number_format($subtotal,2);?></td></tr>
             <?php if($is_gst && $gst_total>0): ?>
-            <tr><td colspan="<?php echo $colspan;?>"></td><td>CGST (1.5%)</td><td class="r">₹<?php echo number_format($cgst,2);?></td></tr>
-            <tr><td colspan="<?php echo $colspan;?>"></td><td>SGST (1.5%)</td><td class="r">₹<?php echo number_format($sgst,2);?></td></tr>
+            <tr><td colspan="<?php echo $colspan;?>"></td><td>CGST (<?php echo $half_rate_percent; ?>)</td><td class="r">₹<?php echo number_format($cgst,2);?></td></tr>
+            <tr><td colspan="<?php echo $colspan;?>"></td><td>SGST (<?php echo $half_rate_percent; ?>)</td><td class="r">₹<?php echo number_format($sgst,2);?></td></tr>
             <?php endif; ?>
         </tfoot>
     </table>

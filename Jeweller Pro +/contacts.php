@@ -233,7 +233,7 @@ $total = count($customers);
             </div>
             <div>
                 <label style="font-size:12px;font-weight:600;color:var(--gold2);">Address</label>
-                <textarea name="address" id="fAddress" rows="2" placeholder="Customer address"></textarea>
+                <textarea name="address" id="fAddress" rows="2" placeholder="India, West Bengal"></textarea>
             </div>
             <div class="flex gap-2 pt-2">
                 <button type="button" onclick="closeModal()" class="btn flex-1 py-2 text-sm" style="background:#f3f4f6;color:#6b7280;">Cancel</button>

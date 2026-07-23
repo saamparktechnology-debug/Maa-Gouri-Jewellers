@@ -458,7 +458,8 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
             $colRow = mysqli_fetch_assoc($colRes);
             if($colRow && stripos($colRow['Type'] ?? '', 'decimal') !== false) $col_qty_decimal = true;
         }
-        if(!$col_qty_decimal) mysqli_query($conn, "ALTER TABLE invoice_items MODIFY COLUMN quantity DECIMAL(10,3) NULL");
+        $col_huid = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'huid_code'")) > 0;
+        if(!$col_huid) mysqli_query($conn, "ALTER TABLE invoice_items ADD COLUMN huid_code VARCHAR(50) NULL");
 
         if(is_array($items)) {
             foreach($items as $item) {
@@ -469,15 +470,16 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
                 $manual_name = mysqli_real_escape_string($conn, trim($item['name'] ?? $item['product'] ?? ''));
                 $manual_serial = mysqli_real_escape_string($conn, trim($item['serial'] ?? $item['serial_no'] ?? ''));
                 $manual_hsn = mysqli_real_escape_string($conn, trim($item['hsn'] ?? $item['hsn_code'] ?? ''));
+                $manual_huid = mysqli_real_escape_string($conn, trim($item['huid'] ?? $item['huid_code'] ?? ''));
 
                 if($product_id === 'other' || !is_numeric($product_id)) {
-                    $item_query = "INSERT INTO invoice_items (invoice_id, product_id, product_name, serial_no, hsn_code, quantity, price, total) VALUES ($invoice_id, NULL, '".$manual_name."', '".$manual_serial."', '".$manual_hsn."', $quantity, $price, $total)";
+                    $item_query = "INSERT INTO invoice_items (invoice_id, product_id, product_name, serial_no, hsn_code, huid_code, quantity, price, total) VALUES ($invoice_id, NULL, '".$manual_name."', '".$manual_serial."', '".$manual_hsn."', '".$manual_huid."', $quantity, $price, $total)";
                     mysqli_query($conn, $item_query);
                     continue;
                 }
                 $pid = intval($product_id);
-                $item_query = "INSERT INTO invoice_items (invoice_id, product_id, quantity, price, total)
-                               VALUES ($invoice_id, $pid, $quantity, $price, $total)";
+                $item_query = "INSERT INTO invoice_items (invoice_id, product_id, product_name, serial_no, hsn_code, huid_code, quantity, price, total)
+                               VALUES ($invoice_id, $pid, '".$manual_name."', '".$manual_serial."', '".$manual_hsn."', '".$manual_huid."', $quantity, $price, $total)";
                 mysqli_query($conn, $item_query);
                 mysqli_query($conn, "UPDATE products SET quantity = quantity - $quantity WHERE id = $pid");
             }
@@ -1181,7 +1183,7 @@ function submitPayment() {
                         <div class="sm:col-span-2">
                             <label class="block mb-1 text-sm font-semibold" style="color:#7a4e0a;">Address</label>
                             <input type="text" name="customer_address" id="customerAddress"
-                                class="jewel-input w-full rounded-lg px-3 py-2 text-sm" placeholder="Customer Address">
+                                class="jewel-input w-full rounded-lg px-3 py-2 text-sm" placeholder="India, West Bengal">
                         </div>
                         <div>
                             <label class="block mb-1 text-sm font-semibold" style="color:#7a4e0a;">Email <span style="color:#9ca3af;font-size:11px;">(Optional, required for reminder email)</span></label>
@@ -1264,6 +1266,8 @@ function submitPayment() {
                                 </select>
                                 <input type="number" id="stockQty" placeholder="GMS/Qty" step="0.001" min="0.001"
                                     class="jewel-input w-28 rounded-lg px-3 py-2 text-sm">
+                                <input type="text" id="stockHuid" placeholder="HUID (Opt)" style="text-transform:uppercase;"
+                                    class="jewel-input w-28 rounded-lg px-3 py-2 text-sm">
                                 <button type="button" onclick="addStockItem()"
                                     class="btn-gold px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">&#10133; Add</button>
                             </div>
@@ -1304,6 +1308,11 @@ function submitPayment() {
                                     <input type="number" id="catRate" placeholder="Rate (auto from shop)" step="0.01" min="0"
                                         class="jewel-input w-full rounded-lg px-3 py-2 text-sm" oninput="calculateTotal()">
                                 </div>
+                                <div class="sm:col-span-2">
+                                    <label class="block mb-1 text-xs font-semibold" style="color:#7a4e0a;">HUID Code <span style="color:#9ca3af;">(Optional)</span></label>
+                                    <input type="text" id="catHuid" placeholder="e.g. H12345" style="text-transform:uppercase;"
+                                        class="jewel-input w-full rounded-lg px-3 py-2 text-sm">
+                                </div>
                             </div>
                             <button type="button" onclick="addCategoryItem()"
                                 class="btn-gold w-full py-2 rounded-lg text-sm font-semibold">&#10133; Add Category Item</button>
@@ -1336,6 +1345,11 @@ function submitPayment() {
                                 <div>
                                     <label class="block mb-1 text-xs font-semibold" style="color:#7a4e0a;">HSN Code <span style="color:#9ca3af;">(Optional)</span></label>
                                     <input type="text" id="manualHsn" placeholder="71131910" value="71131910"
+                                        class="jewel-input w-full rounded-lg px-3 py-2 text-sm">
+                                </div>
+                                <div>
+                                    <label class="block mb-1 text-xs font-semibold" style="color:#7a4e0a;">HUID Code <span style="color:#9ca3af;">(Optional)</span></label>
+                                    <input type="text" id="manualHuid" placeholder="e.g. H12345" style="text-transform:uppercase;"
                                         class="jewel-input w-full rounded-lg px-3 py-2 text-sm">
                                 </div>
                             </div>
@@ -2318,6 +2332,7 @@ function addStockItem() {
     const select = document.getElementById('productSelect');
     const productId = select.value;
     const qty = parseFloat(document.getElementById('stockQty').value) || 0;
+    const huid = (document.getElementById('stockHuid') ? document.getElementById('stockHuid').value.trim() : '');
     if(!productId) { alert('Please select a product from the list.'); return; }
     if(qty <= 0)   { alert('Please enter a valid weight / quantity (GMS).'); return; }
     const opt = select.options[select.selectedIndex];
@@ -2337,6 +2352,7 @@ function addStockItem() {
         name: name,
         item_type: '',
         hsn: '7113',
+        huid: huid,
         quantity: qty,
         price: finalRate,
         total: parseFloat((finalRate * qty).toFixed(2)),
@@ -2345,6 +2361,7 @@ function addStockItem() {
     updateItemsList();
     calculateTotal();
     document.getElementById('stockQty').value = '';
+    if(document.getElementById('stockHuid')) document.getElementById('stockHuid').value = '';
     document.getElementById('selectedProductInfo').classList.add('hidden');
     showNotif('\u2705 Added: ' + name + ' (' + qty + ' GMS)', 'success');
 }
@@ -2391,6 +2408,7 @@ function addCategoryItem() {
     const type   = document.getElementById('itemType').value;
     const qty    = parseFloat(document.getElementById('catQty').value) || 0;
     const rate   = parseFloat(document.getElementById('catRate').value) || 0;
+    const huid   = (document.getElementById('catHuid') ? document.getElementById('catHuid').value.trim() : '');
     if(!cat)  { alert('Please select a product category.'); return; }
     if(!type) { alert('Please select an item type.'); return; }
     if(qty <= 0)  { alert('Please enter weight in GMS.'); return; }
@@ -2400,6 +2418,7 @@ function addCategoryItem() {
         name: cat + ' \u2013 ' + type,
         item_type: type,
         hsn: '7113',
+        huid: huid,
         quantity: qty,
         price: rate,
         total: parseFloat((rate * qty).toFixed(2)),
@@ -2410,6 +2429,7 @@ function addCategoryItem() {
     calculateTotal();
     document.getElementById('catQty').value  = '';
     document.getElementById('itemType').value = '';
+    if(document.getElementById('catHuid')) document.getElementById('catHuid').value = '';
     showNotif('\u2705 Added: ' + cat + ' ' + type, 'success');
 }
 
@@ -2428,6 +2448,7 @@ function addManualItem() {
     const rate  = parseFloat(document.getElementById('manualRate').value)  || 0;
     const total = parseFloat(document.getElementById('manualTotal').value) || 0;
     const hsn   = document.getElementById('manualHsn').value.trim() || '71131910';
+    const huid  = (document.getElementById('manualHuid') ? document.getElementById('manualHuid').value.trim() : '');
     if(!name)    { alert('Please enter an item description.'); return; }
     if(total <= 0) { alert('Please enter a valid total amount (\u20B9).'); return; }
     items.push({
@@ -2435,6 +2456,7 @@ function addManualItem() {
         name: name,
         item_type: '',
         hsn: hsn,
+        huid: huid,
         quantity: gms > 0 ? gms : 0,
         price: (gms > 0 && rate > 0) ? rate : 0,
         total: total,
@@ -2448,6 +2470,7 @@ function addManualItem() {
     document.getElementById('manualRate').value  = '0';
     document.getElementById('manualTotal').value = '';
     document.getElementById('manualHsn').value   = '71131910';
+    if(document.getElementById('manualHuid')) document.getElementById('manualHuid').value = '';
     showNotif('\u2705 Added: ' + name, 'success');
 }
 
@@ -2463,11 +2486,12 @@ function updateItemsList() {
         const gstChecked = item.gst_applicable ? 'checked' : '';
         const badge = item.is_manual ? '<span style="color:#9ca3af;font-size:10px;">[Manual]</span>' :
                       item.is_item_only ? '<span style="color:#b5730e;font-size:10px;">[Category]</span>' : '';
+        const huidTag = item.huid ? '<span style="color:#059669;font-size:10px;font-weight:600;"> | HUID: ' + htmlEsc(item.huid) + '</span>' : '';
         html += '<tr>' +
             '<td class="px-2 py-2 text-xs text-center" style="color:#9ca3af;">' + (idx+1) + '</td>' +
             '<td class="px-2 py-2 text-xs" style="color:#374151;">' + icon + ' ' + htmlEsc(item.name) +
                 (item.item_type ? '<span style="color:#b5730e;font-size:10px;"> [' + htmlEsc(item.item_type) + ']</span>' : '') +
-                badge + '<div style="color:#9ca3af;font-size:10px;">HSN: ' + (item.hsn || '71131910') + '</div></td>' +
+                badge + huidTag + '<div style="color:#9ca3af;font-size:10px;">HSN: ' + (item.hsn || '71131910') + '</div></td>' +
             '<td class="px-2 py-2 text-center text-xs" style="color:#6b7280;">' + (item.quantity > 0 ? item.quantity : '\u2014') + '</td>' +
             '<td class="px-2 py-2 text-right text-xs" style="color:#374151;">' + (item.price > 0 ? '\u20B9' + item.price.toFixed(2) : '\u2014') + '</td>' +
             '<td class="px-2 py-2 text-right text-xs font-semibold" style="color:#7a4e0a;">\u20B9' + item.total.toFixed(2) + '</td>' +
