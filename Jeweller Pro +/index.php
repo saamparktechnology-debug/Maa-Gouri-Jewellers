@@ -108,8 +108,14 @@ if($is_logged_in) {
     $total_sales = $total_sales_row['total'] ?? 0;
 
     // Today's sales (Includes new billing invoices + due payments cleared today)
-    $today_sales_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT (SELECT COALESCE(SUM(total_amount), 0) FROM invoices WHERE DATE(created_at) = CURDATE()) + (SELECT COALESCE(SUM(amount_paid), 0) FROM due_update_history WHERE DATE(payment_date) = CURDATE()) as total"));
-    $today_sales_amt = $today_sales_row['total'] ?? 0;
+    $today_due_cleared = 0;
+    $due_chk = mysqli_query($conn, "SHOW TABLES LIKE 'due_update_history'");
+    if($due_chk && mysqli_num_rows($due_chk) > 0) {
+        $due_cleared_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(amount_paid), 0) as total FROM due_update_history WHERE DATE(payment_date) = CURDATE()"));
+        $today_due_cleared = floatval($due_cleared_row['total'] ?? 0);
+    }
+    $today_inv_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(total_amount), 0) as total FROM invoices WHERE DATE(created_at) = CURDATE()"));
+    $today_sales_amt = floatval($today_inv_row['total'] ?? 0) + $today_due_cleared;
 
     // Today's invoice count
     $today_invoice_count_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM invoices WHERE DATE(created_at) = CURDATE()"));
@@ -1268,7 +1274,14 @@ if($is_logged_in) {
         <?php
         $products_count = $conn->query("SELECT COUNT(*) as total FROM products")->fetch_assoc();
         $stock_value    = $conn->query("SELECT SUM(price * quantity) as total FROM products")->fetch_assoc();
-        $today_sales    = $conn->query("SELECT (SELECT COALESCE(SUM(total_amount), 0) FROM invoices WHERE DATE(created_at) = CURDATE()) + (SELECT COALESCE(SUM(amount_paid), 0) FROM due_update_history WHERE DATE(payment_date) = CURDATE()) as total")->fetch_assoc();
+        $today_due_cleared_stat = 0;
+        $due_chk_stat = $conn->query("SHOW TABLES LIKE 'due_update_history'");
+        if($due_chk_stat && $due_chk_stat->num_rows > 0) {
+            $due_cleared_row_stat = $conn->query("SELECT COALESCE(SUM(amount_paid), 0) as total FROM due_update_history WHERE DATE(payment_date) = CURDATE()")->fetch_assoc();
+            $today_due_cleared_stat = floatval($due_cleared_row_stat['total'] ?? 0);
+        }
+        $today_inv_row_stat = $conn->query("SELECT COALESCE(SUM(total_amount), 0) as total FROM invoices WHERE DATE(created_at) = CURDATE()")->fetch_assoc();
+        $today_sales = ['total' => floatval($today_inv_row_stat['total'] ?? 0) + $today_due_cleared_stat];
         $customers_count = $conn->query("SELECT COUNT(*) as total FROM customers")->fetch_assoc();
         ?>
         <div class="stat-gem p-5">

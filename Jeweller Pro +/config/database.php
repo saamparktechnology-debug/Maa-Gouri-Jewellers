@@ -351,6 +351,146 @@ foreach (['Gold', 'Silver', 'Diamond', 'Platinum'] as $m) {
     mysqli_query($conn, "INSERT IGNORE INTO stock_metal (material_type, qty_available) VALUES ('$m', 0)");
 }
 
+// Ensure due_update_history table exists
+$create_due_history = "CREATE TABLE IF NOT EXISTS due_update_history (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    invoice_id INT NOT NULL,
+    previous_balance DECIMAL(10,2) NOT NULL,
+    new_balance DECIMAL(10,2) NOT NULL,
+    amount_paid DECIMAL(10,2) NOT NULL,
+    payment_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    payment_mode VARCHAR(50) DEFAULT 'Cash'
+)";
+mysqli_query($conn, $create_due_history);
+
+$chkModeCol = mysqli_query($conn, "SHOW COLUMNS FROM due_update_history LIKE 'payment_mode'");
+if ($chkModeCol && mysqli_num_rows($chkModeCol) == 0) {
+    @mysqli_query($conn, "ALTER TABLE due_update_history ADD COLUMN payment_mode VARCHAR(50) DEFAULT 'Cash'");
+}
+
+// Ensure income and expenses tables exist
+$create_income = "CREATE TABLE IF NOT EXISTS income (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    income_date DATE NOT NULL,
+    source VARCHAR(100) NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    description TEXT NULL,
+    payment_method VARCHAR(30) DEFAULT 'cash',
+    invoice_no VARCHAR(50) NULL,
+    created_by INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)";
+mysqli_query($conn, $create_income);
+
+$create_expenses = "CREATE TABLE IF NOT EXISTS expenses (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    expense_date DATE NOT NULL,
+    category VARCHAR(50) NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    description TEXT NULL,
+    payment_method VARCHAR(30) DEFAULT 'cash',
+    bill_no VARCHAR(50) NULL,
+    vendor_name VARCHAR(100) NULL,
+    created_by INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)";
+mysqli_query($conn, $create_expenses);
+
+// Ensure income_categories and expense_categories exist
+$create_income_cat = "CREATE TABLE IF NOT EXISTS income_categories (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    category_name VARCHAR(50) UNIQUE NOT NULL,
+    status VARCHAR(20) DEFAULT 'active'
+)";
+mysqli_query($conn, $create_income_cat);
+
+$create_expense_cat = "CREATE TABLE IF NOT EXISTS expense_categories (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    category_name VARCHAR(50) UNIQUE NOT NULL,
+    status VARCHAR(20) DEFAULT 'active'
+)";
+mysqli_query($conn, $create_expense_cat);
+
+// Seed default categories if empty
+$chk_inc_cat = mysqli_query($conn, "SELECT COUNT(*) as cnt FROM income_categories");
+if ($chk_inc_cat && ($row_cat = mysqli_fetch_assoc($chk_inc_cat)) && ($row_cat['cnt'] ?? 0) == 0) {
+    foreach (['Sales Income', 'Interest Income', 'Rental Income', 'Commission Income', 'Other Income'] as $c) {
+        mysqli_query($conn, "INSERT IGNORE INTO income_categories (category_name) VALUES ('$c')");
+    }
+}
+$chk_exp_cat = mysqli_query($conn, "SELECT COUNT(*) as cnt FROM expense_categories");
+if ($chk_exp_cat && ($row_cat = mysqli_fetch_assoc($chk_exp_cat)) && ($row_cat['cnt'] ?? 0) == 0) {
+    foreach (['Purchase', 'Rent', 'Electricity Bill', 'Salary', 'Marketing', 'Maintenance', 'Tax Payment', 'Transportation', 'Other Expenses'] as $c) {
+        mysqli_query($conn, "INSERT IGNORE INTO expense_categories (category_name) VALUES ('$c')");
+    }
+}
+
+// Ensure advance_customers table exists
+$create_advance_customers = "CREATE TABLE IF NOT EXISTS advance_customers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT NULL,
+    customer_name VARCHAR(100) NULL,
+    customer_mobile VARCHAR(15) NULL,
+    advance_amount DECIMAL(10,2) DEFAULT 0.00,
+    advance_date DATE NULL,
+    due_date DATE NULL,
+    reminder_days INT DEFAULT 3,
+    status VARCHAR(20) DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)";
+mysqli_query($conn, $create_advance_customers);
+
+// Ensure whatsapp tables exist
+$create_whatsapp_settings = "CREATE TABLE IF NOT EXISTS whatsapp_settings (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    api_type VARCHAR(50) DEFAULT 'greenapi',
+    api_url VARCHAR(255) NULL,
+    api_token VARCHAR(255) NULL,
+    instance_id VARCHAR(100) NULL,
+    phone_number_id VARCHAR(100) NULL,
+    access_token TEXT NULL,
+    status VARCHAR(20) DEFAULT 'inactive',
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    reminder_days INT DEFAULT 3
+)";
+mysqli_query($conn, $create_whatsapp_settings);
+
+$create_whatsapp_logs = "CREATE TABLE IF NOT EXISTS whatsapp_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    recipient_number VARCHAR(20) NOT NULL,
+    recipient_name VARCHAR(100) NULL,
+    message_type VARCHAR(50) NULL,
+    message_content TEXT NULL,
+    status VARCHAR(20) DEFAULT 'pending',
+    api_response TEXT NULL,
+    sent_at TIMESTAMP NULL DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    media_file_path TEXT NULL,
+    media_file_name VARCHAR(255) NULL
+)";
+mysqli_query($conn, $create_whatsapp_logs);
+
+$create_otp_logins = "CREATE TABLE IF NOT EXISTS otp_logins (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(100) NOT NULL,
+    otp VARCHAR(6) NOT NULL,
+    expires_at DATETIME NOT NULL,
+    is_used TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)";
+mysqli_query($conn, $create_otp_logins);
+
+$create_password_resets = "CREATE TABLE IF NOT EXISTS password_resets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(100) NOT NULL,
+    otp VARCHAR(6) NOT NULL,
+    expires_at DATETIME NOT NULL,
+    is_used TINYINT(1) DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)";
+mysqli_query($conn, $create_password_resets);
+
 // Set session user if needed
 if(isset($_SESSION['user_id'])) {
     $check = mysqli_query($conn, "SELECT id FROM users WHERE id = '{$_SESSION['user_id']}'");
@@ -362,3 +502,4 @@ if(isset($_SESSION['user_id'])) {
         $_SESSION['user_mobile'] = '9647291299';
     }
 }
+
