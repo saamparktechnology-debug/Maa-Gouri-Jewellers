@@ -1380,10 +1380,18 @@ function submitPayment() {
                             <h4 class="text-xs font-bold mb-2" style="color:#7a4e0a;">Additional Details for this Item</h4>
                             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                                 <div>
-                                    <label class="block mb-1 text-xs font-semibold" style="color:#7a4e0a;">Making Charge (%)</label>
-                                    <input type="number" id="itemMakingCharge" value="" step="0.1" min="0" placeholder="0" class="jewel-input w-full rounded-lg px-2 py-1 text-sm" oninput="updateMakingChargeHint()">
-                                    <div id="itemMakingChargeHint" class="text-xs mt-0.5" style="color:#059669;font-weight:600;display:none;"></div>
-                                </div>
+                                     <div class="flex items-center justify-between mb-1">
+                                         <label id="mcLabel" class="text-xs font-semibold" style="color:#7a4e0a;">Making Charge (%)</label>
+                                         <button type="button" id="mcToggleBtn" onclick="toggleMcMode()" class="px-1.5 py-0.5 text-xs font-bold rounded bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200 transition-all flex items-center gap-1 shadow-sm cursor-pointer whitespace-nowrap">
+                                             <i class="fas fa-exchange-alt text-amber-700"></i> <span id="mcToggleBtnText">Direct (₹)</span>
+                                         </button>
+                                     </div>
+                                     <div class="relative">
+                                         <input type="number" id="itemMakingCharge" value="" step="0.1" min="0" placeholder="0" class="jewel-input w-full rounded-lg px-2 py-1 text-sm font-semibold pr-6" oninput="updateMakingChargeHint()">
+                                         <span id="mcUnitSuffix" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-bold text-amber-700 pointer-events-none">%</span>
+                                     </div>
+                                     <div id="itemMakingChargeHint" class="text-xs mt-1 font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200" style="display:none;"></div>
+                                 </div>
                                 <div>
                                     <label class="block mb-1 text-xs font-semibold" style="color:#7a4e0a;">Hallmark (₹)</label>
                                     <input type="number" id="itemHallmark" value="" step="1" min="0" placeholder="0" class="jewel-input w-full rounded-lg px-2 py-1 text-sm">
@@ -2062,10 +2070,34 @@ function onGramItemTypeChange() {
     statusDiv.classList.remove('hidden');
 }
 
+let currentMcMode = 'pct'; // 'pct' or 'direct'
+
+function toggleMcMode() {
+    const label = document.getElementById('mcLabel');
+    const btnText = document.getElementById('mcToggleBtnText');
+    const suffix = document.getElementById('mcUnitSuffix');
+    const input = document.getElementById('itemMakingCharge');
+
+    if (currentMcMode === 'pct') {
+        currentMcMode = 'direct';
+        if (label) label.textContent = 'Making Charge (₹)';
+        if (btnText) btnText.textContent = 'Percentage (%)';
+        if (suffix) suffix.textContent = '₹';
+        if (input) { input.step = '1'; input.placeholder = 'e.g. 500'; }
+    } else {
+        currentMcMode = 'pct';
+        if (label) label.textContent = 'Making Charge (%)';
+        if (btnText) btnText.textContent = 'Direct (₹)';
+        if (suffix) suffix.textContent = '%';
+        if (input) { input.step = '0.1'; input.placeholder = 'e.g. 12'; }
+    }
+    updateMakingChargeHint();
+}
+
 function updateMakingChargeHint() {
     const hintEl = document.getElementById('itemMakingChargeHint');
     if(!hintEl) return;
-    const imcPct = parseFloat(document.getElementById('itemMakingCharge').value) || 0;
+    const inputVal = parseFloat(document.getElementById('itemMakingCharge').value) || 0;
     
     let baseAmount = 0;
     if (typeof currentMainTab === 'undefined' || currentMainTab === 'gram') {
@@ -2074,7 +2106,11 @@ function updateMakingChargeHint() {
         let weight = parseFloat(document.getElementById('gramWeight')?.value) || 0;
         const rate10g = parseFloat(document.getElementById('gramRate')?.value) || 0;
         const qty = parseFloat(document.getElementById('gramQty')?.value) || 1;
-        baseAmount = weight * (rate10g / 10) * qty;
+        if (weight > 0) {
+            baseAmount = weight * (rate10g / 10) * qty;
+        } else {
+            baseAmount = qty * rate10g;
+        }
     } else {
         const checkedRadio = document.querySelector('input[name="qty_source"]:checked');
         const source = checkedRadio ? checkedRadio.value : (typeof currentQtySource !== 'undefined' ? currentQtySource : 'stock');
@@ -2086,10 +2122,16 @@ function updateMakingChargeHint() {
         baseAmount = qty * rate;
     }
     
-    if (imcPct > 0 && baseAmount > 0) {
-        const mcAmt = baseAmount * (imcPct / 100);
-        hintEl.textContent = '= \u20B9' + mcAmt.toFixed(2);
-        hintEl.style.display = 'block';
+    if (inputVal > 0) {
+        if (currentMcMode === 'pct') {
+            const mcAmt = baseAmount > 0 ? baseAmount * (inputVal / 100) : 0;
+            hintEl.textContent = '= \u20B9' + mcAmt.toFixed(2);
+            hintEl.style.display = 'block';
+        } else {
+            const mcPct = baseAmount > 0 ? (inputVal / baseAmount) * 100 : 0;
+            hintEl.textContent = baseAmount > 0 ? '= ' + mcPct.toFixed(2) + '%' : 'Direct \u20B9' + inputVal.toFixed(2);
+            hintEl.style.display = 'block';
+        }
     } else {
         hintEl.textContent = '';
         hintEl.style.display = 'none';
@@ -2214,12 +2256,22 @@ function submitGramItem() {
         itemPrice = rate10g;
     }
     
-    const imcPct = parseFloat(document.getElementById('itemMakingCharge').value) || 0;
-    const imc = parseFloat((baseAmount * (imcPct / 100)).toFixed(2));
+    const mcInputVal = parseFloat(document.getElementById('itemMakingCharge').value) || 0;
+    let imcPct = 0;
+    let imcAmt = 0;
+
+    if (currentMcMode === 'pct') {
+        imcPct = mcInputVal;
+        imcAmt = parseFloat((baseAmount * (mcInputVal / 100)).toFixed(2));
+    } else {
+        imcAmt = mcInputVal;
+        imcPct = baseAmount > 0 ? parseFloat(((mcInputVal / baseAmount) * 100).toFixed(2)) : 0;
+    }
+
     const ihm = parseFloat(document.getElementById('itemHallmark').value) || 0;
     const idisc = parseFloat(document.getElementById('itemDiscount').value) || 0;
     const igst = document.getElementById('itemGstType').value;
-    const itemTotal = parseFloat((baseAmount + imc + ihm - idisc).toFixed(2));
+    const itemTotal = parseFloat((baseAmount + imcAmt + ihm - idisc).toFixed(2));
     
     const inputHuid = document.getElementById('manualHuid') ? document.getElementById('manualHuid').value.trim() : '';
 
@@ -2234,8 +2286,9 @@ function submitGramItem() {
         stock_deduct: qty,
         price: itemPrice,
         base_amount: baseAmount,
+        mc_mode: currentMcMode,
         making_charge_pct: imcPct,
-        making_charge: imc,
+        making_charge: imcAmt,
         hallmark: ihm,
         discount: idisc,
         total: itemTotal,
@@ -2531,11 +2584,18 @@ function populateStockSelects() {
     filterGramStock('');
     filterQtyStock('');
 }
-function resetItemCharges() {
+   function resetItemCharges() {
     document.getElementById('itemMakingCharge').value = '';
     document.getElementById('itemHallmark').value = '';
     document.getElementById('itemDiscount').value = '';
     document.getElementById('itemGstType').value = 'non_gst';
+    currentMcMode = 'pct';
+    const label = document.getElementById('mcLabel');
+    const btnText = document.getElementById('mcToggleBtnText');
+    const suffix = document.getElementById('mcUnitSuffix');
+    if (label) label.textContent = 'Making Charge (%)';
+    if (btnText) btnText.textContent = 'Direct (₹)';
+    if (suffix) suffix.textContent = '%';
     const hint = document.getElementById('itemMakingChargeHint');
     if(hint) { hint.textContent = ''; hint.style.display = 'none'; }
 }
@@ -2566,14 +2626,14 @@ function updateItemsList() {
         const badge = item.is_manual ? '<span style="color:#9ca3af;font-size:10px;">[Manual]</span>' :
                       item.is_item_only ? '<span style="color:#b5730e;font-size:10px;">[Category]</span>' : '';
         const base = (item.base_amount !== undefined) ? item.base_amount : (item.price * item.quantity);
-        let mcPct = item.making_charge_pct;
-        if (mcPct === undefined || mcPct === null) {
-            mcPct = (base > 0 && item.making_charge) ? parseFloat((item.making_charge / base * 100).toFixed(2)) : 0;
-        }
-        const mcAmt = item.making_charge || 0;
+        let mcPct = item.making_charge_pct || 0;
+        let mcAmt = item.making_charge || 0;
+        const mcMode = item.mc_mode || 'pct';
+        const mcInputVal = (mcMode === 'direct') ? (mcAmt > 0 ? mcAmt : '') : (mcPct > 0 ? mcPct : '');
+        const mcSubDisp = (mcMode === 'direct') ? (mcPct > 0 ? '(' + mcPct.toFixed(1) + '%)' : '') : (mcAmt > 0 ? '(\u20B9' + mcAmt.toFixed(2) + ')' : '');
+
         const hm = item.hallmark || 0;
         const disc = item.discount || 0;
-        const mcValDisp = (mcPct > 0) ? mcPct : '';
         const hmValDisp = (hm > 0) ? hm : '';
         const discValDisp = (disc > 0) ? disc : '';
         const chargeInputStyle = 'width:60px;padding:3px 4px;border:1px solid #e5c98a;border-radius:5px;font-size:11px;text-align:right;';
@@ -2586,8 +2646,8 @@ function updateItemsList() {
             '<td class="px-2 py-2 text-right text-xs" style="color:#374151;">' + (item.price > 0 ? '\u20B9' + item.price.toFixed(2) : '\u2014') + '</td>' +
             '<td class="px-2 py-2 text-right text-xs" style="color:#374151;">\u20B9' + base.toFixed(2) + '</td>' +
             '<td class="px-2 py-2 text-right text-xs">' +
-                '<input type="number" min="0" step="0.1" value="' + mcValDisp + '" placeholder="0" style="' + chargeInputStyle + '" onchange="updateItemCharge(' + idx + ',\'making_charge_pct\',this.value)">' +
-                '<div style="font-size:9.5px;color:#059669;font-weight:600;margin-top:1px;">(\u20B9' + mcAmt.toFixed(2) + ')</div>' +
+                '<input type="number" min="0" step="' + (mcMode === 'direct' ? '1' : '0.1') + '" value="' + mcInputVal + '" placeholder="0" style="' + chargeInputStyle + '" onchange="updateItemCharge(' + idx + ',\'' + (mcMode === 'direct' ? 'making_charge' : 'making_charge_pct') + '\',this.value)">' +
+                '<div style="font-size:9.5px;color:#059669;font-weight:600;margin-top:1px;">' + mcSubDisp + '</div>' +
             '</td>' +
             '<td class="px-2 py-2 text-right text-xs"><input type="number" min="0" step="1" value="' + hmValDisp + '" placeholder="0" style="' + chargeInputStyle + '" onchange="updateItemCharge(' + idx + ',\'hallmark\',this.value)"></td>' +
             '<td class="px-2 py-2 text-right text-xs"><input type="number" min="0" step="1" value="' + discValDisp + '" placeholder="0" style="' + chargeInputStyle + '" onchange="updateItemCharge(' + idx + ',\'discount\',this.value)"></td>' +
