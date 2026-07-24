@@ -29,7 +29,7 @@ foreach ($possible_sockets as $sock) {
 }
 
 // Passwords to attempt if primary fails
-$passwords_to_try = array_unique(array_filter([$password, '', 'RootPaas123', 'root', '123456'], function($val) { return $val !== null; }));
+$passwords_to_try = array_unique(array_filter([$password, '', 'RootPass123', 'RootPaas123', 'root', '123456'], function($val) { return $val !== null; }));
 
 foreach ($targets as $t) {
     foreach ($passwords_to_try as $p) {
