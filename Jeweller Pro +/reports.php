@@ -428,16 +428,21 @@ $unpaid_customers = mysqli_query($conn, "SELECT invoice_no, customer_name, custo
 $unpaid_rows = [];
 while($r = mysqli_fetch_assoc($unpaid_customers)) $unpaid_rows[] = $r;
 
-// GST summary
 $gst_month = mysqli_real_escape_string($conn, $_GET['gst_month'] ?? date('Y-m'));
 $gst_month_where = $gst_month ? "WHERE DATE_FORMAT(created_at,'%Y-%m') = '$gst_month'" : '';
 $gst_summary = mysqli_fetch_assoc(mysqli_query($conn, "
     SELECT
-        SUM(CASE WHEN gst_type LIKE 'gst%'  THEN 1 ELSE 0 END) as gst_count,
-        SUM(CASE WHEN gst_type NOT LIKE 'gst%' THEN 1 ELSE 0 END) as nongst_count,
-        SUM(CASE WHEN gst_type LIKE 'gst%'  THEN total_amount ELSE 0 END) as gst_taxable_total,
-        SUM(CASE WHEN gst_type NOT LIKE 'gst%' THEN total_amount ELSE 0 END) as nongst_amt,
-        SUM(CASE WHEN gst_type LIKE 'gst%'  THEN gst_amount   ELSE 0 END) as actual_gst_collected
+        SUM(CASE WHEN (gst_type LIKE 'gst%' OR gst_amount > 0) THEN 1 ELSE 0 END) as gst_count,
+        SUM(CASE WHEN (gst_type NOT LIKE 'gst%' AND (gst_amount IS NULL OR gst_amount = 0)) THEN 1 ELSE 0 END) as nongst_count,
+        SUM(CASE WHEN (gst_type LIKE 'gst%' OR gst_amount > 0) THEN (total_amount - COALESCE(gst_amount, 0)) ELSE 0 END) as gst_taxable_total,
+        SUM(CASE WHEN (gst_type NOT LIKE 'gst%' AND (gst_amount IS NULL OR gst_amount = 0)) THEN total_amount ELSE 0 END) as nongst_amt,
+        SUM(CASE WHEN (gst_type LIKE 'gst%' OR gst_amount > 0) THEN gst_amount ELSE 0 END) as actual_gst_collected,
+        SUM(CASE WHEN ((gst_type LIKE 'gst%' OR gst_amount > 0) AND NOT (gst_type = 'gst_18' OR (total_amount - gst_amount > 0 AND (gst_amount / (total_amount - gst_amount)) > 0.10))) THEN 1 ELSE 0 END) as gst_3_count,
+        SUM(CASE WHEN ((gst_type LIKE 'gst%' OR gst_amount > 0) AND NOT (gst_type = 'gst_18' OR (total_amount - gst_amount > 0 AND (gst_amount / (total_amount - gst_amount)) > 0.10))) THEN (total_amount - COALESCE(gst_amount, 0)) ELSE 0 END) as gst_3_taxable,
+        SUM(CASE WHEN ((gst_type LIKE 'gst%' OR gst_amount > 0) AND NOT (gst_type = 'gst_18' OR (total_amount - gst_amount > 0 AND (gst_amount / (total_amount - gst_amount)) > 0.10))) THEN gst_amount ELSE 0 END) as gst_3_amt,
+        SUM(CASE WHEN ((gst_type LIKE 'gst%' OR gst_amount > 0) AND (gst_type = 'gst_18' OR (total_amount - gst_amount > 0 AND (gst_amount / (total_amount - gst_amount)) > 0.10))) THEN 1 ELSE 0 END) as gst_18_count,
+        SUM(CASE WHEN ((gst_type LIKE 'gst%' OR gst_amount > 0) AND (gst_type = 'gst_18' OR (total_amount - gst_amount > 0 AND (gst_amount / (total_amount - gst_amount)) > 0.10))) THEN (total_amount - COALESCE(gst_amount, 0)) ELSE 0 END) as gst_18_taxable,
+        SUM(CASE WHEN ((gst_type LIKE 'gst%' OR gst_amount > 0) AND (gst_type = 'gst_18' OR (total_amount - gst_amount > 0 AND (gst_amount / (total_amount - gst_amount)) > 0.10))) THEN gst_amount ELSE 0 END) as gst_18_amt
     FROM invoices $gst_month_where
 "));
 
@@ -453,8 +458,10 @@ if($filter_from)   $where_clauses[] = "DATE(created_at) >= '$filter_from'";
 if($filter_to)     $where_clauses[] = "DATE(created_at) <= '$filter_to'";
 if($filter_name)   $where_clauses[] = "(customer_name LIKE '%$filter_name%' OR customer_mobile LIKE '%$filter_name%')";
 if($filter_status) $where_clauses[] = "payment_status = '$filter_status'";
-if($filter_gst === 'gst')     $where_clauses[] = "gst_type LIKE 'gst%'";
-if($filter_gst === 'non_gst') $where_clauses[] = "gst_type NOT LIKE 'gst%'";
+if($filter_gst === 'gst')       $where_clauses[] = "(gst_type LIKE 'gst%' OR gst_amount > 0)";
+if($filter_gst === 'gst_3')     $where_clauses[] = "((gst_type LIKE 'gst%' OR gst_amount > 0) AND NOT (gst_type = 'gst_18' OR (total_amount - gst_amount > 0 AND (gst_amount / (total_amount - gst_amount)) > 0.10)))";
+if($filter_gst === 'gst_18')    $where_clauses[] = "((gst_type LIKE 'gst%' OR gst_amount > 0) AND (gst_type = 'gst_18' OR (total_amount - gst_amount > 0 AND (gst_amount / (total_amount - gst_amount)) > 0.10)))";
+if($filter_gst === 'non_gst')   $where_clauses[] = "(gst_type NOT LIKE 'gst%' AND (gst_amount IS NULL OR gst_amount = 0))";
 $where_sql = $where_clauses ? 'WHERE ' . implode(' AND ', $where_clauses) : '';
 
 // customer_gstin column exists directly in invoices table

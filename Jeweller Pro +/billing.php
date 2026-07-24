@@ -337,7 +337,11 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
     $customer_mobile  = mysqli_real_escape_string($conn, $_POST['customer_mobile']);
     $customer_address = mysqli_real_escape_string($conn, $_POST['customer_address'] ?? '');
     $customer_email   = mysqli_real_escape_string($conn, $_POST['customer_email'] ?? '');
+    $gst_amount       = floatval($_POST['gst_amount'] ?? 0);
     $raw_gst_type     = strtolower(trim($_POST['gst_type'] ?? 'non_gst'));
+    if ($gst_amount > 0 && ($raw_gst_type === 'non_gst' || empty($raw_gst_type))) {
+        $raw_gst_type = 'gst_3';
+    }
     $gst_type         = mysqli_real_escape_string($conn, $raw_gst_type);
     $subtotal         = floatval($_POST['subtotal']);
     $making_charge    = floatval($_POST['making_charge'] ?? 0);
