@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'config/database.php';
+require_once 'config/company_config.php';
 
 if(!isset($_SESSION['user_id'])) {
     header("Location: login.php");
@@ -8,11 +9,6 @@ if(!isset($_SESSION['user_id'])) {
 }
 
 // Create/alter tables
-$check_column = mysqli_query($conn, "SHOW COLUMNS FROM whatsapp_settings LIKE 'reminder_days'");
-if(mysqli_num_rows($check_column) == 0) {
-    mysqli_query($conn, "ALTER TABLE whatsapp_settings ADD COLUMN reminder_days INT DEFAULT 3");
-}
-
 mysqli_query($conn, "CREATE TABLE IF NOT EXISTS whatsapp_settings (
     id INT AUTO_INCREMENT PRIMARY KEY,
     api_type VARCHAR(50) DEFAULT 'greenapi',
@@ -23,6 +19,11 @@ mysqli_query($conn, "CREATE TABLE IF NOT EXISTS whatsapp_settings (
     status VARCHAR(20) DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )");
+
+$check_column = mysqli_query($conn, "SHOW COLUMNS FROM whatsapp_settings LIKE 'reminder_days'");
+if($check_column && mysqli_num_rows($check_column) == 0) {
+    mysqli_query($conn, "ALTER TABLE whatsapp_settings ADD COLUMN reminder_days INT DEFAULT 3");
+}
 
 mysqli_query($conn, "CREATE TABLE IF NOT EXISTS whatsapp_logs (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -52,16 +53,77 @@ mysqli_query($conn, "CREATE TABLE IF NOT EXISTS advance_customers (
     customer_id INT,
     customer_name VARCHAR(100),
     customer_mobile VARCHAR(15),
+    mobile VARCHAR(15),
     advance_amount DECIMAL(10,2) DEFAULT 0,
+    balance DECIMAL(10,2) DEFAULT 0,
     advance_date DATE,
     due_date DATE,
     reminder_days INT DEFAULT 3,
+    notes TEXT,
     status VARCHAR(20) DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )");
 
+function ensureAdvanceCustomersSchema($conn) {
+    $cols = [];
+    $res = mysqli_query($conn, "SHOW COLUMNS FROM advance_customers");
+    if($res) {
+        while($row = mysqli_fetch_assoc($res)) $cols[$row['Field']] = true;
+    }
+
+    $add = [];
+    if(!isset($cols['customer_id']))      $add[] = "ADD COLUMN customer_id INT";
+    if(!isset($cols['customer_mobile']))  $add[] = "ADD COLUMN customer_mobile VARCHAR(15)";
+    if(!isset($cols['mobile']))           $add[] = "ADD COLUMN mobile VARCHAR(15)";
+    if(!isset($cols['advance_amount']))   $add[] = "ADD COLUMN advance_amount DECIMAL(10,2) DEFAULT 0";
+    if(!isset($cols['balance']))          $add[] = "ADD COLUMN balance DECIMAL(10,2) DEFAULT 0";
+    if(!isset($cols['advance_date']))     $add[] = "ADD COLUMN advance_date DATE";
+    if(!isset($cols['due_date']))         $add[] = "ADD COLUMN due_date DATE";
+    if(!isset($cols['reminder_days']))    $add[] = "ADD COLUMN reminder_days INT DEFAULT 3";
+    if(!isset($cols['notes']))            $add[] = "ADD COLUMN notes TEXT";
+    if(!isset($cols['status']))           $add[] = "ADD COLUMN status VARCHAR(20) DEFAULT 'active'";
+
+    foreach($add as $alter) {
+        mysqli_query($conn, "ALTER TABLE advance_customers $alter");
+    }
+
+    mysqli_query($conn, "UPDATE advance_customers SET customer_mobile = COALESCE(customer_mobile, mobile) WHERE TRIM(COALESCE(customer_mobile, '')) = '' AND TRIM(COALESCE(mobile, '')) <> ''");
+    mysqli_query($conn, "UPDATE advance_customers SET mobile = COALESCE(mobile, customer_mobile) WHERE TRIM(COALESCE(mobile, '')) = '' AND TRIM(COALESCE(customer_mobile, '')) <> ''");
+    mysqli_query($conn, "UPDATE advance_customers SET advance_amount = COALESCE(advance_amount, balance) WHERE COALESCE(advance_amount, 0) = 0 AND COALESCE(balance, 0) > 0");
+    mysqli_query($conn, "UPDATE advance_customers SET balance = COALESCE(balance, advance_amount) WHERE COALESCE(balance, 0) = 0 AND COALESCE(advance_amount, 0) > 0");
+    mysqli_query($conn, "UPDATE advance_customers SET status = COALESCE(status, 'active') WHERE status IS NULL OR status = ''");
+}
+
+ensureAdvanceCustomersSchema($conn);
+
 $upload_dir = 'uploads/whatsapp_media/';
 if(!file_exists($upload_dir)) mkdir($upload_dir, 0777, true);
+
+function syncAdvanceCustomersFromInvoices($conn) {
+    $sql = "INSERT INTO advance_customers (customer_id, customer_name, customer_mobile, mobile, advance_amount, balance, advance_date, due_date, reminder_days, status)
+            SELECT i.id,
+                   i.customer_name,
+                   i.customer_mobile,
+                   i.customer_mobile,
+                   COALESCE(i.balance_amount, 0),
+                   COALESCE(i.balance_amount, 0),
+                   DATE(i.created_at),
+                   COALESCE(i.due_date, DATE(i.created_at)),
+                   3,
+                   'active'
+            FROM invoices i
+            WHERE i.payment_status IN ('part', 'unpaid')
+              AND COALESCE(i.balance_amount, 0) > 0
+              AND TRIM(COALESCE(i.customer_mobile, '')) <> ''
+              AND NOT EXISTS (
+                  SELECT 1
+                  FROM advance_customers a
+                  WHERE COALESCE(a.customer_mobile, a.mobile) = i.customer_mobile
+                    AND COALESCE(a.due_date, DATE(a.advance_date)) = COALESCE(i.due_date, DATE(i.created_at))
+                    AND COALESCE(a.advance_amount, a.balance, 0) = COALESCE(i.balance_amount, 0)
+              )";
+    mysqli_query($conn, $sql);
+}
 
 function sendWhatsAppMessage($phone, $message, $conn, $mediaFile = null, $mediaType = 'text') {
     $settings = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM whatsapp_settings WHERE status = 'active' LIMIT 1"));
@@ -103,8 +165,115 @@ function sendWhatsAppMessage($phone, $message, $conn, $mediaFile = null, $mediaT
             curl_close($ch);
             $result = ($http_code==200||$http_code==201) ? ['success'=>true,'response'=>$response] : ['success'=>false,'error'=>"HTTP {$http_code}"];
         }
+    } elseif($settings['api_type'] == 'whinta') {
+        $apiToken = trim($settings['api_token']);
+        $baseUrl  = rtrim(trim($settings['api_url']), '/');
+        $toPhone  = '+' . $phone; // Whinta expects number in international format with leading +
+
+        if($mediaType != 'text' && $mediaFile && file_exists($mediaFile)) {
+            // NOTE: Confirm exact field names in Whinta's "Send media" doc (Developer Tools > Access Token tab).
+            // Many cloud WhatsApp APIs need a publicly reachable media URL rather than a raw local file path —
+            // if Whinta rejects this, upload the file somewhere public first and pass that URL instead.
+            $url  = "{$baseUrl}/send-media";
+            $body = json_encode(['phone' => $toPhone, 'caption' => $message, 'media' => $mediaFile]);
+        } else {
+            $url  = "{$baseUrl}/send";
+            $body = json_encode(['phone' => $toPhone, 'message' => $message]);
+        }
+
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_URL => $url,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $body,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                'Authorization: Bearer ' . $apiToken,
+            ],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_SSL_VERIFYPEER => false,
+            CURLOPT_TIMEOUT => 60,
+        ]);
+        $response   = curl_exec($ch);
+        $http_code  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $curl_error = curl_error($ch);
+        curl_close($ch);
+
+        $result = $curl_error
+            ? ['success' => false, 'error' => 'CURL: ' . $curl_error]
+            : (($http_code == 200 || $http_code == 201)
+                ? ['success' => true, 'response' => $response]
+                : ['success' => false, 'error' => "HTTP {$http_code}: " . $response]);
     }
     return $result;
+}
+
+function sendWhatsAppTemplate($phone, $templateName, $languageCode, $bodyParams, $buttonParam, $conn) {
+    $settings = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM whatsapp_settings WHERE status = 'active' LIMIT 1"));
+    if(!$settings) return ['success' => false, 'error' => 'No active API settings found.'];
+    if($settings['api_type'] != 'whinta') return ['success' => false, 'error' => 'Template sending is currently only wired up for Whinta API.'];
+
+    $phone = preg_replace('/[^0-9]/', '', $phone);
+    if(substr($phone, 0, 1) == '0') $phone = substr($phone, 1);
+    if(substr($phone, 0, 2) != '91') $phone = '91' . $phone;
+    $toPhone = '+' . $phone;
+
+    $apiToken = trim($settings['api_token']);
+    $baseUrl  = rtrim(trim($settings['api_url']), '/');
+
+    $components = [];
+
+    if(!empty($bodyParams)) {
+        $components[] = [
+            'type'       => 'body',
+            'parameters' => array_map(function($v) { return ['type' => 'text', 'text' => (string)$v]; }, $bodyParams),
+        ];
+    }
+
+    if($buttonParam !== null && $buttonParam !== '') {
+        // For the dynamic "Pay now" URL button (sub_type "url"), Whinta/Meta expect a "text" parameter,
+        // not "payload" (payload is only for quick_reply buttons).
+        $components[] = [
+            'type'       => 'button',
+            'sub_type'   => 'url',
+            'index'      => '0',
+            'parameters' => [['type' => 'text', 'text' => (string)$buttonParam]],
+        ];
+    }
+
+    $payload = [
+        'phone'    => $toPhone,
+        'template' => [
+            'name'       => $templateName,
+            'language'   => ['code' => $languageCode],
+            'components' => $components,
+        ],
+    ];
+
+    $url = "{$baseUrl}/send/template";
+    $ch = curl_init();
+    curl_setopt_array($ch, [
+        CURLOPT_URL => $url,
+        CURLOPT_POST => true,
+        CURLOPT_POSTFIELDS => json_encode($payload),
+        CURLOPT_HTTPHEADER => [
+            'Content-Type: application/json',
+            'Authorization: Bearer ' . $apiToken,
+        ],
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_SSL_VERIFYPEER => false,
+        CURLOPT_TIMEOUT => 60,
+    ]);
+    $response   = curl_exec($ch);
+    $http_code  = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curl_error = curl_error($ch);
+    curl_close($ch);
+
+    return $curl_error
+        ? ['success' => false, 'error' => 'CURL: ' . $curl_error]
+        : (($http_code == 200 || $http_code == 201)
+            ? ['success' => true, 'response' => $response]
+            : ['success' => false, 'error' => "HTTP {$http_code}: " . $response]);
 }
 
 function logWhatsAppMessage($number,$name,$type,$message,$mediaFile,$mediaName,$status,$response,$conn) {
@@ -131,6 +300,9 @@ if($_SERVER['REQUEST_METHOD']=='POST' && isset($_POST['send_single'])) {
     $message       = $_POST['message']??'';
     $customer_name = $_POST['customer_name']??'';
     $media_type    = $_POST['single_media_type']??'text';
+    $use_template  = isset($_POST['use_template']) && $_POST['use_template']=='1';
+    $tpl_amount    = $_POST['template_amount']??'';
+    $tpl_due_date  = $_POST['template_due_date']??'';
     $media_file_path = $media_file_name = '';
 
     if(isset($_FILES['single_media_file']) && $_FILES['single_media_file']['error']==0) {
@@ -144,6 +316,18 @@ if($_SERVER['REQUEST_METHOD']=='POST' && isset($_POST['send_single'])) {
     }
 
     if(empty($number)) $single_error = "❌ Please enter a mobile number!";
+    elseif($use_template) {
+        if(empty($customer_name) || $tpl_amount==='' || empty($tpl_due_date)) {
+            $single_error = "❌ For template messages, please fill Customer Name, Amount, and Due Date!";
+        } else {
+            $dueDateFormatted = date('d-m-Y', strtotime($tpl_due_date));
+            $amountFormatted  = number_format((float)$tpl_amount, 2);
+            $logMsg = "[Template: payment_reminder_1] Hello $customer_name, Your payment of ₹$amountFormatted is due on $dueDateFormatted.";
+            $result = sendWhatsAppTemplate($number, 'payment_reminder_1', 'en_US', [$customer_name, '₹'.$amountFormatted, $dueDateFormatted], $number, $conn);
+            if($result['success']) { logWhatsAppMessage($number,$customer_name,'single_template',$logMsg,'','','sent',json_encode($result),$conn); $single_success="✅ Template message sent to $number!<br><small>Whinta response: ".htmlspecialchars($result['response']??'')."</small>"; }
+            else { logWhatsAppMessage($number,$customer_name,'single_template',$logMsg,'','','failed',$result['error'],$conn); $single_error="❌ Failed: ".$result['error']; }
+        }
+    }
     elseif(empty($message) && empty($media_file_path)) $single_error = "❌ Please enter a message or select media!";
     else {
         $result = sendWhatsAppMessage($number, $message, $conn, $media_file_path, $media_type);
@@ -188,13 +372,33 @@ if($_SERVER['REQUEST_METHOD']=='POST' && isset($_POST['send_bulk'])) {
 // Advance reminders
 if(isset($_GET['send_advance_reminders'])) {
     $rdays=intval($_GET['reminder_days']??3);
-    $adv_q=mysqli_query($conn,"SELECT * FROM advance_customers WHERE status='active' AND due_date>=CURDATE() AND DATEDIFF(due_date,CURDATE())<=$rdays");
+    $selected_ids = isset($_GET['selected_ids']) ? array_map('intval', (array)$_GET['selected_ids']) : [];
+
+    $where = "status='active' AND due_date>=CURDATE() AND DATEDIFF(due_date,CURDATE())<=$rdays";
+    if(!empty($selected_ids)) {
+        $ids = implode(',', $selected_ids);
+        $where .= " AND id IN ($ids)";
+    }
+
+    $adv_q=mysqli_query($conn,"SELECT * FROM advance_customers WHERE $where");
     $sent_count=$failed_count=0;
+    $current_api = mysqli_fetch_assoc(mysqli_query($conn,"SELECT api_type FROM whatsapp_settings WHERE status='active' LIMIT 1"));
+    $use_template_for_reminders = $current_api && $current_api['api_type']=='whinta';
     while($c=mysqli_fetch_assoc($adv_q)) {
         $dl=mysqli_fetch_assoc(mysqli_query($conn,"SELECT DATEDIFF('{$c['due_date']}',CURDATE()) as days"));
         $dlv=$dl?$dl['days']:0;
-        $msg="💎 *MAA GOURI JEWELLERS - PAYMENT REMINDER* 💎\n\nDear {$c['customer_name']},\n\nYour advance payment is due in *$dlv days*.\n\n📅 Due: ".date('d-m-Y',strtotime($c['due_date']))."\n💰 Amount: ₹".number_format($c['advance_amount'],2)."\n\nPlease pay at earliest convenience.\n\nThank you! ✨";
-        $r=sendWhatsAppMessage($c['customer_mobile'],$msg,$conn);
+        $dueDateFormatted = date('d-m-Y',strtotime($c['due_date']));
+        $amountFormatted  = number_format($c['advance_amount'],2);
+
+        if($use_template_for_reminders) {
+            // payment_reminder_1 (Meta-approved): "Hello {{1}}, Your payment of {{2}} is due on {{3}}..."
+            $msg = "[Template: payment_reminder_1] Hello {$c['customer_name']}, Your payment of ₹$amountFormatted is due on $dueDateFormatted.";
+            $r = sendWhatsAppTemplate($c['customer_mobile'], 'payment_reminder_1', 'en_US', [$c['customer_name'], '₹'.$amountFormatted, $dueDateFormatted], $c['customer_mobile'], $conn);
+        } else {
+            $msg="💎 *MAA GOURI JEWELLERS - PAYMENT REMINDER* 💎\n\nDear {$c['customer_name']},\n\nYour advance payment is due in *$dlv days*.\n\n📅 Due: $dueDateFormatted\n💰 Amount: ₹$amountFormatted\n\nPlease pay at earliest convenience.\n\nThank you! ✨";
+            $r=sendWhatsAppMessage($c['customer_mobile'],$msg,$conn);
+        }
+
         if($r['success']) { $sent_count++; logWhatsAppMessage($c['customer_mobile'],$c['customer_name'],'advance_reminder',$msg,'','','sent',json_encode($r),$conn); }
         else { $failed_count++; logWhatsAppMessage($c['customer_mobile'],$c['customer_name'],'advance_reminder',$msg,'','','failed',$r['error'],$conn); }
     }
@@ -204,7 +408,14 @@ if(isset($_GET['send_advance_reminders'])) {
 $api_settings         = mysqli_fetch_assoc(mysqli_query($conn,"SELECT * FROM whatsapp_settings WHERE status='active' LIMIT 1"));
 $all_customers        = mysqli_query($conn,"SELECT id,name,mobile FROM customers ORDER BY name");
 $logs                 = mysqli_query($conn,"SELECT * FROM whatsapp_logs ORDER BY sent_at DESC LIMIT 30");
-$advance_customers_list = mysqli_query($conn,"SELECT * FROM advance_customers WHERE status='active' ORDER BY due_date ASC");
+syncAdvanceCustomersFromInvoices($conn);
+$advance_customers_list = mysqli_query($conn,
+    "SELECT a.*, i.invoice_no, i.total_amount, i.balance_amount
+     FROM advance_customers a
+     LEFT JOIN invoices i ON i.id = a.customer_id
+     WHERE a.status='active'
+     ORDER BY a.due_date ASC"
+);
 $total_customers      = mysqli_num_rows($all_customers);
 
 $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-preview.png','moti-removebg-preview.png'];
@@ -214,8 +425,8 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <meta name="author" content="MANU GUPTA Suraj Chandra">
-    <title>WhatsApp Automation — Maa Gouri Jewellers</title>
+    <meta name="author" content="MANU GUPTA">
+    <title>WhatsApp Automation — MAA GOURI JEWELLERS</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/theme.css">
@@ -223,28 +434,28 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap');
 
         * { font-family: 'Poppins', sans-serif; box-sizing: border-box; }
-        h1,h2,h3,.gold-font { font-family: 'Playfair Display', serif; }
+        h1,h2,h3,.gold-font { font-family: 'Poppins', sans-serif; font-weight: 700; }
 
         /* ========== SIDEBAR ========== */
         .sidebar {
             position: fixed; top: 0; left: 0;
             width: 240px; height: 100vh;
-            background: linear-gradient(180deg, #7a4e0a 0%, #b5730e 40%, #d68b16 100%);
+            background: linear-gradient(180deg, #011921 0%, #03373b 50%, #044e54 80%, #011921 100%);
             z-index: 1000; display: flex; flex-direction: column;
             box-shadow: 4px 0 24px rgba(0,0,0,0.25);
             transition: transform 0.35s cubic-bezier(.4,0,.2,1);
-            overflow-y: auto; overflow-x: hidden;
+            overflow: hidden;
         }
-        .sidebar::-webkit-scrollbar { width: 4px; }
-        .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+        .sidebar-nav::-webkit-scrollbar { width: 4px; }
+        .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
 
         .sidebar-logo { padding: 22px 18px 16px; border-bottom: 1px solid rgba(255,255,255,0.18); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-        .sidebar-logo img { width: 44px; height: 44px; object-fit: contain; border-radius: 50%; background: rgba(255,255,255,0.1); padding: 3px; flex-shrink: 0; }
-        .sidebar-logo-text h2 { color: #fff; font-size: 13px; font-weight: 700; line-height: 1.3; font-family: 'Playfair Display', serif; letter-spacing: 0.5px; }
+        .sidebar-logo img { width: 44px; height: 44px; object-fit: cover; border-radius: 50%; background: rgba(255,255,255,0.1); flex-shrink: 0; }
+        .sidebar-logo-text h2 { color: #fff; font-size: 13px; font-weight: 700; line-height: 1.3; font-family: 'Poppins', serif; letter-spacing: 0.5px; }
         .sidebar-logo-text p  { color: rgba(255,255,255,0.65); font-size: 10px; margin-top: 1px; }
 
-        .sidebar-nav { flex: 1; padding: 10px 0; }
-        .sidebar-section-label { padding: 10px 20px 4px; color: rgba(255,255,255,0.45); font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+        .sidebar-nav { flex: 1; padding: 10px 0; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-section-label { padding: 10px 20px 4px; color: rgba(255,255,255,0.45); font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; position: sticky; top: 0; background: #011921; color: #f5c842; z-index: 10; }
 
         .sidebar-nav a { display: flex; align-items: center; gap: 12px; padding: 11px 20px; color: rgba(255,255,255,0.85); text-decoration: none; font-size: 13px; font-weight: 500; transition: all 0.2s ease; border-left: 3px solid transparent; letter-spacing: 0.3px; position: relative; }
         .sidebar-nav a:hover { background: rgba(255,255,255,0.13); color: #fff; border-left-color: rgba(255,255,255,0.8); padding-left: 26px; }
@@ -268,7 +479,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
         /* ========== LAYOUT ========== */
         .page-wrapper { margin-left: 240px; min-height: 100vh; background: #F5F5F5; transition: margin-left 0.35s ease; }
-        nav.nav-gold { background: linear-gradient(135deg, #b5730e, #d68b16) !important; }
+        nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important; border-bottom: 2.5px solid #ffd700; box-shadow: 0 0 12px rgba(255, 215, 0, 0.5) !important; }
 
         .burger-menu { width: 28px; height: 20px; position: relative; cursor: pointer; }
         .burger-menu span { display: block; position: absolute; height: 3px; width: 100%; background: #fff; border-radius: 3px; transition: all 0.3s ease; }
@@ -434,12 +645,24 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     }
 
     window.addEventListener('load', function() {
-        createJewelSparkles();
-        setTimeout(typeEffect, 600);
-        setTimeout(function() {
+        const isReload = performance.getEntriesByType("navigation")[0]?.type === "reload";
+        const hasVisited = sessionStorage.getItem('visited');
+
+        if (!hasVisited || isReload) {
+            sessionStorage.setItem('visited', 'true');
+            createJewelSparkles();
+            setTimeout(typeEffect, 600);
+            setTimeout(function() {
+                const ov = document.getElementById('loadingOverlay');
+                if(ov) { ov.style.opacity = '0'; ov.style.visibility = 'hidden'; setTimeout(()=>ov.style.display='none', 500); }
+            }, 2000);
+        } else {
             const ov = document.getElementById('loadingOverlay');
-            if(ov) { ov.style.opacity = '0'; ov.style.visibility = 'hidden'; setTimeout(()=>ov.style.display='none', 500); }
-        }, 2000);
+            if(ov) { ov.style.display = 'none'; }
+            // Animate the content wrapper, NOT body (body transform breaks position:fixed sidebar)
+            const pw = document.querySelector('.page-wrapper');
+            if(pw) { pw.style.animation = 'slideInFromRightGlobal 0.3s ease-out forwards'; }
+        }
     });
 </script>
 
@@ -449,8 +672,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     <!-- Scanlines texture -->
     <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(214,139,22,0.015) 3px,rgba(214,139,22,0.015) 4px);pointer-events:none;z-index:1;"></div>
 
-    <!-- Corner ornaments -->
-    <!-- background diamonds removed to keep only central gem -->
+   
 
     <!-- Stars / sparkles container -->
     <div id="loaderStars" style="position:absolute;inset:0;pointer-events:none;z-index:2;"></div>
@@ -461,18 +683,13 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     <!-- Center content -->
     <div style="position:relative;z-index:10;text-align:center;">
 
-        <!-- Logo -->
-        <div style="position:relative;width:110px;height:110px;margin:0 auto 28px;display:flex;align-items:center;justify-content:center;">
-            <img src="assets/images/moti-removebg-preview.png" alt="Logo" style="max-width:100%;max-height:100%;animation:gemGlowPulse 2s ease-in-out infinite;">
-        </div>
-
-        <!-- Title -->
-        <div style="color:#d68b16;font-size:22px;letter-spacing:6px;font-family:'Playfair Display',serif;margin-bottom:6px;animation:titleGold 2s ease infinite alternate;">MAA GOURI JEWELLERS</div>
-        <p style="color:rgba(201,169,110,0.7);font-size:10px;letter-spacing:4px;text-transform:uppercase;margin-bottom:24px;">Crafting Timeless Elegance</p>
-
-        <!-- Progress bar -->
-        <div style="width:200px;height:3px;background:rgba(255,255,255,0.08);border-radius:3px;margin:0 auto 16px;overflow:hidden;">
-            <div style="height:100%;width:35%;background:linear-gradient(90deg,#7a4e0a,#d68b16,#f5c842);border-radius:3px;animation:barSlide 1.8s ease-in-out infinite;"></div>
+        <!-- Gem with halos -->
+                <div style="position:relative;width:120px;height:120px;margin:0 auto 24px;display:flex;align-items:center;justify-content:center;">
+            
+            
+            <div style="width:120px;height:120px;background:transparent;animation:gemGlowPulse 1.5s ease-in-out infinite;">
+                <img src="assets/images/moti-removebg-preview.png" alt="MAA GOURI JEWELLERS Logo" style="width:100%;height:100%;object-fit:contain;display:block;">
+            </div>
         </div>
 
         <!-- Dots -->
@@ -515,36 +732,58 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         </div>
     </div>
 
-    <nav class="sidebar-nav">
+     <nav class="sidebar-nav">
         <div class="sidebar-section-label">Main Menu</div>
-        <a href="index.php"><i class="fas fa-home"></i> HOME</a>
-        <a href="billing.php"><i class="fas fa-receipt"></i> BILLING</a>
-        <a href="stock.php"><i class="fas fa-boxes"></i> STOCK</a>
-        <a href="customers.php"><i class="fas fa-users"></i> CUSTOMERS</a>
+
+        <a href="index.php" class="active">
+            <i class="fas fa-home"></i> HOME
+        </a>
+        <a href="billing.php">
+            <i class="fas fa-receipt"></i> BILLING
+        </a>
+        <a href="stock.php">
+            <i class="fas fa-boxes"></i> STOCK
+        </a>
+        <a href="customers.php">
+            <i class="fas fa-users"></i> CUSTOMERS
+        </a>
 
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Analytics</div>
-        <a href="reports.php"><i class="fas fa-chart-bar"></i> REPORTS</a>
-        <a href="income_expenses.php"><i class="fas fa-chart-line"></i> INCOME &amp; EXP</a>
+
+        <a href="reports.php">
+            <i class="fas fa-chart-bar"></i> REPORTS
+        </a>
+        <a href="due_list.php">
+            <i class="fas fa-hourglass-half"></i> DUE LIST
+        </a>
+        <a href="income_expenses.php">
+            <i class="fas fa-chart-line"></i> INCOME & EXP
+        </a>
 
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Tools</div>
-        <a href="whatsapp_automation.php" class="active"><i class="fab fa-whatsapp"></i> WHATSAPP</a>
-        <a href="sbook.php"><i class="fas fa-book"></i> KARIGORI</a>
-         <a href="purchase.php">
-            <i class="fas fa-book"></i>PURCHASE
+
+        <a href="whatsapp_automation.php">
+            <i class="fab fa-whatsapp"></i> WHATSAPP
         </a>
-        <a href="account.php">
-            <i class="fas fa-book"></i> ACCOUNT
+        <a href="purchase.php">
+            <i class="fas fa-book"></i> PURCHASE
+        </a>
+        <a href="contacts.php">
+            <i class="fas fa-address-book"></i> CONTACTS
+        </a>
+        <a href="accounts.php">
+            <i class="fas fa-calculator"></i> ACCOUNTS
         </a>
     </nav>
 
     <div class="sidebar-user">
         <div class="sidebar-user-info">
             <i class="fas fa-user-circle"></i>
-                <div class="user-details">
+            <div class="user-details">
                 <p><?php echo htmlspecialchars($_SESSION['user_name']); ?></p>
-                <span>MAA GOURI JEWELLERS</span>
+                <span><?php echo htmlspecialchars($_SESSION['user_mobile'] ?? 'Admin'); ?></span>
             </div>
         </div>
         <a href="logout.php" class="sidebar-logout"><i class="fas fa-sign-out-alt"></i> LOGOUT</a>
@@ -605,13 +844,14 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                     <div>
                         <label class="field-label">🌐 API Type</label>
                         <select name="api_type" class="jewel-input">
-                            <option value="greenapi" <?php echo ($api_settings&&$api_settings['api_type']=='greenapi')?'selected':''; ?>>💚 Green API</option>
-                            <option value="custom"   <?php echo ($api_settings&&$api_settings['api_type']=='custom')?'selected':''; ?>>⚙️ Custom API</option>
+                            <option value="greenapi" <?php echo ($api_settings&&$api_settings['api_type']=='greenapi')?'selected':''; ?>> hunk API</option>
+                            <option value="whinta"   <?php echo ($api_settings&&$api_settings['api_type']=='whinta')?'selected':''; ?>>📲 Whinta API</option>
+                            <option value="custom"   <?php echo ($api_settings&&$api_settings['api_type']=='custom')?'selected':''; ?>> Custom API</option>
                         </select>
                     </div>
                     <div>
                         <label class="field-label">🔗 API URL</label>
-                        <input type="text" name="api_url" value="<?php echo htmlspecialchars($api_settings['api_url']??'https://api.green-api.com'); ?>" placeholder="https://api.green-api.com" class="jewel-input">
+                        <input type="text" name="api_url" value="<?php echo htmlspecialchars($api_settings['api_url']??'https://api.hunk-api.com'); ?>" placeholder="https://api.hunk-api.com" class="jewel-input">
                     </div>
                     <div>
                         <label class="field-label">🆔 Instance ID</label>
@@ -623,13 +863,20 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                     </div>
                 </div>
                 <button type="submit" name="save_api_settings" class="btn-gold mt-4">
-                    <i class="fas fa-save mr-1"></i> Save Settings
+                    <i class="fas fa-save"></i> Save Settings
                 </button>
             </form>
-            <div class="info-box mt-4">
+            <!-- <div class="info-box mt-4">
                 <i class="fas fa-info-circle mr-1" style="color:#d68b16;"></i>
-                <strong>Green API Setup:</strong> Get your Instance ID &amp; API Token from
-                <a href="https://console.green-api.com" target="_blank">green-api.com</a>
+                <strong>hunk API Setup:</strong> Get your Instance ID &amp; API Token from
+                <a href="https://console.green-api.com" target="_blank">hunk-api.com</a>
+            </div> -->
+            <div class="info-box mt-2">
+                <i class="fas fa-info-circle mr-1" style="color:#d68b16;"></i>
+                <strong>Whinta API Setup:</strong> Select "Whinta API" above, set <b>API URL</b> to
+                <code>https://app.whinta.com/api</code>, leave <b>Instance ID</b> blank, and paste your
+                <b>Access Token</b> (from Whinta → Developer Tools → Access Token → Generate API key) into the
+                <b>API Token</b> field.
             </div>
         </div>
 
@@ -644,7 +891,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                     </div>
                     <div>
                         <label class="field-label">👤 Customer Name (Optional)</label>
-                        <input type="text" name="customer_name" placeholder="Customer name" class="jewel-input">
+                        <input type="text" name="customer_name" id="singleCustomerName" placeholder="Customer name" class="jewel-input">
                     </div>
                     <div>
                         <label class="field-label">📎 Media Type</label>
@@ -659,6 +906,25 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         <input type="file" name="single_media_file" accept="image/*,video/*" class="jewel-input">
                     </div>
                     <div class="sm:col-span-2">
+                        <label class="field-label" style="display:flex;align-items:center;gap:6px;">
+                            <input type="checkbox" name="use_template" id="singleUseTemplate" value="1" onchange="toggleSingleTemplate()" style="width:16px;height:16px;accent-color:#16a34a;">
+                            🧾 Send as Approved Template (use this if the customer hasn't messaged you in the last 24 hours)
+                        </label>
+                    </div>
+                    <div id="singleTemplateFieldsDiv" style="display:none;" class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="field-label">💰 Amount (₹)</label>
+                            <input type="number" step="0.01" name="template_amount" placeholder="5000" class="jewel-input">
+                        </div>
+                        <div>
+                            <label class="field-label">📅 Due Date</label>
+                            <input type="date" name="template_due_date" class="jewel-input">
+                        </div>
+                        <div class="sm:col-span-2">
+                            <span class="text-xs" style="color:#7a4e0a;">Uses the Meta-approved "payment_reminder_1" template: "Hello {Customer Name}, Your payment of ₹{Amount} is due on {Due Date}." Fill Customer Name above too — it's used as the template's name variable.</span>
+                        </div>
+                    </div>
+                    <div class="sm:col-span-2" id="singleMessageDiv">
                         <label class="field-label">📝 Message</label>
                         <textarea name="message" rows="3" placeholder="Type your message here…" class="jewel-input"></textarea>
                     </div>
@@ -732,18 +998,21 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         <option value="15">15 days before</option>
                     </select>
                 </div>
-                <a href="#" id="sendFilteredReminders" class="btn-pink">
-                    <i class="fas fa-bell"></i> Send Reminders
-                </a>
+                <button type="button" id="sendFilteredReminders" class="btn-pink">
+                    <i class="fas fa-bell"></i> Send Selected Reminders
+                </button>
+                <span class="text-xs" style="color:#7a4e0a;">Select any customer checkbox to send only those reminders.</span>
             </div>
 
             <div class="table-wrap overflow-x-auto rounded-xl" style="border:1px solid rgba(219,39,119,0.15);">
                 <table class="jewel-table">
                     <thead>
                         <tr>
+                            <th class="text-center">Select</th>
                             <th class="text-left">Customer</th>
                             <th class="text-left">Mobile</th>
-                            <th class="text-right">Amount</th>
+                            <th class="text-right">Due Amount</th>
+                            <th class="text-right">Total Bill</th>
                             <th class="text-center">Due Date</th>
                             <th class="text-center">Reminder</th>
                             <th class="text-center">Status</th>
@@ -760,15 +1029,17 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             $dt  = $dlv>0 ? "$dlv days left" : ($dlv==0 ? 'Due today' : 'Overdue');
                         ?>
                         <tr>
-                            <td class="font-semibold" style="color:#800020;">💎 <?php echo htmlspecialchars($adv['customer_name']); ?></td>
-                            <td>📱 <?php echo htmlspecialchars($adv['customer_mobile']); ?></td>
-                            <td class="text-right font-bold" style="color:#d68b16;">₹<?php echo number_format($adv['advance_amount'],2); ?></td>
-                            <td class="text-center">📅 <?php echo date('d M Y', strtotime($adv['due_date'])); ?></td>
+                            <td class="text-center"><input type="checkbox" class="advance-reminder-checkbox" value="<?php echo (int)$adv['id']; ?>" style="accent-color:#db2777;width:16px;height:16px;"></td>
+                            <td class="font-semibold" style="color:#800020;">💎 <?php echo htmlspecialchars($adv['customer_name'] ?: 'Customer'); ?></td>
+                            <td>📱 <?php echo htmlspecialchars($adv['customer_mobile'] ?: '—'); ?></td>
+                            <td class="text-right font-bold" style="color:#d68b16;">₹<?php echo number_format((float)($adv['balance_amount'] ?? $adv['advance_amount']),2); ?></td>
+                            <td class="text-right" style="color:#7a4e0a;">₹<?php echo number_format((float)($adv['total_amount'] ?? 0),2); ?></td>
+                            <td class="text-center">📅 <?php echo !empty($adv['due_date']) ? date('d M Y', strtotime($adv['due_date'])) : '—'; ?></td>
                             <td class="text-center"><?php echo $adv['reminder_days']; ?> days</td>
                             <td class="text-center <?php echo $dc; ?>"><?php echo $dt; ?></td>
                         </tr>
                         <?php endwhile; else: ?>
-                        <tr><td colspan="6" class="text-center py-8" style="color:#7a4e0a;opacity:0.6;">No advance customers found.</td></tr>
+                        <tr><td colspan="8" class="text-center py-8" style="color:#7a4e0a;opacity:0.6;">No advance customers found.</td></tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
@@ -818,7 +1089,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     <footer>
         <p class="text-xs" style="color:#7a4e0a;">
             &copy; 2026 MAA GOURI JEWELLERS &nbsp;|&nbsp; CRAFTED WITH ELEGANCE &nbsp;|&nbsp;
-            Developed by <a href="https://saamparktechnologyresearch.in/" target="_blank" style="text-decoration:underline;color:#800020;">STR</a>
+            Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology</a>
         </p>
     </footer>
 </div><!-- end .page-wrapper -->
@@ -853,6 +1124,13 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         if(sel && div) div.style.display = sel.value !== 'text' ? 'block' : 'none';
     }
 
+    /* ── Single Message: template vs free-text toggle ── */
+    function toggleSingleTemplate() {
+        const checked = document.getElementById('singleUseTemplate').checked;
+        document.getElementById('singleTemplateFieldsDiv').style.display = checked ? 'grid' : 'none';
+        document.getElementById('singleMessageDiv').style.display = checked ? 'none' : 'block';
+    }
+
     /* ── Customer checkboxes ── */
     function selectAll()   { document.querySelectorAll('input[name="selected_customers[]"]').forEach(c => c.checked = true); }
     function deselectAll() { document.querySelectorAll('input[name="selected_customers[]"]').forEach(c => c.checked = false); }
@@ -863,11 +1141,23 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         reminderBtn.addEventListener('click', function(e) {
             e.preventDefault();
             const days = document.getElementById('reminderDaysFilter').value;
-            if(confirm('Send reminders to customers due within ' + days + ' days?')) {
-                window.location.href = '?send_advance_reminders=1&reminder_days=' + days;
+            const selected = [...document.querySelectorAll('.advance-reminder-checkbox:checked')].map(c => c.value);
+            if(selected.length === 0) {
+                alert('Please select at least one customer to send reminder.');
+                return;
+            }
+            if(confirm('Send reminders to ' + selected.length + ' selected customer(s) due within ' + days + ' days?')) {
+                const params = new URLSearchParams({send_advance_reminders: '1', reminder_days: days});
+                selected.forEach(id => params.append('selected_ids[]', id));
+                window.location.href = '?' + params.toString();
             }
         });
     }
 </script>
 </body>
 </html>
+
+
+
+
+

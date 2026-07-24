@@ -1,16 +1,32 @@
 <?php
 session_start();
 require_once 'config/database.php';
+require_once 'config/company_config.php';
 
 $error = '';
 $success = '';
+
+// Build base URL dynamically so redirects work through tunnels
+$scheme   = (!empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) ? $_SERVER['HTTP_X_FORWARDED_PROTO'] : 'http';
+$host     = $_SERVER['HTTP_HOST'];
+$base_dir = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
+$base_url = $scheme . '://' . $host . $base_dir . '/';
+
+// Handle ?fix=1 auto-repair URL
+if (isset($_GET['fix'])) {
+    $pass1 = password_hash('radhe#123', PASSWORD_BCRYPT);
+    $pass2 = password_hash('123456', PASSWORD_BCRYPT);
+    mysqli_query($conn, "DELETE FROM users WHERE email='subhapatra169@gmail.com' OR email='hiisupriya@gmail.com' OR mobile='8617536679' OR mobile='9876543210'");
+    mysqli_query($conn, "INSERT INTO users (name, mobile, email, password) VALUES ('Subha Patra', '8617536679', 'subhapatra169@gmail.com', '$pass1'), ('Supriya', '9876543210', 'hiisupriya@gmail.com', '$pass2')");
+    $success = "Admin accounts (subhapatra169@gmail.com & hiisupriya@gmail.com) activated successfully!";
+}
 
 // ─── LOGIN ───────────────────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['send_otp'])) {
     $email    = mysqli_real_escape_string($conn, trim($_POST['email']));
     $password = $_POST['password'];
 
-    $check = mysqli_query($conn, "SELECT * FROM users WHERE email = '$email'");
+    $check = mysqli_query($conn, "SELECT * FROM users WHERE email = '$email' OR mobile = '$email' OR LOWER(email) = LOWER('$email')");
     if (mysqli_num_rows($check) > 0) {
         $row = mysqli_fetch_assoc($check);
         if (password_verify($password, $row['password'])) {
@@ -18,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['send_otp'])) {
             $_SESSION['user_name']   = $row['name'];
             $_SESSION['user_mobile'] = $row['mobile'];
             $_SESSION['user_email']  = $email;
-            header("Location: index.php");
+            header('Location: ' . $base_url . 'index.php');
             exit();
         } else {
             $error = "Email or Password is incorrect!";
@@ -44,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['verify_otp'])) {
         unset($_SESSION['otp'], $_SESSION['otp_sent'], $_SESSION['otp_expires'],
               $_SESSION['otp_email'], $_SESSION['otp_user_id'],
               $_SESSION['otp_user_name'], $_SESSION['otp_user_mobile']);
-        header("Location: index.php");
+        header('Location: ' . $base_url . 'index.php');
         exit();
     } else {
         $error = "Incorrect OTP! Please check again.";
@@ -66,6 +82,8 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <meta name="author" content="MANU GUPTA">
+    <meta name="description" content="Login for MAA GOURI JEWELLERS">
     <title>Login — MAA GOURI JEWELLERS</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -181,7 +199,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
             padding: 4px;
         }
         .brand-top-text h2 {
-            font-family: 'Playfair Display', serif;
+            font-family: 'Poppins', serif;
             font-size: 14px; font-weight: 700;
             color: #fff; line-height: 1.3;
             text-shadow: 0 2px 8px rgba(0,0,0,0.6);
@@ -194,7 +212,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
 
         .left-bottom { }
         .left-bottom h3 {
-            font-family: 'Playfair Display', serif;
+            font-family: 'Poppins', serif;
             font-size: 22px; font-weight: 700;
             color: #fff; line-height: 1.3;
             text-shadow: 0 2px 12px rgba(0,0,0,0.7);
@@ -243,7 +261,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
             50%      { transform: translateY(-6px); }
         }
         .form-logo h1 {
-            font-family: 'Playfair Display', serif;
+            font-family: 'Poppins', serif;
             font-size: 22px; font-weight: 700;
             color: var(--crimson); margin-top: 10px;
             line-height: 1.2;
@@ -252,7 +270,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
 
         /* ── Form section title ── */
         .form-title {
-            font-family: 'Playfair Display', serif;
+            font-family: 'Poppins', serif;
             font-size: 20px; font-weight: 700;
             color: var(--crimson); margin-bottom: 20px;
             display: flex; align-items: center; gap: 8px;
@@ -357,7 +375,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
         .otp-box {
             width: 44px; height: 52px;
             text-align: center; font-size: 20px; font-weight: 700;
-            font-family: 'Playfair Display', serif;
+            font-family: 'Poppins', serif;
             background: var(--cream);
             border: 2px solid rgba(181,115,14,0.3);
             border-radius: 12px; color: var(--crimson);
@@ -581,10 +599,10 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
             <div class="otp-shield"><i class="fas fa-shield-alt"></i></div>
 
             <div style="text-align:center;margin-bottom:20px;">
-                <h3 style="font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--crimson);margin-bottom:6px;">Verify OTP</h3>
+                <h3 style="font-family:'Poppins',serif;font-size:20px;font-weight:700;color:var(--crimson);margin-bottom:6px;">Verify OTP</h3>
                 <p style="font-size:12px;color:#6b7280;line-height:1.6;">
                     A 6-digit OTP has been sent to<br>
-                    <strong style="color:var(--crimson);">motijewellers9635985848@gmail.com</strong>
+                    <strong style="color:var(--crimson);"> <?php echo htmlspecialchars($_SESSION['otp_email'] ?? 'your email'); ?></strong>
                 </p>
             </div>
 
@@ -721,3 +739,8 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
 </script>
 </body>
 </html>
+
+
+
+
+

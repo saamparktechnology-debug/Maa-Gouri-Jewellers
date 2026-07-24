@@ -1,13 +1,12 @@
 <?php
 session_start();
 require_once 'config/database.php';
+require_once 'config/company_config.php';
 
 if(!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
 }
-// <meta name="author" content="MANU GUPTA">
-// <meta name="description" content="Income and Expense Management for Gouri Jewellers">
 
 // Handle Add Income
 if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_income'])) {
@@ -85,9 +84,9 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <meta name="author" content="MANU GUPTA Suraj Chandra">
-    <meta name="description" content="Income and Expense Management for Gouri Jewellers">
-    <title>Income &amp; Expenses — Maa Gouri Jewellers</title>
+    <meta name="author" content="MANU GUPTA">
+    <meta name="description" content="Income and Expense Management for MAA GOURI JEWELLERS">
+    <title>Income &amp; Expenses — MAA GOURI JEWELLERS</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -96,28 +95,28 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap');
 
         * { font-family: 'Poppins', sans-serif; box-sizing: border-box; }
-        h1,h2,h3,.gold-font { font-family: 'Playfair Display', serif; }
+        h1,h2,h3,.gold-font { font-family: 'Poppins', sans-serif; font-weight: 700; }
 
         /* ========== SIDEBAR ========== */
         .sidebar {
             position: fixed; top: 0; left: 0;
             width: 240px; height: 100vh;
-            background: linear-gradient(180deg, #7a4e0a 0%, #b5730e 40%, #d68b16 100%);
+            background: linear-gradient(180deg, #011921 0%, #03373b 50%, #044e54 80%, #011921 100%);
             z-index: 1000; display: flex; flex-direction: column;
             box-shadow: 4px 0 24px rgba(0,0,0,0.25);
             transition: transform 0.35s cubic-bezier(.4,0,.2,1);
-            overflow-y: auto; overflow-x: hidden;
+            overflow: hidden;
         }
-        .sidebar::-webkit-scrollbar { width: 4px; }
-        .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+        .sidebar-nav::-webkit-scrollbar { width: 4px; }
+        .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
 
         .sidebar-logo { padding: 22px 18px 16px; border-bottom: 1px solid rgba(255,255,255,0.18); display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
-        .sidebar-logo img { width: 44px; height: 44px; object-fit: contain; border-radius: 50%; background: rgba(255,255,255,0.1); padding: 3px; flex-shrink: 0; }
-        .sidebar-logo-text h2 { color: #fff; font-size: 13px; font-weight: 700; line-height: 1.3; font-family: 'Playfair Display', serif; letter-spacing: 0.5px; }
+        .sidebar-logo img { width: 44px; height: 44px; object-fit: cover; border-radius: 50%; background: rgba(255,255,255,0.1); flex-shrink: 0; }
+        .sidebar-logo-text h2 { color: #fff; font-size: 13px; font-weight: 700; line-height: 1.3; font-family: 'Poppins', serif; letter-spacing: 0.5px; }
         .sidebar-logo-text p  { color: rgba(255,255,255,0.65); font-size: 10px; margin-top: 1px; }
 
-        .sidebar-nav { flex: 1; padding: 10px 0; }
-        .sidebar-section-label { padding: 10px 20px 4px; color: rgba(255,255,255,0.45); font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+        .sidebar-nav { flex: 1; padding: 10px 0; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-section-label { padding: 10px 20px 4px; color: rgba(255,255,255,0.45); font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; position: sticky; top: 0; background: #011921; color: #f5c842; z-index: 10; }
 
         .sidebar-nav a { display: flex; align-items: center; gap: 12px; padding: 11px 20px; color: rgba(255,255,255,0.85); text-decoration: none; font-size: 13px; font-weight: 500; transition: all 0.2s ease; border-left: 3px solid transparent; letter-spacing: 0.3px; position: relative; }
         .sidebar-nav a:hover { background: rgba(255,255,255,0.13); color: #fff; border-left-color: rgba(255,255,255,0.8); padding-left: 26px; }
@@ -141,7 +140,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
         /* ========== LAYOUT ========== */
         .page-wrapper { margin-left: 240px; min-height: 100vh; background: #F5F5F5; transition: margin-left 0.35s ease; }
-        nav.nav-gold { background: linear-gradient(135deg, #b5730e, #d68b16) !important; }
+        nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important; border-bottom: 2.5px solid #ffd700; box-shadow: 0 0 12px rgba(255, 215, 0, 0.5) !important; }
 
         .burger-menu { width: 28px; height: 20px; position: relative; cursor: pointer; }
         .burger-menu span { display: block; position: absolute; height: 3px; width: 100%; background: #fff; border-radius: 3px; transition: all 0.3s ease; }
@@ -291,12 +290,24 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     }
 
     window.addEventListener('load', function() {
-        createJewelSparkles();
-        setTimeout(typeEffect, 600);
-        setTimeout(function() {
+        const isReload = performance.getEntriesByType("navigation")[0]?.type === "reload";
+        const hasVisited = sessionStorage.getItem('visited');
+
+        if (!hasVisited || isReload) {
+            sessionStorage.setItem('visited', 'true');
+            createJewelSparkles();
+            setTimeout(typeEffect, 600);
+            setTimeout(function() {
+                const ov = document.getElementById('loadingOverlay');
+                if(ov) { ov.style.opacity = '0'; ov.style.visibility = 'hidden'; setTimeout(()=>ov.style.display='none', 500); }
+            }, 2000);
+        } else {
             const ov = document.getElementById('loadingOverlay');
-            if(ov) { ov.style.opacity = '0'; ov.style.visibility = 'hidden'; setTimeout(()=>ov.style.display='none', 500); }
-        }, 2000);
+            if(ov) { ov.style.display = 'none'; }
+            // Animate the content wrapper, NOT body (body transform breaks position:fixed sidebar)
+            const pw = document.querySelector('.page-wrapper');
+            if(pw) { pw.style.animation = 'slideInFromRightGlobal 0.3s ease-out forwards'; }
+        }
     });
 </script>
 
@@ -305,9 +316,6 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
     <!-- Scanlines texture -->
     <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(214,139,22,0.015) 3px,rgba(214,139,22,0.015) 4px);pointer-events:none;z-index:1;"></div>
-
-    <!-- Corner ornaments -->
-    <!-- background diamonds removed to keep only central gem -->
 
     <!-- Stars / sparkles container -->
     <div id="loaderStars" style="position:absolute;inset:0;pointer-events:none;z-index:2;"></div>
@@ -318,18 +326,13 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     <!-- Center content -->
     <div style="position:relative;z-index:10;text-align:center;">
 
-        <!-- Logo -->
-        <div style="position:relative;width:110px;height:110px;margin:0 auto 28px;display:flex;align-items:center;justify-content:center;">
-            <img src="assets/images/moti-removebg-preview.png" alt="Logo" style="max-width:100%;max-height:100%;animation:gemGlowPulse 2s ease-in-out infinite;">
-        </div>
-
-        <!-- Title -->
-        <div style="color:#d68b16;font-size:22px;letter-spacing:6px;font-family:'Playfair Display',serif;margin-bottom:6px;animation:titleGold 2s ease infinite alternate;">MAA GOURI JEWELLERS</div>
-        <p style="color:rgba(201,169,110,0.7);font-size:10px;letter-spacing:4px;text-transform:uppercase;margin-bottom:24px;">Crafting Timeless Elegance</p>
-
-        <!-- Progress bar -->
-        <div style="width:200px;height:3px;background:rgba(255,255,255,0.08);border-radius:3px;margin:0 auto 16px;overflow:hidden;">
-            <div style="height:100%;width:35%;background:linear-gradient(90deg,#7a4e0a,#d68b16,#f5c842);border-radius:3px;animation:barSlide 1.8s ease-in-out infinite;"></div>
+        <!-- Gem with halos -->
+                <div style="position:relative;width:120px;height:120px;margin:0 auto 24px;display:flex;align-items:center;justify-content:center;">
+            
+            
+            <div style="width:120px;height:120px;background:transparent;animation:gemGlowPulse 1.5s ease-in-out infinite;">
+                <img src="assets/images/moti-removebg-preview.png" alt="MAA GOURI JEWELLERS Logo" style="width:100%;height:100%;object-fit:contain;display:block;">
+            </div>
         </div>
 
         <!-- Dots -->
@@ -372,28 +375,24 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         </div>
     </div>
 
-    <nav class="sidebar-nav">
+   <nav class="sidebar-nav">
         <div class="sidebar-section-label">Main Menu</div>
-        <a href="index.php"><i class="fas fa-home"></i> HOME</a>
+
+        <a href="index.php" ><i class="fas fa-home"></i> HOME</a>
         <a href="billing.php"><i class="fas fa-receipt"></i> BILLING</a>
         <a href="stock.php"><i class="fas fa-boxes"></i> STOCK</a>
         <a href="customers.php"><i class="fas fa-users"></i> CUSTOMERS</a>
 
-        <div class="sidebar-divider"></div>
-        <div class="sidebar-section-label">Analytics</div>
+        <div class="sidebar-divider"></div><div class="sidebar-section-label">Analytics</div>
+
         <a href="reports.php"><i class="fas fa-chart-bar"></i> REPORTS</a>
+        <a href="due_list.php"><i class="fas fa-hourglass-half"></i> DUE LIST</a>
         <a href="income_expenses.php" class="active"><i class="fas fa-chart-line"></i> INCOME &amp; EXP</a>
 
-        <div class="sidebar-divider"></div>
-        <div class="sidebar-section-label">Tools</div>
         <a href="whatsapp_automation.php"><i class="fab fa-whatsapp"></i> WHATSAPP</a>
-        <a href="sbook.php"><i class="fas fa-book"></i> KARIGORI</a>
-         <a href="purchase.php">
-            <i class="fas fa-book"></i>PURCHASE
-        </a>
-        <a href="account.php">
-            <i class="fas fa-book"></i> ACCOUNT
-        </a>
+        <a href="purchase.php"><i class="fas fa-book"></i> PURCHASE</a>
+        <a href="contacts.php"><i class="fas fa-address-book"></i> CONTACTS</a>
+        <a href="accounts.php"><i class="fas fa-calculator"></i> ACCOUNTS</a>
     </nav>
 
     <div class="sidebar-user">
@@ -438,7 +437,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     <div class="container mx-auto px-4 sm:px-6 py-6">
 
         <!-- Alerts -->
-        <?php if(isset($success_income)): ?>
+        <?php if(isset($success_incom)): ?>
             <div class="mb-4 px-4 py-3 rounded-lg text-sm" style="background:#f0fdf4;border:1px solid #86efac;color:#166534;"><i class="fas fa-check-circle mr-2"></i><?php echo $success_income; ?></div>
         <?php endif; ?>
         <?php if(isset($success_expense)): ?>
@@ -566,7 +565,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             <textarea name="description" rows="2" placeholder="Additional details…" class="jewel-input"></textarea>
                         </div>
                     </div>
-                    <button type="submit" name="add_income" class="btn-income mt-4">
+                    <button type="submit" name="add_income" class="btn-income mt-4 w-full">
                         <i class="fas fa-save mr-1"></i> Add Income
                     </button>
                 </form>
@@ -644,11 +643,11 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             <td><?php echo date('d M Y', strtotime($inc['income_date'])); ?></td>
                             <td class="font-semibold" style="color:#166534;"><?php echo htmlspecialchars($inc['source']); ?></td>
                             <td style="color:#7a4e0a;"><?php echo htmlspecialchars($inc['category']); ?></td>
-                            <td class="text-right font-bold" style="color:#16a34a;">₹<?php echo number_format($inc['amount'],2); ?></td>
+                            <td class="text-right font-bold" style="color:#16a34a;">₹<?php echo number_format($inc['amunt'],2); ?></td>
                             <td style="text-transform:uppercase;font-size:11px;"><?php echo htmlspecialchars($inc['payment_method']); ?></td>
                             <td class="text-center">
                                 <a href="?delete_income=<?php echo $inc['id']; ?>" onclick="return confirm('Delete this income record?')" class="btn-delete">
-                                    <i class="fas fa-trash mr-1"></i>
+                                    <i class="fas fa-trash"></i>
                                 </a>
                             </td>
                         </tr>
@@ -687,12 +686,12 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         <tr>
                             <td><?php echo date('d M Y', strtotime($exp['expense_date'])); ?></td>
                             <td style="color:#9f1239;"><?php echo htmlspecialchars($exp['category']); ?></td>
-                            <td style="color:#7a4e0a;"><?php echo htmlspecialchars($exp['vendor_name'] ?? '—'); ?></td>
+                            <td style="color:#7a4e0a;"><?php echo htmlspecialchars($exp['vendor'] ?? '—'); ?></td>
                             <td class="text-right font-bold" style="color:#dc2626;">₹<?php echo number_format($exp['amount'],2); ?></td>
-                            <td style="text-transform:uppercase;font-size:11px;"><?php echo htmlspecialchars($exp['payment_method']); ?></td>
+                            <td style="text-transform:uppercase;font-size:11px;"><?php echo htmlspecialchars($exp['payment']); ?></td>
                             <td class="text-center">
                                 <a href="?delete_expense=<?php echo $exp['id']; ?>" onclick="return confirm('Delete this expense record?')" class="btn-delete">
-                                    <i class="fas fa-trash mr-1"></i>
+                                    <i class="fas fa-trash"></i>
                                 </a>
                             </td>
                         </tr>
@@ -727,7 +726,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     <footer>
         <p class="text-xs" style="color:#7a4e0a;">
             &copy; 2026 MAA GOURI JEWELLERS &nbsp;|&nbsp; CRAFTED WITH ELEGANCE &nbsp;|&nbsp;
-            Developed by <a href="https://saamparktechnologyresearch.in/" target="_blank" style="text-decoration:underline;color:#800020;">STR</a>
+            Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology</a>
         </p>
     </footer>
 </div><!-- end .page-wrapper -->
@@ -757,10 +756,10 @@ footer { background: linear-gradient(0deg, #f5e6c8, #fdf6e3); border-top: 2px so
     }
 
     /* ── Charts ── */
-    const incomeLabels  = <?php echo json_encode(array_keys($income_by_cat)); ?>;
+    const incomeLabels  = <?php echo json_encode(array_keys($incom_by_cat)); ?>;
     const incomeData    = <?php echo json_encode(array_values($income_by_cat)); ?>;
-    const expenseLabels = <?php echo json_encode(array_keys($expense_by_cat)); ?>;
-    const expenseData   = <?php echo json_encode(array_values($expense_by_cat)); ?>;
+    const expenseLabels = <?php echo json_encode(array_keys($expese_by_cat)); ?>;
+    const expenseData   = <?php echo json_encode(array_values($exese_by_cat)); ?>;
 
     const goldPalette  = ['#d68b16','#b5730e','#7a4e0a','#f5c842','#c9a96e','#e8a020','#9a6010'];
     const redPalette   = ['#dc2626','#b91c1c','#9f1239','#ef4444','#f87171','#be123c','#7f1d1d'];
@@ -785,7 +784,7 @@ footer { background: linear-gradient(0deg, #f5e6c8, #fdf6e3); border-top: 2px so
     }
 
     if(expenseData.length > 0) {
-        new Chart(document.getElementById('expenseChart'), {
+        new Chart(document.getElementById('expeChart'), {
             type: 'pie',
             data: { labels: expenseLabels, datasets: [{ data: expenseData, backgroundColor: redPalette, borderWidth: 2, borderColor: '#fff' }] },
             options: chartOpts('#9f1239')
@@ -797,3 +796,8 @@ footer { background: linear-gradient(0deg, #f5e6c8, #fdf6e3); border-top: 2px so
 </script>
 </body>
 </html>
+
+
+
+
+

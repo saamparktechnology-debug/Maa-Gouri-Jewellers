@@ -1,5 +1,6 @@
 <?php
 require_once 'config/database.php';
+require_once 'config/company_config.php';
 
 $fixes = [
     2 => 'Supriyo@123',
@@ -14,3 +15,4 @@ foreach ($fixes as $id => $plain_password) {
 
 echo "<br><b>Delete this file now!</b>";
 ?>
+

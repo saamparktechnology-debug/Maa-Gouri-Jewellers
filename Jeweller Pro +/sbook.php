@@ -1,6 +1,7 @@
-﻿<?php
+<?php
 session_start();
 require_once 'config/database.php';
+require_once 'config/company_config.php';
 
 $is_logged_in = isset($_SESSION['user_id']);
 $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
@@ -11,9 +12,8 @@ $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <meta name="author" content="MANU GUPTA Suraj Chandra">
-    <meta name="description" content="Karigari Payment Management for Gouri Jewellers">
-    <title>Karigari Payment | Gouri Jewellers</title>
+    <meta name="author" content="MANU GUPTA">
+    <title>Sanchari | MAA GOURI JEWELLERS</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/theme.css">
@@ -21,7 +21,7 @@ $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap');
 
         * { font-family: 'Poppins', sans-serif; box-sizing: border-box; }
-        h1,h2,h3,.gold-font { font-family: 'Playfair Display', serif; }
+        h1,h2,h3,.gold-font { font-family: 'Poppins', serif; }
 
         .sidebar {
             position: fixed;
@@ -29,19 +29,18 @@ $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
             left: 0;
             width: 240px;
             height: 100vh;
-            background: linear-gradient(180deg, #7a4e0a 0%, #b5730e 40%, #d68b16 100%);
+            background: linear-gradient(180deg, #011921 0%, #03373b 50%, #044e54 80%, #011921 100%);
             z-index: 1000;
             display: flex;
             flex-direction: column;
             box-shadow: 4px 0 24px rgba(0,0,0,0.25);
             transition: transform 0.35s cubic-bezier(.4,0,.2,1);
-            overflow-y: auto;
-            overflow-x: hidden;
+            overflow: hidden;
         }
 
-        .sidebar::-webkit-scrollbar { width: 4px; }
-        .sidebar::-webkit-scrollbar-track { background: transparent; }
-        .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+        .sidebar-nav::-webkit-scrollbar { width: 4px; }
+        .sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+        .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
 
         .sidebar-logo {
             padding: 22px 18px 16px;
@@ -67,7 +66,7 @@ $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
             font-size: 13px;
             font-weight: 700;
             line-height: 1.3;
-            font-family: 'Playfair Display', serif;
+            font-family: 'Poppins', serif;
             letter-spacing: 0.5px;
         }
 
@@ -80,6 +79,8 @@ $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
         .sidebar-nav {
             flex: 1;
             padding: 10px 0;
+            overflow-y: auto;
+            overflow-x: hidden;
         }
 
         .sidebar-section-label {
@@ -89,6 +90,10 @@ $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
             font-weight: 700;
             letter-spacing: 1.5px;
             text-transform: uppercase;
+            position: sticky;
+            top: 0;
+            background: #011921; color: #f5c842;
+            z-index: 10;
         }
 
         .sidebar-nav a {
@@ -217,8 +222,7 @@ $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
 
         .page-wrapper { margin-left: 240px; min-height: 100vh; transition: margin-left 0.35s ease; }
 
-        nav.nav-gold {
-            background: linear-gradient(135deg, #b5730e, #d68b16) !important;
+        nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important; border-bottom: 2.5px solid #ffd700; box-shadow: 0 0 12px rgba(255, 215, 0, 0.5) !important;
             margin-left: 0;
         }
 
@@ -261,7 +265,7 @@ $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
         @media (min-width: 769px) { .mobile-burger { display: none !important; } }
 
         .hero-with-logo { text-align: center; }
-        .typing-text { background: linear-gradient(135deg, #800020, #c9a96e, #d68b16); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-family: 'Playfair Display', serif; }
+        .typing-text { background: linear-gradient(135deg, #800020, #c9a96e, #d68b16); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-family: 'Poppins', serif; }
         .cursor { display: inline-block; width: 3px; height: 1em; background: #d68b16; margin-left: 4px; vertical-align: middle; animation: blink 0.8s infinite; }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
 
@@ -308,6 +312,10 @@ $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
 
         body.light-theme { background:#F5F5F5; }
         body.dark-theme { background:#201d1b; color:#f8fafc; }
+
+
+
+    
     </style>
 </head>
 <body class="<?php echo $theme == 'light' ? 'light-theme' : 'dark-theme'; ?>" style="background:#F5F5F5; margin:0; padding:0;">
@@ -361,27 +369,40 @@ $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
     }
 
     window.addEventListener('load', function() {
-        createJewelSparkles();
-        setTimeout(typeEffect, 600);
-        setTimeout(function() {
+        const isReload = performance.getEntriesByType("navigation")[0]?.type === "reload";
+        const hasVisited = sessionStorage.getItem('visited');
+
+        if (!hasVisited || isReload) {
+            sessionStorage.setItem('visited', 'true');
+            createJewelSparkles();
+            setTimeout(typeEffect, 600);
+            setTimeout(function() {
+                const ov = document.getElementById('loadingOverlay');
+                if(ov) { ov.style.opacity = '0'; ov.style.visibility = 'hidden'; setTimeout(()=>ov.style.display='none', 500); }
+            }, 2000);
+        } else {
             const ov = document.getElementById('loadingOverlay');
-            if(ov) { ov.style.opacity = '0'; ov.style.visibility = 'hidden'; setTimeout(()=>ov.style.display='none', 500); }
-        }, 2000);
+            if(ov) { ov.style.display = 'none'; }
+            // Animate the content wrapper, NOT body (body transform breaks position:fixed sidebar)
+            const pw = document.querySelector('.page-wrapper');
+            if(pw) { pw.style.animation = 'slideInFromRightGlobal 0.3s ease-out forwards'; }
+        }
     });
 </script>
 
 <div id="loadingOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;display:flex;justify-content:center;align-items:center;overflow:hidden;transition:opacity 0.6s ease,visibility 0.6s ease;background:radial-gradient(ellipse at 50% 60%, #1a0a00 0%, #0d0500 100%);">
     <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(214,139,22,0.015) 3px,rgba(214,139,22,0.015) 4px);pointer-events:none;z-index:1;"></div>
-    <!-- background diamonds removed to keep only central gem -->
+    <div style="position:absolute;top:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite;">✦</div>
+    <div style="position:absolute;top:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 1s;">✦</div>
+    <div style="position:absolute;bottom:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 2s;">✦</div>
+    <div style="position:absolute;bottom:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 3s;">✦</div>
     <div style="position:relative;z-index:10;text-align:center;">
-        <!-- Logo -->
-        <div style="position:relative;width:110px;height:110px;margin:0 auto 28px;display:flex;align-items:center;justify-content:center;">
-            <img src="assets/images/moti-removebg-preview.png" alt="Logo" style="max-width:100%;max-height:100%;animation:gemGlowPulse 2s ease-in-out infinite;">
-        </div>
-        <div style="color:#d68b16;font-size:22px;letter-spacing:6px;font-family:'Playfair Display',serif;margin-bottom:6px;animation:titleGold 2s ease infinite alternate;">MAA GOURI JEWELLERS</div>
-        <p style="color:rgba(201,169,110,0.7);font-size:10px;letter-spacing:4px;text-transform:uppercase;margin-bottom:24px;">Crafting Timeless Elegance</p>
-        <div style="width:200px;height:3px;background:rgba(255,255,255,0.08);border-radius:3px;margin:0 auto 16px;overflow:hidden;">
-            <div style="height:100%;width:35%;background:linear-gradient(90deg,#7a4e0a,#d68b16,#f5c842);border-radius:3px;animation:barSlide 1.8s ease-in-out infinite;"></div>
+                <div style="position:relative;width:120px;height:120px;margin:0 auto 24px;display:flex;align-items:center;justify-content:center;">
+            
+            
+            <div style="width:120px;height:120px;background:transparent;animation:gemGlowPulse 1.5s ease-in-out infinite;">
+                <img src="assets/images/moti-removebg-preview.png" alt="MAA GOURI JEWELLERS Logo" style="width:100%;height:100%;object-fit:contain;display:block;">
+            </div>
         </div>
         <div style="display:flex;gap:9px;justify-content:center;">
             <div style="width:6px;height:6px;border-radius:50%;background:#d68b16;animation:dotBounce 1.2s ease-in-out infinite;"></div>
@@ -408,7 +429,7 @@ $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
         $logo_found = false;
         foreach($logo_paths as $path) {
             if(file_exists($path)) {
-                echo '<img src="'.$path.'" alt="Moti Jewellers Logo">';
+                echo '<img src="'.$path.'" alt="MAA GOURI JEWELLERS Logo" style="height:38px;width:auto;max-width:44px;object-fit:contain;display:inline-block;margin-right:8px;">';
                 $logo_found = true; break;
             }
         }
@@ -420,9 +441,10 @@ $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
         </div>
     </div>
 
-    <nav class="sidebar-nav">
+     <nav class="sidebar-nav">
         <div class="sidebar-section-label">Main Menu</div>
-        <a href="index.php">
+
+        <a href="index.php" class="active">
             <i class="fas fa-home"></i> HOME
         </a>
         <a href="billing.php">
@@ -434,24 +456,34 @@ $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
         <a href="customers.php">
             <i class="fas fa-users"></i> CUSTOMERS
         </a>
+
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Analytics</div>
+
         <a href="reports.php">
             <i class="fas fa-chart-bar"></i> REPORTS
+        </a>
+        <a href="due_list.php">
+            <i class="fas fa-hourglass-half"></i> DUE LIST
         </a>
         <a href="income_expenses.php">
             <i class="fas fa-chart-line"></i> INCOME & EXP
         </a>
+
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Tools</div>
+
         <a href="whatsapp_automation.php">
             <i class="fab fa-whatsapp"></i> WHATSAPP
+        </a>
+        <a href="purchase.php">
+            <i class="fas fa-book"></i> PURCHASE
         </a>
         <a href="contacts.php">
             <i class="fas fa-address-book"></i> CONTACTS
         </a>
-        <a href="sbook.php" class="active">
-            <i class="fas fa-book"></i> karigori
+        <a href="accounts.php">
+            <i class="fas fa-calculator"></i> ACCOUNTS
         </a>
     </nav>
 
@@ -506,7 +538,7 @@ $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
                 $logo_found = false;
                 foreach($logo_paths as $path) {
                     if(file_exists($path)) {
-                        echo '<img src="'.$path.'" alt="Moti Jewellers Logo">';
+                        echo '<img src="'.$path.'" alt="MAA GOURI JEWELLERS Logo" style="height:38px;width:auto;max-width:44px;object-fit:contain;display:inline-block;margin-right:8px;">';
                         $logo_found = true; break;
                     }
                 }
@@ -519,74 +551,85 @@ $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
             </h1>
 
             <p class="text-base sm:text-lg md:text-xl mb-8 max-w-2xl mx-auto" style="color:#7a4e0a;">
-                Register Karigar payments quickly and professionally.
+                Gold Advance Booking / Swarna Sanchay Management System with registration, payments, passbook, redemption and reports.
             </p>
 
             <div class="hero-buttons flex flex-col sm:flex-row justify-center space-y-3 sm:space-y-0 sm:space-x-6">
-                <a href="billing.php" class="btn-jewel"><i class="fas fa-receipt mr-2"></i> START BILLING</a>
-                <a href="stock.php" class="btn-jewel" style="background:linear-gradient(135deg,#7a4e0a,#d68b16);"><i class="fas fa-boxes mr-2"></i> VIEW STOCK</a>
+                <a href="sanchari_register.php" class="btn-jewel"><i class="fas fa-user-plus mr-2"></i> NEW CUSTOMER</a>
+                <a href="sanchari_payment.php" class="btn-jewel" style="background:linear-gradient(135deg,#7a4e0a,#d68b16);"><i class="fas fa-coins mr-2"></i> PAYMENT ENTRY</a>
             </div>
         </div>
     </section>
 
     <div class="container mx-auto px-4 sm:px-6 py-10">
-        <div class="form-card p-8 sm:p-10 mx-auto max-w-4xl">
-            <div class="mb-8 text-center">
-                <h2 class="text-3xl font-bold" style="color:#800020;">Karigari Payment</h2>
-                <p class="mt-2 text-sm text-gray-600">Enter karigar details below to register a new payment record.</p>
+        <div class="grid gap-6 lg:grid-cols-3">
+            <div class="form-card p-8">
+                <h3 class="text-2xl font-bold mb-3" style="color:#800020;">MAA GOURI JEWELLERS Gold Advance Scheme</h3>
+                <p class="text-sm text-gray-600 mb-4">Complete modules for customer registration, payment entry, passbook viewing, redemption, reports and dashboard are now available from this page.</p>
+                <ul class="list-unstyled text-sm text-gray-700 space-y-2">
+                    <li><i class="fas fa-check text-success me-2"></i> Auto-generated Customer ID / Book ID / Payment ID</li>
+                    <li><i class="fas fa-check text-success me-2"></i> Gold weight auto calculated from amount and rate</li>
+                    <li><i class="fas fa-check text-success me-2"></i> Passbook, reports, redemption and dashboard modules</li>
+                </ul>
             </div>
 
-            <form action="sbook_save.php" method="POST">
-                <div class="grid gap-6 md:grid-cols-2">
-                    <div>
-                        <label class="form-label">Karigar Name <span class="required">*</span></label>
-                        <input type="text" name="name" class="form-input mt-2" required>
-                    </div>
-                    <div>
-                        <label class="form-label">Karigar ID <span class="required">*</span></label>
-                        <input type="text" name="customer_id" class="form-input mt-2" required>
-                    </div>
-                    <div>
-                        <label class="form-label">Phone Number <span class="required">*</span></label>
-                        <input type="text" name="phone" class="form-input mt-2" maxlength="10" required>
-                    </div>
-                    <div>
-                        <label class="form-label">Email</label>
-                        <input type="email" name="email" class="form-input mt-2">
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="form-label">Address</label>
-                        <textarea name="address" rows="4" class="form-input mt-2"></textarea>
-                    </div>
-                </div>
+ <!-- ===================================================================== -->
+   <div style="background:#e8f5e9; border-radius:18px; border:1px solid #c8e6c9; box-shadow:0 8px 25px rgba(0,0,0,0.08); padding:24px;">
+    <h4 style="color:#c7522a; font-weight:700; border-bottom:2px solid rgba(199,82,42,0.2); padding-bottom:10px; margin-bottom:16px; font-size:16px;">
+        <i class="fas fa-bolt" style="margin-right:8px;"></i>Quick Access
+    </h4>
 
-                <div class="mt-8 text-right">
-                    <button type="submit" class="btn-jewel">Register Karigar Payment</button>
-                </div>
-            </form>
+    <div style="display:flex; flex-direction:column; gap:10px;">
+        <a href="sanchari_register.php" style="background:#fff; color:#333; border:1px solid #c8e6c9; font-weight:600; padding:12px 16px; border-radius:12px; text-decoration:none; display:flex; align-items:center; transition:all 0.3s ease;">
+            <i class="fas fa-user-plus" style="width:25px; margin-right:8px;"></i> Customer Registration
+        </a>
+        <a href="sanchari_payment.php" style="background:#fff; color:#333; border:1px solid #c8e6c9; font-weight:600; padding:12px 16px; border-radius:12px; text-decoration:none; display:flex; align-items:center;">
+            <i class="fas fa-coins" style="width:25px; margin-right:8px;"></i> Payment Entry
+        </a>
+        <a href="sanchari_dashboard.php" style="background:#fff; color:#333; border:1px solid #c8e6c9; font-weight:600; padding:12px 16px; border-radius:12px; text-decoration:none; display:flex; align-items:center;">
+            <i class="fas fa-chart-line" style="width:25px; margin-right:8px;"></i> Dashboard
+        </a>
+        
+        <a href="sanchari_redemption.php" style="background:#fff; color:#333; border:1px solid #c8e6c9; font-weight:600; padding:12px 16px; border-radius:12px; text-decoration:none; display:flex; align-items:center;">
+            <i class="fas fa-gem" style="width:25px; margin-right:8px;"></i> Gold Redemption
+        </a>
+        <a href="sanchari_reports.php" style="background:#fff; color:#333; border:1px solid #c8e6c9; font-weight:600; padding:12px 16px; border-radius:12px; text-decoration:none; display:flex; align-items:center;">
+            <i class="fas fa-file-alt" style="width:25px; margin-right:8px;"></i> Reports
+        </a>
+    </div>
+</div>
+
+
+            <div class="form-card p-6">
+                <h4 class="mb-3" style="color:#c7522a;">Terms & Conditions</h4>
+                <ol class="small text-gray-700 ps-3 mb-0">
+                    <li>Deposit continuously for 11 months and receive scheme benefit in the 12th month.</li>
+                    <li>Passbook loss requires customer verification.</li>
+                    <li>Gold weight is calculated as per the gold rate on the payment date.</li>
+                    <li>Missing installments may cancel scheme benefits.</li>
+                </ol>
+            </div>
+        </div>
+        <div class="form-card p-8 mt-6">
+            <h3 class="text-2xl font-bold mb-4" style="color:#800020;">Current Status</h3>
+            <p class="text-sm text-gray-600">The new Sanchari modules are ready under the project root. Use the buttons above to open the registration, payment, dashboard, passbook, redemption and reports pages.</p>
         </div>
     </div>
 
     <footer class="footer-jewel py-10 mt-4" style="background:linear-gradient(0deg, #f5e6c8, #fdf6e3); border-top: 2px solid #d68b16; margin-left:240px;">
-        <div class="container mx-auto px-4 sm:px-6">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-                <div>
-                    <div class="footer-logo">
-                        <?php
-                        $logo_found = false;
-                        foreach($logo_paths as $path) {
-                            if(file_exists($path)) { echo '<img src="'.$path.'" alt="Logo">'; $logo_found=true; break; }
-                        }
-                        if(!$logo_found) echo '<i class="fas fa-gem" style="color:#800020;font-size:28px;"></i>';
-                        ?>
-                        <h3 class="text-lg font-bold" style="color:#800020;">MAA GOURI JEWELLERS</h3>
-                    </div>
-                    <p class="text-sm" style="color:#6b5a3e;">Premium jewellery management system for royal businesses.</p>
-                </div>
-            </div>
+        <div class="container mx-auto px-4 sm:px-6 text-center">
+            <p class="text-xs" style="color:#7a4e0a;">
+                &copy; <?php echo date('Y'); ?> MAA GOURI JEWELLERS &nbsp;|&nbsp; CRAFTED WITH ELEGANCE &nbsp;|&nbsp;
+                Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology</a>
+            </p>
         </div>
     </footer>
 </div>
 
 </body>
 </html>
+
+
+
+
+

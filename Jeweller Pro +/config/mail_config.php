@@ -7,18 +7,13 @@ require_once __DIR__ . '/../vendor/phpmailer/phpmailer/src/Exception.php';
 require_once __DIR__ . '/../vendor/phpmailer/phpmailer/src/PHPMailer.php';
 require_once __DIR__ . '/../vendor/phpmailer/phpmailer/src/SMTP.php';
 
-// SMTP settings: update these values for your mail provider.
-// For reliable email delivery, configure a valid SMTP provider and set SMTP_USERNAME and SMTP_PASSWORD.
-// Example for Gmail: SMTP_HOST='smtp.gmail.com', SMTP_PORT=587, SMTP_SECURE='tls', and use an App Password.
-// The PHP mail() fallback only works if your local Windows/XAMPP environment has a working SMTP relay configured
-// in php.ini via SMTP and smtp_port. If not, set SMTP credentials above and use PHPMailer.
 define('MAIL_FROM_ADDRESS', 'santudhara157@gmail.com');
 define('MAIL_FROM_NAME', 'Maa Gouri Jewellers');
 define('SMTP_HOST', 'smtp.gmail.com');
 define('SMTP_PORT', 587);
 define('SMTP_USERNAME', 'santudhara157@gmail.com');
 define('SMTP_PASSWORD', 'gieoszdkzsouypho');
-define('SMTP_SECURE', 'tls'); // tls or ssl
+define('SMTP_SECURE', 'tls');
 
 define('SMTP_DEBUG', 0);
 
@@ -33,7 +28,7 @@ function sendSMTPMail($to, $subject, $message) {
         }
         $lastError = error_get_last();
         $phpError = $lastError['message'] ?? 'Failed to connect to local mailserver.';
-        $errorMessage = 'PHP mail() fallback failed. Configure SMTP_USERNAME and SMTP_PASSWORD in config/mail_config.php, or enable a local mailserver in php.ini (SMTP/smtp_port). ' . $phpError;
+        $errorMessage = 'PHP mail() fallback failed. Configure SMTP_USERNAME and SMTP_PASSWORD in config/mail_config.php. ' . $phpError;
         error_log('[mail_config] ' . $errorMessage);
         return ['success' => false, 'message' => $errorMessage];
     }
@@ -71,7 +66,3 @@ function sendSMTPMail($to, $subject, $message) {
         return ['success' => false, 'message' => $errorMessage];
     }
 }
-
-
-
-

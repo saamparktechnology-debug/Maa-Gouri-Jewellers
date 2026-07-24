@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'config/database.php';
+require_once 'config/company_config.php';
 
 $is_logged_in = isset($_SESSION['user_id']);
 
@@ -337,3 +338,4 @@ function closeSidebar(){
 </script>
 </body>
 </html>
+

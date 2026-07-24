@@ -1,163 +1,393 @@
 <?php
 session_start();
 require_once 'config/database.php';
-
-// AJAX: Delete an invoice (and its line items)
-if(isset($_GET['action']) && $_GET['action'] === 'delete_invoice') {
-    header('Content-Type: application/json');
-    if(!isset($_SESSION['user_id'])) {
-        echo json_encode(['success' => false, 'message' => 'Not logged in.']);
-        exit();
-    }
-    if($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
-        exit();
-    }
-    $invoice_no = mysqli_real_escape_string($conn, trim($_POST['invoice_no'] ?? ''));
-    if(empty($invoice_no)) {
-        echo json_encode(['success' => false, 'message' => 'Invoice number required.']);
-        exit();
-    }
-    $findRes = mysqli_query($conn, "SELECT id FROM invoices WHERE invoice_no = '$invoice_no' LIMIT 1");
-    if(!$findRes || mysqli_num_rows($findRes) === 0) {
-        echo json_encode(['success' => false, 'message' => 'Invoice not found.']);
-        exit();
-    }
-    $invRow = mysqli_fetch_assoc($findRes);
-    $invoice_id = intval($invRow['id']);
-
-    mysqli_query($conn, "DELETE FROM invoice_items WHERE invoice_id = $invoice_id");
-    $del = mysqli_query($conn, "DELETE FROM invoices WHERE id = $invoice_id");
-
-    if($del) {
-        echo json_encode(['success' => true, 'message' => 'Invoice ' . $invoice_no . ' deleted successfully.']);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Error deleting invoice: ' . mysqli_error($conn)]);
-    }
-    exit();
-}
-
-// AJAX: Get items for an invoice
-if(isset($_GET['action']) && $_GET['action'] === 'get_invoice_items') {
-    header('Content-Type: application/json');
-    if(!isset($_SESSION['user_id'])) {
-        echo json_encode(['success' => false, 'message' => 'Not logged in.']);
-        exit();
-    }
-    $invoice_no = mysqli_real_escape_string($conn, trim($_GET['invoice_no'] ?? ''));
-    if(empty($invoice_no)) {
-        echo json_encode(['success' => false, 'message' => 'Invoice number required.']);
-        exit();
-    }
-    $findRes = mysqli_query($conn, "SELECT id FROM invoices WHERE invoice_no = '$invoice_no' LIMIT 1");
-    if(!$findRes || mysqli_num_rows($findRes) === 0) {
-        echo json_encode(['success' => false, 'message' => 'Invoice not found.']);
-        exit();
-    }
-    $invRow = mysqli_fetch_assoc($findRes);
-    $invoice_id = intval($invRow['id']);
-
-    $items_res = mysqli_query($conn, "SELECT ii.id, ii.product_id, ii.quantity, ii.price, ii.total,
-                                             COALESCE(p.name, ii.product_name, 'Jewellery Item') AS product_name,
-                                             COALESCE(p.serial_no, ii.serial_no, '') AS serial_no,
-                                             COALESCE(ii.hsn_code, '0') AS hsn_code
-                                      FROM invoice_items ii
-                                      LEFT JOIN products p ON ii.product_id = p.id
-                                      WHERE ii.invoice_id = $invoice_id");
-    $items = [];
-    if($items_res) {
-        while($r = mysqli_fetch_assoc($items_res)) {
-            $r['hsn_code'] = (!empty($r['hsn_code'])) ? $r['hsn_code'] : '0';
-            $items[] = $r;
-        }
-    }
-    echo json_encode(['success' => true, 'items' => $items, 'invoice_no' => $invoice_no]);
-    exit();
-}
-
-// AJAX: Move items to stock and delete invoice
-if(isset($_GET['action']) && $_GET['action'] === 'move_to_stock_and_delete') {
-    header('Content-Type: application/json');
-    if(!isset($_SESSION['user_id'])) {
-        echo json_encode(['success' => false, 'message' => 'Not logged in.']);
-        exit();
-    }
-    if($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        echo json_encode(['success' => false, 'message' => 'Invalid request method.']);
-        exit();
-    }
-    $invoice_no = mysqli_real_escape_string($conn, trim($_POST['invoice_no'] ?? ''));
-    $items_json = $_POST['items'] ?? '[]';
-    $items_data = json_decode($items_json, true);
-
-    if(empty($invoice_no)) {
-        echo json_encode(['success' => false, 'message' => 'Invoice number required.']);
-        exit();
-    }
-    $findRes = mysqli_query($conn, "SELECT id FROM invoices WHERE invoice_no = '$invoice_no' LIMIT 1");
-    if(!$findRes || mysqli_num_rows($findRes) === 0) {
-        echo json_encode(['success' => false, 'message' => 'Invoice not found.']);
-        exit();
-    }
-    $invRow = mysqli_fetch_assoc($findRes);
-    $invoice_id = intval($invRow['id']);
-
-    // Ensure products table has hsn_code column
-    $chk_hsn = mysqli_query($conn, "SHOW COLUMNS FROM products LIKE 'hsn_code'");
-    if($chk_hsn && mysqli_num_rows($chk_hsn) == 0) {
-        mysqli_query($conn, "ALTER TABLE products ADD COLUMN hsn_code VARCHAR(50) DEFAULT '0'");
-    }
-
-    if(is_array($items_data)) {
-        foreach($items_data as $it) {
-            $product_id = intval($it['product_id'] ?? 0);
-            $pname      = mysqli_real_escape_string($conn, trim($it['product_name'] ?? 'Jewellery Item'));
-            $serial     = mysqli_real_escape_string($conn, trim($it['serial_no'] ?? ''));
-            $qty        = floatval($it['qty'] ?? 0);
-            $hsn        = mysqli_real_escape_string($conn, trim($it['hsn_code'] ?? '0'));
-            if(empty($hsn)) $hsn = '0';
-
-            if($qty <= 0) continue;
-
-            if($product_id > 0) {
-                // Product exists by ID
-                mysqli_query($conn, "UPDATE products SET quantity = quantity + $qty, hsn_code = '$hsn' WHERE id = $product_id");
-            } else {
-                // Check if product exists by name or serial
-                $chkP = mysqli_query($conn, "SELECT id FROM products WHERE name = '$pname' OR (serial_no != '' AND serial_no = '$serial') LIMIT 1");
-                if($chkP && mysqli_num_rows($chkP) > 0) {
-                    $prow = mysqli_fetch_assoc($chkP);
-                    $existing_id = intval($prow['id']);
-                    mysqli_query($conn, "UPDATE products SET quantity = quantity + $qty, hsn_code = '$hsn' WHERE id = $existing_id");
-                } else {
-                    // Create new product
-                    if(empty($serial)) {
-                        $sres = mysqli_query($conn, "SELECT MAX(id) AS maxid FROM products");
-                        $srow = mysqli_fetch_assoc($sres);
-                        $next_id = intval($srow['maxid'] ?? 0) + 1;
-                        $serial = 'SN' . str_pad($next_id, 4, '0', STR_PAD_LEFT);
-                    }
-                    mysqli_query($conn, "INSERT INTO products (serial_no, name, item_name, category, price, quantity, hsn_code, created_at)
-                                         VALUES ('$serial', '$pname', '$pname', 'Gold', 0.00, $qty, '$hsn', NOW())");
-                }
-            }
-        }
-    }
-
-    mysqli_query($conn, "DELETE FROM invoice_items WHERE invoice_id = $invoice_id");
-    $del = mysqli_query($conn, "DELETE FROM invoices WHERE id = $invoice_id");
-
-    if($del) {
-        echo json_encode(['success' => true, 'message' => 'Items moved to stock and invoice ' . $invoice_no . ' deleted successfully.']);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Error deleting invoice: ' . mysqli_error($conn)]);
-    }
-    exit();
-}
+require_once 'config/company_config.php';
 
 if(!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit();
+}
+
+// AJAX endpoint to get invoice items details
+if (isset($_GET['action']) && $_GET['action'] === 'get_invoice_items') {
+    header('Content-Type: application/json');
+    $invoice_no = mysqli_real_escape_string($conn, trim($_GET['invoice_no'] ?? ''));
+    $items = [];
+    if (!empty($invoice_no)) {
+        $chk = mysqli_query($conn, "SELECT id FROM invoices WHERE invoice_no = '$invoice_no'");
+        if ($chk && mysqli_num_rows($chk) > 0) {
+            $invoice = mysqli_fetch_assoc($chk);
+            $invoice_id = intval($invoice['id']);
+            
+            // Fetch items
+            $res = mysqli_query($conn, "
+                SELECT 
+                    ii.id, 
+                    ii.product_id, 
+                    ii.product_name, 
+                    ii.serial_no, 
+                    ii.huid_code, 
+                    ii.hsn_code, 
+                    ii.price, 
+                    ii.quantity,
+                    p.category,
+                    p.weight
+                FROM invoice_items ii 
+                LEFT JOIN products p ON ii.product_id = p.id 
+                WHERE ii.invoice_id = $invoice_id
+            ");
+            
+            if ($res) {
+                while ($row = mysqli_fetch_assoc($res)) {
+                    $items[] = [
+                        'id' => intval($row['id']),
+                        'product_id' => $row['product_id'] ? intval($row['product_id']) : null,
+                        'product_name' => $row['product_name'] ?? '',
+                        'serial_no' => $row['serial_no'] ?? '',
+                        'huid_code' => $row['huid_code'] ?? '',
+                        'hsn_code' => $row['hsn_code'] ?? '0',
+                        'price' => floatval($row['price'] ?? 0),
+                        'quantity' => floatval($row['quantity'] ?? 0),
+                        'category' => $row['category'] ?? '',
+                        'weight' => $row['weight'] ?? ''
+                    ];
+                }
+            }
+        }
+    }
+    echo json_encode($items);
+    exit();
+}
+
+// Handle remove data action
+$reset_success = '';
+$reset_error = '';
+if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_delete_invoice'])) {
+    $invoice_no = mysqli_real_escape_string($conn, trim($_POST['invoice_no'] ?? ''));
+    $delete_mode = $_POST['delete_mode'] ?? 'restore_stock';
+    if (empty($invoice_no)) {
+        $reset_error = "Error: Invoice number is missing.";
+    } else {
+        mysqli_query($conn, "SET FOREIGN_KEY_CHECKS = 0");
+        $success = false;
+        
+        $chk = mysqli_query($conn, "SELECT id FROM invoices WHERE invoice_no = '$invoice_no'");
+        if ($chk && mysqli_num_rows($chk) > 0) {
+            $invoice = mysqli_fetch_assoc($chk);
+            $invoice_id = $invoice['id'];
+            
+            if ($delete_mode === 'restore_stock') {
+                if (isset($_POST['items_restore'])) {
+                    $restore_items = json_decode($_POST['items_restore'], true);
+                    if (is_array($restore_items)) {
+                        foreach ($restore_items as $item) {
+                            $product_id = intval($item['product_id'] ?? 0);
+                            $restore_qty = floatval($item['restore_qty'] ?? 0);
+                            $hsn_code = mysqli_real_escape_string($conn, $item['hsn_code'] ?? '0');
+                            $product_name = mysqli_real_escape_string($conn, $item['product_name'] ?? '');
+                            $serial_no = mysqli_real_escape_string($conn, $item['serial_no'] ?? '');
+                            $huid_code = mysqli_real_escape_string($conn, $item['huid_code'] ?? '');
+                            $price = floatval($item['price'] ?? 0);
+                            $unit = mysqli_real_escape_string($conn, $item['unit'] ?? '');
+                            $category = mysqli_real_escape_string($conn, $item['category'] ?? '');
+                            $weight = mysqli_real_escape_string($conn, $item['weight'] ?? '');
+                            
+                            if ($restore_qty > 0) {
+                                $product_exists = false;
+                                if ($product_id > 0) {
+                                    $p_chk = mysqli_query($conn, "SELECT id FROM products WHERE id = $product_id");
+                                    if ($p_chk && mysqli_num_rows($p_chk) > 0) {
+                                        $product_exists = true;
+                                    }
+                                }
+                                
+                                if ($product_exists) {
+                                    mysqli_query($conn, "UPDATE products SET quantity = quantity + $restore_qty, hsn_code = '$hsn_code' WHERE id = $product_id");
+                                } else {
+                                    // Re-insert product back to stock
+                                    if (empty($category)) {
+                                        if (stripos($product_name, 'gold') !== false) {
+                                            $category = 'Gold 22K';
+                                        } else if (stripos($product_name, 'silver') !== false) {
+                                            $category = 'Silver';
+                                        } else {
+                                            $category = 'Others';
+                                        }
+                                    }
+                                    
+                                    // Insert product
+                                    mysqli_query($conn, "INSERT INTO products (serial_no, name, item_name, category, weight, price, quantity, huid_code, hsn_code, created_at) VALUES ('$serial_no', '$product_name', '$product_name', '$category', '$weight', $price, $restore_qty, '$huid_code', '$hsn_code', NOW())");
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Fallback to original restore behavior if items_restore wasn't submitted (e.g. legacy/direct form POST)
+                    $items_res = mysqli_query($conn, "SELECT product_id, quantity FROM invoice_items WHERE invoice_id = $invoice_id");
+                    if ($items_res) {
+                        while ($item = mysqli_fetch_assoc($items_res)) {
+                            if (!empty($item['product_id']) && floatval($item['quantity']) > 0) {
+                                $pid = intval($item['product_id']);
+                                $p_qty = floatval($item['quantity']);
+                                $p_chk = mysqli_query($conn, "SELECT id FROM products WHERE id = $pid");
+                                if ($p_chk && mysqli_num_rows($p_chk) > 0) {
+                                    mysqli_query($conn, "UPDATE products SET quantity = quantity + $p_qty WHERE id = $pid");
+                                } else {
+                                    // Fetch item details to re-insert
+                                    $item_detail = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM invoice_items WHERE invoice_id = $invoice_id AND product_id = $pid LIMIT 1"));
+                                    if ($item_detail) {
+                                        $name = mysqli_real_escape_string($conn, $item_detail['product_name']);
+                                        $serial = mysqli_real_escape_string($conn, $item_detail['serial_no']);
+                                        $huid = mysqli_real_escape_string($conn, $item_detail['huid_code']);
+                                        $hsn = mysqli_real_escape_string($conn, $item_detail['hsn_code'] ?? '0');
+                                        $price = floatval($item_detail['price']);
+                                        $cat = (stripos($name, 'gold') !== false) ? 'Gold 22K' : ((stripos($name, 'silver') !== false) ? 'Silver' : 'Others');
+                                        mysqli_query($conn, "INSERT INTO products (serial_no, name, item_name, category, weight, price, quantity, huid_code, hsn_code, created_at) VALUES ('$serial', '$name', '$name', '$cat', '', $price, $p_qty, '$huid', '$hsn', NOW())");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Delete invoice
+            $q = mysqli_query($conn, "DELETE FROM invoices WHERE id = $invoice_id");
+            if ($q) {
+                $success = true;
+                $reset_success = "Invoice #$invoice_no has been successfully deleted.";
+                if ($delete_mode === 'restore_stock') {
+                    $reset_success .= " Specified quantities have been moved back to stock.";
+                }
+            } else {
+                $reset_error = "Error deleting invoice: " . mysqli_error($conn);
+            }
+        } else {
+            $reset_error = "Error: Invoice #$invoice_no not found.";
+        }
+        
+        mysqli_query($conn, "SET FOREIGN_KEY_CHECKS = 1");
+        
+        if ($success) {
+            $redirect_url = 'reports.php?reset_msg=' . urlencode($reset_success);
+            echo '<!DOCTYPE html><html><head>';
+            echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($redirect_url) . '">';
+            echo '<script>window.location.replace(' . json_encode($redirect_url) . ');<\/script>';
+            echo '</head><body style="background:#fffbf4;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">';
+            echo '<p style="color:#7a4e0a;font-weight:600;">✅ Done! Redirecting...</p>';
+            echo '</body></html>';
+            exit();
+        }
+    }
+}
+
+if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_reset_report'])) {
+    $target = $_POST['reset_target'] ?? '';
+    $confirm_text = strtoupper(trim($_POST['confirm_delete_text'] ?? ''));
+    
+    if ($confirm_text !== 'DELETE') {
+        $reset_error = "Error: Please type 'DELETE' to confirm.";
+    } else {
+        mysqli_query($conn, "SET FOREIGN_KEY_CHECKS = 0");
+        $success = false;
+        
+        switch($target) {
+            case 'invoices':
+                $q1 = mysqli_query($conn, "TRUNCATE TABLE invoice_items");
+                $q2 = mysqli_query($conn, "TRUNCATE TABLE invoices");
+                if ($q1 && $q2) {
+                    $success = true;
+                    $reset_success = "All Invoices and Billing data have been successfully deleted.";
+                } else {
+                    $reset_error = "Error deleting invoices: " . mysqli_error($conn);
+                }
+                break;
+            case 'specific_invoice':
+                $spec_id = mysqli_real_escape_string($conn, trim($_POST['specific_identifier'] ?? ''));
+                if (empty($spec_id)) {
+                    $reset_error = "Error: Please specify the Invoice Number.";
+                } else {
+                    $chk = mysqli_query($conn, "SELECT id FROM invoices WHERE invoice_no = '$spec_id'");
+                    if ($chk && mysqli_num_rows($chk) > 0) {
+                        $invoice = mysqli_fetch_assoc($chk);
+                        $invoice_id = $invoice['id'];
+                        
+                        // Restore product quantities
+                        $items_res = mysqli_query($conn, "SELECT product_id, quantity FROM invoice_items WHERE invoice_id = $invoice_id");
+                        if ($items_res) {
+                            while ($item = mysqli_fetch_assoc($items_res)) {
+                                if (!empty($item['product_id']) && floatval($item['quantity']) > 0) {
+                                    mysqli_query($conn, "UPDATE products SET quantity = quantity + " . floatval($item['quantity']) . " WHERE id = " . intval($item['product_id']));
+                                }
+                            }
+                        }
+                        
+                        // Delete invoice
+                        $q2 = mysqli_query($conn, "DELETE FROM invoices WHERE id = $invoice_id");
+                        if ($q2) {
+                            $success = true;
+                            $reset_success = "Invoice #$spec_id has been successfully deleted and product stock restored.";
+                        } else {
+                            $reset_error = "Error deleting invoice: " . mysqli_error($conn);
+                        }
+                    } else {
+                        $reset_error = "Error: Invoice #$spec_id not found.";
+                    }
+                }
+                break;
+            case 'stock':
+                $q = mysqli_query($conn, "TRUNCATE TABLE products");
+                if ($q) {
+                    $success = true;
+                    $reset_success = "All Products/Stock data have been successfully deleted.";
+                } else {
+                    $reset_error = "Error deleting products: " . mysqli_error($conn);
+                }
+                break;
+            case 'specific_stock':
+                $spec_id = mysqli_real_escape_string($conn, trim($_POST['specific_identifier'] ?? ''));
+                if (empty($spec_id)) {
+                    $reset_error = "Error: Please specify the Product Serial Number, Name, or ID.";
+                } else {
+                    $chk = mysqli_query($conn, "SELECT id, name FROM products WHERE serial_no = '$spec_id' OR name = '$spec_id' OR id = '$spec_id'");
+                    if ($chk && mysqli_num_rows($chk) > 0) {
+                        $product = mysqli_fetch_assoc($chk);
+                        $p_id = $product['id'];
+                        $p_name = $product['name'];
+                        
+                        $q = mysqli_query($conn, "DELETE FROM products WHERE id = $p_id");
+                        if ($q) {
+                            $success = true;
+                            $reset_success = "Product '$p_name' has been successfully deleted.";
+                        } else {
+                            $reset_error = "Error deleting product: " . mysqli_error($conn);
+                        }
+                    } else {
+                        $reset_error = "Error: Product matching '$spec_id' not found.";
+                    }
+                }
+                break;
+            case 'customers':
+                $q = mysqli_query($conn, "TRUNCATE TABLE customers");
+                if ($q) {
+                    $success = true;
+                    $reset_success = "All Customer profiles have been successfully deleted.";
+                } else {
+                    $reset_error = "Error deleting customers: " . mysqli_error($conn);
+                }
+                break;
+            case 'specific_customer':
+                $spec_id = mysqli_real_escape_string($conn, trim($_POST['specific_identifier'] ?? ''));
+                if (empty($spec_id)) {
+                    $reset_error = "Error: Please specify the Customer Mobile Number, Name, or ID.";
+                } else {
+                    $chk = mysqli_query($conn, "SELECT id, name, mobile FROM customers WHERE mobile = '$spec_id' OR name = '$spec_id' OR id = '$spec_id'");
+                    if ($chk && mysqli_num_rows($chk) > 0) {
+                        $customer = mysqli_fetch_assoc($chk);
+                        $c_id = $customer['id'];
+                        $c_name = $customer['name'];
+                        $c_mobile = $customer['mobile'];
+                        
+                        $q = mysqli_query($conn, "DELETE FROM customers WHERE id = $c_id");
+                        if ($q) {
+                            $success = true;
+                            $reset_success = "Customer '$c_name' ($c_mobile) has been successfully deleted.";
+                        } else {
+                            $reset_error = "Error deleting customer: " . mysqli_error($conn);
+                        }
+                    } else {
+                        $reset_error = "Error: Customer matching '$spec_id' not found.";
+                    }
+                }
+                break;
+            case 'purchases':
+                $q1 = mysqli_query($conn, "TRUNCATE TABLE purchase_entries");
+                $q2 = mysqli_query($conn, "UPDATE stock_metal SET qty_available = 0");
+                if ($q1 && $q2) {
+                    $success = true;
+                    $reset_success = "All Purchase Entries have been successfully deleted and metal stock reset to 0.";
+                } else {
+                    $reset_error = "Error deleting purchases: " . mysqli_error($conn);
+                }
+                break;
+            case 'specific_purchase':
+                $spec_id = mysqli_real_escape_string($conn, trim($_POST['specific_identifier'] ?? ''));
+                if (empty($spec_id)) {
+                    $reset_error = "Error: Please specify the Purchase No or ID.";
+                } else {
+                    $chk = mysqli_query($conn, "SELECT id, purchase_no, material_type, qty FROM purchase_entries WHERE purchase_no = '$spec_id' OR id = '$spec_id'");
+                    if ($chk && mysqli_num_rows($chk) > 0) {
+                        $purchase = mysqli_fetch_assoc($chk);
+                        $p_id = $purchase['id'];
+                        $p_no = $purchase['purchase_no'];
+                        $mat = $purchase['material_type'];
+                        $qty = floatval($purchase['qty']);
+                        
+                        // Deduct stock from stock_metal
+                        mysqli_query($conn, "UPDATE stock_metal SET qty_available = qty_available - $qty WHERE material_type = '$mat'");
+                        
+                        $q = mysqli_query($conn, "DELETE FROM purchase_entries WHERE id = $p_id");
+                        if ($q) {
+                            $success = true;
+                            $reset_success = "Purchase Entry '$p_no' has been successfully deleted, and stock adjusted.";
+                        } else {
+                            $reset_error = "Error deleting purchase entry: " . mysqli_error($conn);
+                        }
+                    } else {
+                        $reset_error = "Error: Purchase Entry matching '$spec_id' not found.";
+                    }
+                }
+                break;
+            case 'sanchay':
+                $q1 = mysqli_query($conn, "TRUNCATE TABLE sanchari_payments");
+                $q2 = mysqli_query($conn, "TRUNCATE TABLE sanchari_redemptions");
+                $q3 = mysqli_query($conn, "TRUNCATE TABLE sanchari_customers");
+                if ($q1 && $q2 && $q3) {
+                    $success = true;
+                    $reset_success = "All Sanchay Book (scheme, payments, redemptions) data have been successfully deleted.";
+                } else {
+                    $reset_error = "Error deleting Sanchay Book data: " . mysqli_error($conn);
+                }
+                break;
+            case 'income_expense':
+                $chk1 = mysqli_query($conn, "SHOW TABLES LIKE 'income'");
+                $chk2 = mysqli_query($conn, "SHOW TABLES LIKE 'expenses'");
+                $q1 = true; $q2 = true;
+                if ($chk1 && mysqli_num_rows($chk1) > 0) {
+                    $q1 = mysqli_query($conn, "TRUNCATE TABLE income");
+                }
+                if ($chk2 && mysqli_num_rows($chk2) > 0) {
+                    $q2 = mysqli_query($conn, "TRUNCATE TABLE expenses");
+                }
+                if ($q1 && $q2) {
+                    $success = true;
+                    $reset_success = "All Income and Expense records have been successfully deleted.";
+                } else {
+                    $reset_error = "Error deleting income/expenses: " . mysqli_error($conn);
+                }
+                break;
+            default:
+                $reset_error = "Error: Invalid selection.";
+        }
+        mysqli_query($conn, "SET FOREIGN_KEY_CHECKS = 1");
+        
+        // If successful, reload to refresh stats/reports
+        if ($success) {
+            $redirect_url = 'reports.php?reset_msg=' . urlencode($reset_success);
+            echo '<!DOCTYPE html><html><head>';
+            echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($redirect_url) . '">';
+            echo '<script>window.location.replace(' . json_encode($redirect_url) . ');<\/script>';
+            echo '</head><body style="background:#fffbf4;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">';
+            echo '<p style="color:#7a4e0a;font-weight:600;">✅ Done! Redirecting...</p>';
+            echo '</body></html>';
+            exit();
+        }
+    }
+}
+
+// Check for redirection message
+if (isset($_GET['reset_msg'])) {
+    $reset_success = $_GET['reset_msg'];
 }
 
 // Get daily sales for last 7 days
@@ -190,7 +420,7 @@ $paid_cust = mysqli_query($conn, "SELECT invoice_no, customer_name, customer_mob
 $paid_rows = [];
 while($r = mysqli_fetch_assoc($paid_cust)) $paid_rows[] = $r;
 
-$part_customers = mysqli_query($conn, "SELECT invoice_no, customer_name, customer_mobile, total_amount, paid_amount, balance_amount, created_at FROM invoices WHERE payment_status='part' ORDER BY created_at DESC LIMIT 100");
+$part_customers = mysqli_query($conn, "SELECT i.invoice_no, i.customer_name, i.customer_mobile, i.total_amount, i.paid_amount, i.balance_amount, i.created_at, COALESCE(c.email, '') AS customer_email FROM invoices i LEFT JOIN customers c ON c.mobile = i.customer_mobile WHERE i.payment_status='part' ORDER BY i.created_at DESC LIMIT 100");
 $part_rows = [];
 while($r = mysqli_fetch_assoc($part_customers)) $part_rows[] = $r;
 
@@ -235,16 +465,14 @@ while($r = mysqli_fetch_assoc($bills_result)) $bills_rows[] = $r;
 $total_bills_amount = array_sum(array_column($bills_rows, 'total_amount'));
 $total_bills_count  = count($bills_rows);
 
-$logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-preview.png','moti-removebg-preview.png'];
+$logo_paths = ['logo.png','images/moti-removebg-preview.png','moti-removebg-preview.png'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <meta name="author" content="MANU GUPTA Suraj Chandra">
-    <meta name="description" content="Reports and Analytics for Gouri Jewellers">
-    <title>Reports - Maa Gouri Jewellers</title>
+    <title>Reports - MOTI JEWELLERS</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -254,33 +482,33 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap');
 
         * { font-family: 'Poppins', sans-serif; box-sizing: border-box; }
-        h1,h2,h3,.gold-font { font-family: 'Playfair Display', serif; }
+        h1,h2,h3,.gold-font { font-family: 'Poppins', sans-serif; font-weight: 700; }
 
         /* ========== SIDEBAR ========== */
         .sidebar {
             position: fixed; top: 0; left: 0;
             width: 240px; height: 100vh;
-            background: linear-gradient(180deg, #7a4e0a 0%, #b5730e 40%, #d68b16 100%);
+            background: linear-gradient(180deg, #011921 0%, #03373b 50%, #044e54 80%, #011921 100%);
             z-index: 1000;
             display: flex; flex-direction: column;
             box-shadow: 4px 0 24px rgba(0,0,0,0.25);
             transition: transform 0.35s cubic-bezier(.4,0,.2,1);
-            overflow-y: auto; overflow-x: hidden;
+            overflow: hidden;
         }
-        .sidebar::-webkit-scrollbar { width: 4px; }
-        .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+        .sidebar-nav::-webkit-scrollbar { width: 4px; }
+        .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
 
         .sidebar-logo {
             padding: 22px 18px 16px;
             border-bottom: 1px solid rgba(255,255,255,0.18);
             display: flex; align-items: center; gap: 12px; flex-shrink: 0;
         }
-        .sidebar-logo img { width: 44px; height: 44px; object-fit: contain; border-radius: 50%; background: rgba(255,255,255,0.1); padding: 3px; flex-shrink: 0; }
-        .sidebar-logo-text h2 { color: #fff; font-size: 13px; font-weight: 700; line-height: 1.3; font-family: 'Playfair Display', serif; letter-spacing: 0.5px; }
+        .sidebar-logo img { width: 44px; height: 44px; object-fit: cover; border-radius: 50%; background: rgba(255,255,255,0.1); flex-shrink: 0; }
+        .sidebar-logo-text h2 { color: #fff; font-size: 13px; font-weight: 700; line-height: 1.3; font-family: 'Poppins', serif; letter-spacing: 0.5px; }
         .sidebar-logo-text p  { color: rgba(255,255,255,0.65); font-size: 10px; margin-top: 1px; }
 
-        .sidebar-nav { flex: 1; padding: 10px 0; }
-        .sidebar-section-label { padding: 10px 20px 4px; color: rgba(255,255,255,0.45); font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+        .sidebar-nav { flex: 1; padding: 10px 0; overflow-y: auto; overflow-x: hidden; }
+        .sidebar-section-label { padding: 10px 20px 4px; color: rgba(255,255,255,0.45); font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; position: sticky; top: 0; background: #011921; color: #f5c842; z-index: 10; }
 
         .sidebar-nav a {
             display: flex; align-items: center; gap: 12px;
@@ -311,7 +539,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         /* ========== LAYOUT ========== */
         .page-wrapper { margin-left: 240px; min-height: 100vh; transition: margin-left 0.35s ease; background: #F5F5F5; }
 
-        nav.nav-gold { background: linear-gradient(135deg, #b5730e, #d68b16) !important; }
+        nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important; border-bottom: 2.5px solid #ffd700; box-shadow: 0 0 12px rgba(255, 215, 0, 0.5) !important; }
 
         .burger-menu { width: 28px; height: 20px; position: relative; cursor: pointer; }
         .burger-menu span { display: block; position: absolute; height: 3px; width: 100%; background: #fff; border-radius: 3px; transition: all 0.3s ease; }
@@ -448,7 +676,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         }
     }
 
-    const texts = ["MAA GOURI JEWELLERS"];
+    const texts = ["MOTI JEWELLERS"];
     let textIndex = 0, charIndex = 0, isDeleting = false, typingSpeed = 100;
 
     function typeEffect() {
@@ -480,12 +708,24 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     }
 
     window.addEventListener('load', function() {
-        createJewelSparkles();
-        setTimeout(typeEffect, 600);
-        setTimeout(function() {
+        const isReload = performance.getEntriesByType("navigation")[0]?.type === "reload";
+        const hasVisited = sessionStorage.getItem('visited');
+
+        if (!hasVisited || isReload) {
+            sessionStorage.setItem('visited', 'true');
+            createJewelSparkles();
+            setTimeout(typeEffect, 600);
+            setTimeout(function() {
+                const ov = document.getElementById('loadingOverlay');
+                if(ov) { ov.style.opacity = '0'; ov.style.visibility = 'hidden'; setTimeout(()=>ov.style.display='none', 500); }
+            }, 2000);
+        } else {
             const ov = document.getElementById('loadingOverlay');
-            if(ov) { ov.style.opacity = '0'; ov.style.visibility = 'hidden'; setTimeout(()=>ov.style.display='none', 500); }
-        }, 2000);
+            if(ov) { ov.style.display = 'none'; }
+            // Animate the content wrapper, NOT body (body transform breaks position:fixed sidebar)
+            const pw = document.querySelector('.page-wrapper');
+            if(pw) { pw.style.animation = 'slideInFromRightGlobal 0.3s ease-out forwards'; }
+        }
     });
 </script>
 
@@ -501,15 +741,12 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
     <div style="position:relative;z-index:10;text-align:center;">
         <!-- Logo -->
-        <div style="position:relative;width:110px;height:110px;margin:0 auto 28px;display:flex;align-items:center;justify-content:center;">
-            <img src="assets/images/moti-removebg-preview.png" alt="Logo" style="max-width:100%;max-height:100%;animation:gemGlowPulse 2s ease-in-out infinite;">
-        </div>
-
-        <div style="color:#d68b16;font-size:22px;letter-spacing:6px;font-family:'Playfair Display',serif;margin-bottom:6px;animation:titleGold 2s ease infinite alternate;">MAA GOURI JEWELLERS</div>
-        <p style="color:rgba(201,169,110,0.7);font-size:10px;letter-spacing:4px;text-transform:uppercase;margin-bottom:24px;">Crafting Timeless Elegance</p>
-
-        <div style="width:200px;height:3px;background:rgba(255,255,255,0.08);border-radius:3px;margin:0 auto 16px;overflow:hidden;">
-            <div style="height:100%;width:35%;background:linear-gradient(90deg,#7a4e0a,#d68b16,#f5c842);border-radius:3px;animation:barSlide 1.8s ease-in-out infinite;"></div>
+                <div style="position:relative;width:120px;height:120px;margin:0 auto 24px;display:flex;align-items:center;justify-content:center;">
+            
+            
+            <div style="width:120px;height:120px;background:transparent;animation:gemGlowPulse 1.5s ease-in-out infinite;">
+                <img src="logo.png" alt="MOTI JEWELLERS Logo" style="width:100%;height:100%;object-fit:contain;display:block;">
+            </div>
         </div>
 
         <div style="display:flex;gap:9px;justify-content:center;">
@@ -545,7 +782,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         if(!$logo_found) echo '<i class="fas fa-gem" style="color:#fff;font-size:30px;flex-shrink:0;"></i>';
         ?>
         <div class="sidebar-logo-text">
-            <h2>MAA GOURI JEWELLERS</h2>
+            <h2>MOTI JEWELLERS</h2>
             <p>Premium Since 2026</p>
         </div>
     </div>
@@ -556,20 +793,23 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         <a href="billing.php"><i class="fas fa-receipt"></i> BILLING</a>
         <a href="stock.php"><i class="fas fa-boxes"></i> STOCK</a>
         <a href="customers.php"><i class="fas fa-users"></i> CUSTOMERS</a>
+        <a href="sanchari_dashboard.php">
+            <i class="fas fa-piggy-bank"></i> SANCHAY SCHEME
+        </a>
 
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Analytics</div>
         <a href="reports.php" class="active"><i class="fas fa-chart-bar"></i> REPORTS</a>
+        <a href="due_list.php"><i class="fas fa-hourglass-half"></i> DUE LIST</a>
         <a href="income_expenses.php"><i class="fas fa-chart-line"></i> INCOME &amp; EXP</a>
 
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Tools</div>
         <a href="whatsapp_automation.php"><i class="fab fa-whatsapp"></i> WHATSAPP</a>
-        <a href="sbook.php"><i class="fas fa-book"></i> KARIGORI</a>
-         <a href="purchase.php">
+        <a href="purchase.php">
             <i class="fas fa-book"></i>PURCHASE
         </a>
-        <a href="account.php">
+        <a href="accounts.php">
             <i class="fas fa-book"></i> ACCOUNT
         </a>
     </nav>
@@ -611,12 +851,21 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     <div class="page-heading">
         <h1 class="gold-font"><i class="fas fa-chart-bar mr-2"></i> Business Reports</h1>
         <p>Sales analytics, payment status &amp; GST summary</p>
-        <div style="margin-top:10px;">
-            <a href="due_list.php" class="btn-gold px-4 py-2 rounded-lg" style="background:#d68b16;color:#fff;text-decoration:none;">Due List</a>
-        </div>
     </div>
 
     <div class="container mx-auto px-4 sm:px-6 py-6">
+
+        <!-- Reset Status Banner -->
+        <?php if($reset_success): ?>
+            <div class="mb-6 p-4 rounded-xl text-sm font-semibold" style="background:#d1fae5; border:1px solid #6ee7b7; color:#065f46;">
+                <i class="fas fa-check-circle mr-2"></i> <?php echo htmlspecialchars($reset_success); ?>
+            </div>
+        <?php endif; ?>
+        <?php if($reset_error): ?>
+            <div class="mb-6 p-4 rounded-xl text-sm font-semibold" style="background:#fee2e2; border:1px solid #fca5a5; color:#7f1d1d;">
+                <i class="fas fa-exclamation-circle mr-2"></i> <?php echo htmlspecialchars($reset_error); ?>
+            </div>
+        <?php endif; ?>
 
         <!-- ── CHARTS ROW ── -->
         <div class="charts-grid grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -727,7 +976,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 <div class="overflow-x-auto">
                     <table class="report-table">
                         <thead><tr>
-                            <th>Customer</th><th>Mobile</th><th class="text-right">Bill Total</th><th class="text-right">Paid</th><th class="text-right">⚠️ Balance</th><th class="text-center">Date</th><th class="text-center">Invoice</th>
+                            <th>Customer</th><th>Mobile</th><th class="text-right">Bill Total</th><th class="text-right">Paid</th><th class="text-right">⚠️ Balance</th><th class="text-center">Date</th><th class="text-center">Invoice</th><th class="text-center">Action</th>
                         </tr></thead>
                         <tbody>
                         <?php foreach($part_rows as $r): ?>
@@ -739,6 +988,10 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                 <td class="text-right font-bold" style="color:#dc2626;">₹<?php echo number_format($r['balance_amount'],2); ?></td>
                                 <td class="text-center"><?php echo date('d M Y', strtotime($r['created_at'])); ?></td>
                                 <td class="text-center font-mono text-xs" style="color:#d68b16;"><?php echo htmlspecialchars($r['invoice_no']); ?></td>
+                                <td class="text-center">
+                                    <button onclick='sendReminder(<?php echo json_encode($r['invoice_no']); ?>, <?php echo json_encode($r['customer_name']); ?>, <?php echo json_encode($r['customer_mobile']); ?>, <?php echo floatval($r['balance_amount']); ?>, <?php echo json_encode($r['customer_email'] ?? ''); ?>)' class="btn-jewel" style="padding:5px 8px;font-size:11px;border-radius:16px;margin-right:6px;">🔔 Reminder</button>
+                                    <button onclick='markAsPaid(<?php echo json_encode($r['invoice_no']); ?>, <?php echo floatval($r['balance_amount']); ?>)' class="btn-jewel" style="background:linear-gradient(135deg,#16a34a,#15803d);padding:5px 8px;font-size:11px;border-radius:16px;">✅ Mark Paid</button>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                         </tbody>
@@ -917,9 +1170,9 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 <span class="chip chip-yellow">Total Bills: <strong><?php echo $total_bills_count; ?></strong></span>
                 <span class="chip chip-green">Total Amount: <strong>₹<?php echo number_format($total_bills_amount,2); ?></strong></span>
                 <?php
-                $gst_filtered    = count(array_filter($bills_rows, fn($b)=>(strpos($b['gst_type'] ?? '', 'gst') === 0 && $b['gst_type'] !== 'non_gst')));
-                $nongst_filtered = count(array_filter($bills_rows, fn($b)=>($b['gst_type'] === 'non_gst' || strpos($b['gst_type'] ?? '', 'gst') !== 0)));
-                $total_gst_collected = array_sum(array_column(array_filter($bills_rows, fn($b)=>(strpos($b['gst_type'] ?? '', 'gst') === 0 && $b['gst_type'] !== 'non_gst')), 'gst_amount'));
+                $gst_filtered    = count(array_filter($bills_rows, fn($b)=>$b['gst_type']==='gst'));
+                $nongst_filtered = count(array_filter($bills_rows, fn($b)=>$b['gst_type']!=='gst'));
+                $total_gst_collected = array_sum(array_column(array_filter($bills_rows, fn($b)=>$b['gst_type']==='gst'), 'gst_amount'));
                 $total_cgst = round($total_gst_collected/2, 2);
                 $total_sgst = round($total_gst_collected/2, 2);
                 ?>
@@ -960,12 +1213,11 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         $cgst_amt  = round($gst_amt/2, 2);
                         $sgst_amt  = round($gst_amt/2, 2);
                         $gstin     = trim($bill['customer_gstin'] ?? '');
-                        $status_badge = match($bill['payment_status']) {
-                            'paid'   => '<span class="badge-paid">✅ Paid</span>',
-                            'part'   => '<span class="badge-part">⏳ Part</span>',
-                            'unpaid' => '<span class="badge-unpaid">❌ Unpaid</span>',
-                            default  => htmlspecialchars($bill['payment_status']),
-                        };
+                        $ps = $bill['payment_status'];
+                        if ($ps === 'paid')        $status_badge = '<span class="badge-paid">✅ Paid</span>';
+                        elseif ($ps === 'part')    $status_badge = '<span class="badge-part">⏳ Part</span>';
+                        elseif ($ps === 'unpaid')  $status_badge = '<span class="badge-unpaid">❌ Unpaid</span>';
+                        else                       $status_badge = htmlspecialchars($ps);
                     ?>
                     <tr>
                         <td style="color:#7a4e0a;"><?php echo $i+1; ?></td>
@@ -999,13 +1251,13 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         <td class="text-center"><?php echo $status_badge; ?></td>
                         <td class="text-center text-xs" style="color:#6b7280;white-space:nowrap;"><?php echo date('d M Y', strtotime($bill['created_at'])); ?></td>
                         <td class="text-center">
-                            <div style="display:flex;gap:4px;justify-content:center;flex-wrap:wrap;">
+                            <div class="flex justify-center gap-1.5">
                                 <a href="view_pdf.php?invoice_no=<?php echo urlencode($bill['invoice_no']); ?>" target="_blank"
-                                   class="btn-jewel" style="padding:3px 10px;font-size:10px;border-radius:20px;">
+                                   class="btn-jewel" style="padding:3px 10px;font-size:10px;border-radius:20px;white-space:nowrap;">
                                    🖨️ Print
                                 </a>
-                                <button type="button" onclick="deleteInvoice('<?php echo htmlspecialchars(addslashes($bill['invoice_no'])); ?>', this)"
-                                   style="padding:3px 10px;font-size:10px;border-radius:20px;background:linear-gradient(135deg,#dc2626,#991b1b);color:#fff;border:none;cursor:pointer;font-weight:700;">
+                                <button onclick="confirmDeleteInvoice('<?php echo htmlspecialchars($bill['invoice_no']); ?>')"
+                                        class="btn-jewel" style="background:linear-gradient(135deg,#7f1d1d,#ef4444);padding:3px 10px;font-size:10px;border-radius:20px;white-space:nowrap;">
                                    🗑️ Delete
                                 </button>
                             </div>
@@ -1016,54 +1268,17 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 </table>
             </div>
         </div>
+
+
     </div>
 
     <footer>
         <p class="text-xs" style="color:#7a4e0a;">
-            &copy; 2026 MAA GOURI JEWELLERS &nbsp;|&nbsp; CRAFTED WITH ELEGANCE &nbsp;|&nbsp;
-            Developed by <a href="https://saamparktechnologyresearch.in/" target="_blank" style="text-decoration:underline;color:#800020;">STR</a>
+            &copy; 2026 MOTI JEWELLERS &nbsp;|&nbsp; CRAFTED WITH ELEGANCE &nbsp;|&nbsp;
+            Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology</a>
         </p>
     </footer>
 </div><!-- end .page-wrapper -->
-
-<!-- Modal for Delete Options (Permanent Delete vs Move to Stock) -->
-<div id="deleteOptionsModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden p-4">
-    <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-yellow-600 relative max-h-screen overflow-y-auto">
-        <div class="flex justify-between items-center pb-3 border-b border-gray-200 mb-4">
-            <h3 class="text-lg font-bold text-red-800" id="delModalTitle"><i class="fas fa-trash-alt mr-2 text-red-600"></i> Delete Invoice Options</h3>
-            <button type="button" onclick="closeDeleteOptionsModal()" class="text-gray-400 hover:text-gray-700 text-xl font-bold">&times;</button>
-        </div>
-
-        <!-- Step 1: Choose Option -->
-        <div id="delModalStep1">
-            <p class="text-sm text-gray-700 mb-4">What would you like to do with Invoice <strong id="delInvoiceNoSpan" class="text-amber-700"></strong>?</p>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
-                <button type="button" onclick="confirmPermanentDelete()" class="p-4 rounded-xl border border-red-300 bg-red-50 hover:bg-red-100 text-red-800 font-bold flex flex-col items-center gap-2 transition">
-                    <i class="fas fa-trash-alt text-2xl text-red-600"></i>
-                    <span>Permanent Delete</span>
-                    <span class="text-xs font-normal text-red-600">Remove completely</span>
-                </button>
-                <button type="button" onclick="openMoveToStockStep()" class="p-4 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 font-bold flex flex-col items-center gap-2 transition">
-                    <i class="fas fa-boxes text-2xl text-amber-600"></i>
-                    <span>Move to Stock</span>
-                    <span class="text-xs font-normal text-amber-700">Restore items to stock</span>
-                </button>
-            </div>
-        </div>
-
-        <!-- Step 2: Move to Stock Form -->
-        <div id="delModalStep2" class="hidden">
-            <p class="text-xs text-amber-900 mb-3 font-semibold">Specify quantities to return to stock and HSN code (default is 0):</p>
-            <div id="moveItemsContainer" class="space-y-3 mb-4 max-h-60 overflow-y-auto p-2 bg-amber-50 rounded-xl border border-amber-200">
-                <!-- Dynamically populated rows -->
-            </div>
-            <div class="flex justify-end gap-2">
-                <button type="button" onclick="backToStep1()" class="px-4 py-2 text-xs font-bold rounded-lg border border-gray-300 text-gray-700 bg-gray-100 hover:bg-gray-200">Back</button>
-                <button type="button" id="btnSubmitMoveToStock" onclick="submitMoveToStock()" class="btn-jewel py-2 px-5 text-xs font-bold">💾 Save to Stock & Delete Invoice</button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <style>
 @media (max-width: 768px) { nav.nav-gold { margin-left: 0 !important; } }
@@ -1093,168 +1308,59 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         document.getElementById(id).classList.toggle('open');
     }
 
-    /* ── Delete Invoice Options (Permanent Delete or Move to Stock) ── */
-    let currentDeleteInvoiceNo = '';
-    let currentDeleteButton = null;
-
-    function deleteInvoice(invoiceNo, btn) {
-        currentDeleteInvoiceNo = invoiceNo;
-        currentDeleteButton = btn;
-        document.getElementById('delInvoiceNoSpan').textContent = invoiceNo;
-        document.getElementById('delModalStep1').classList.remove('hidden');
-        document.getElementById('delModalStep2').classList.add('hidden');
-        document.getElementById('deleteOptionsModal').classList.remove('hidden');
-    }
-
-    function closeDeleteOptionsModal() {
-        document.getElementById('deleteOptionsModal').classList.add('hidden');
-        currentDeleteInvoiceNo = '';
-        currentDeleteButton = null;
-    }
-
-    function confirmPermanentDelete() {
-        if(!confirm('⚠️ Are you sure you want to PERMANENTLY delete Invoice ' + currentDeleteInvoiceNo + '? This cannot be undone.')) return;
-        const btn = currentDeleteButton;
-        if(btn) {
-            btn.disabled = true;
-            btn.innerHTML = 'Deleting...';
+    /* ── Actions: Send Reminder & Mark Paid (uses billing.php AJAX endpoints) ── */
+    function sendReminder(invoiceNo, customerName, customerMobile, balanceAmount, customerEmail) {
+        console.log('sendReminder called', {invoiceNo, customerName, customerMobile, balanceAmount, customerEmail});
+        if(!invoiceNo) return alert('Invoice number is missing');
+        // If no customer email provided, prompt admin to enter one
+        let email = customerEmail || '';
+        if(!email) {
+            email = prompt('No email found for this customer. Enter email to send reminder to (or Cancel):', '');
+            if(email === null) return; // user cancelled
+            email = (email || '').trim();
+            const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if(email && !emailRe.test(email)) { alert('Please enter a valid email address.'); return; }
         }
-        closeDeleteOptionsModal();
-
-        fetch(window.location.pathname + '?action=delete_invoice', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            credentials: 'same-origin',
-            body: 'invoice_no=' + encodeURIComponent(currentDeleteInvoiceNo)
-        })
-        .then(r => r.json())
-        .then(data => {
-            if(data.success) {
-                if(btn) {
-                    const row = btn.closest('tr');
-                    if(row) {
-                        row.style.transition = 'opacity 0.3s, height 0.3s';
-                        row.style.opacity = '0';
-                        setTimeout(() => row.remove(), 300);
-                    }
-                } else {
-                    location.reload();
-                }
-            } else {
-                alert(data.message || 'Could not delete invoice.');
-                if(btn) { btn.disabled = false; btn.innerHTML = '🗑️ Delete'; }
-            }
-        })
-        .catch(() => {
-            alert('Network error. Please try again.');
-            if(btn) { btn.disabled = false; btn.innerHTML = '🗑️ Delete'; }
-        });
+        if(!confirm('Send payment reminder to ' + customerName + ' (' + (customerMobile||'') + ') at ' + email + '?')) return;
+        const fd = new FormData();
+        fd.append('invoice_no', invoiceNo);
+        fd.append('customer_name', customerName || 'Customer');
+        fd.append('customer_mobile', customerMobile || '');
+        fd.append('balance_amount', balanceAmount || 0);
+        fd.append('customer_email', email || '');
+        fetch('billing.php?action=send_reminder', { method: 'POST', body: fd, credentials: 'same-origin', headers: { Accept: 'application/json' } })
+            .then(async r => {
+                console.log('sendReminder response status', r.status);
+                const txt = await r.text();
+                try { const res = JSON.parse(txt); if(res.success) { alert(res.message || 'Reminder sent'); location.reload(); } else alert(res.message || txt || 'Failed to send reminder'); }
+                catch(e) { alert('Unexpected server response: ' + txt); }
+            }).catch(e => { console.error('sendReminder fetch error', e); alert('Error: ' + e); });
     }
 
-    function openMoveToStockStep() {
-        const container = document.getElementById('moveItemsContainer');
-        container.innerHTML = '<div class="text-center py-4 text-xs text-amber-800"><i class="fas fa-spinner fa-spin mr-1"></i> Loading invoice items...</div>';
-        document.getElementById('delModalStep1').classList.add('hidden');
-        document.getElementById('delModalStep2').classList.remove('hidden');
-
-        fetch(window.location.pathname + '?action=get_invoice_items&invoice_no=' + encodeURIComponent(currentDeleteInvoiceNo))
-        .then(r => r.json())
-        .then(data => {
-            if(data.success && data.items && data.items.length > 0) {
-                let html = '';
-                data.items.forEach((item, idx) => {
-                    const defaultHsn = (item.hsn_code && item.hsn_code !== '') ? item.hsn_code : '0';
-                    html += `
-                    <div class="bg-white p-3 rounded-lg border border-amber-200 text-xs item-move-row" data-product-id="${item.product_id||0}" data-product-name="${escapeHtml(item.product_name)}" data-serial-no="${escapeHtml(item.serial_no)}">
-                        <div class="font-bold text-amber-900 mb-1">📦 ${escapeHtml(item.product_name)} <span class="text-gray-500 font-normal">(${item.serial_no ? 'SN:'+escapeHtml(item.serial_no) : 'Manual Item'})</span></div>
-                        <div class="grid grid-cols-2 gap-2">
-                            <div>
-                                <label class="block text-gray-600 font-semibold mb-1">Return Qty (GMS/Pcs):</label>
-                                <input type="number" class="jewel-input w-full py-1 px-2 text-xs move-qty-input" value="${item.quantity}" step="0.001" min="0">
-                            </div>
-                            <div>
-                                <label class="block text-gray-600 font-semibold mb-1">HSN Code:</label>
-                                <input type="text" class="jewel-input w-full py-1 px-2 text-xs move-hsn-input" value="${defaultHsn}" placeholder="0">
-                            </div>
-                        </div>
-                    </div>`;
-                });
-                container.innerHTML = html;
-            } else {
-                container.innerHTML = '<div class="text-center py-4 text-xs text-red-600">No items found in this invoice. Click Back to delete.</div>';
-            }
-        })
-        .catch(() => {
-            container.innerHTML = '<div class="text-center py-4 text-xs text-red-600">Failed to load invoice items. Try again.</div>';
-        });
-    }
-
-    function escapeHtml(str) {
-        if(!str) return '';
-        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    }
-
-    function backToStep1() {
-        document.getElementById('delModalStep2').classList.add('hidden');
-        document.getElementById('delModalStep1').classList.remove('hidden');
-    }
-
-    function submitMoveToStock() {
-        const rows = document.querySelectorAll('.item-move-row');
-        const items = [];
-        rows.forEach(r => {
-            const product_id = r.getAttribute('data-product-id');
-            const product_name = r.getAttribute('data-product-name');
-            const serial_no = r.getAttribute('data-serial-no');
-            const qty = parseFloat(r.querySelector('.move-qty-input').value) || 0;
-            const hsn_code = r.querySelector('.move-hsn-input').value.trim() || '0';
-            items.push({ product_id, product_name, serial_no, qty, hsn_code });
-        });
-
-        const submitBtn = document.getElementById('btnSubmitMoveToStock');
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = 'Saving to Stock...';
-
-        fetch(window.location.pathname + '?action=move_to_stock_and_delete', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            credentials: 'same-origin',
-            body: 'invoice_no=' + encodeURIComponent(currentDeleteInvoiceNo) + '&items=' + encodeURIComponent(JSON.stringify(items))
-        })
-        .then(r => r.json())
-        .then(data => {
-            if(data.success) {
-                closeDeleteOptionsModal();
-                alert('✅ ' + data.message);
-                if(currentDeleteButton) {
-                    const row = currentDeleteButton.closest('tr');
-                    if(row) {
-                        row.style.transition = 'opacity 0.3s, height 0.3s';
-                        row.style.opacity = '0';
-                        setTimeout(() => row.remove(), 300);
-                    }
-                } else {
-                    location.reload();
-                }
-            } else {
-                alert(data.message || 'Failed to move to stock.');
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = '💾 Save to Stock & Delete Invoice';
-            }
-        })
-        .catch(() => {
-            alert('Network error. Please try again.');
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '💾 Save to Stock & Delete Invoice';
-        });
+    function markAsPaid(invoiceNo, balanceAmount) {
+        console.log('markAsPaid called', {invoiceNo, balanceAmount});
+        if(!invoiceNo) return alert('Invoice number is missing');
+        if(!confirm('Mark invoice ' + invoiceNo + ' as paid (₹' + parseFloat(balanceAmount).toFixed(2) + ')?')) return;
+        const fd = new FormData();
+        fd.append('invoice_no', invoiceNo);
+        fd.append('amount', balanceAmount || 0);
+        fd.append('anonymize', '1');
+        fetch('billing.php?action=mark_paid', { method: 'POST', body: fd, credentials: 'same-origin', headers: { Accept: 'application/json' } })
+            .then(async r => {
+                console.log('markAsPaid response status', r.status);
+                const txt = await r.text();
+                console.log('markAsPaid response text', txt);
+                try { const res = JSON.parse(txt); if(res.success) { alert(res.message || 'Marked as paid'); location.reload(); } else alert(res.message || txt || 'Failed to mark as paid'); }
+                catch(e) { alert('Unexpected server response: ' + txt); }
+            }).catch(e => { console.error('markAsPaid fetch error', e); alert('Error: ' + e); });
     }
 
     /* ── Chart ── */
     const labels    = <?php echo json_encode(array_column($daily_sales,'date')); ?>;
     const salesData = <?php echo json_encode(array_column($daily_sales,'total')); ?>;
-    const salesChartCanvas = document.getElementById('salesChart');
-    if(salesChartCanvas) {
-        new Chart(salesChartCanvas.getContext('2d'), {
+    const chartEl = document.getElementById('salesChart');
+    if (chartEl) {
+        new Chart(chartEl.getContext('2d'), {
             type: 'line',
             data: {
                 labels,
@@ -1303,8 +1409,8 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         const totalPaid    = billsData.reduce((s,b) => s + parseFloat(b.paid_amount||0), 0);
         const totalBalance = billsData.reduce((s,b) => s + parseFloat(b.balance_amount||0), 0);
         const totalGST     = billsData.reduce((s,b) => s + parseFloat(b.gst_amount||0), 0);
-        const gstBills     = billsData.filter(b => b.gst_type && b.gst_type.startsWith('gst') && b.gst_type !== 'non_gst').length;
-        const nonGstBills  = billsData.filter(b => !b.gst_type || b.gst_type === 'non_gst' || !b.gst_type.startsWith('gst')).length;
+        const gstBills     = billsData.filter(b => b.gst_type === 'gst').length;
+        const nonGstBills  = billsData.filter(b => b.gst_type !== 'gst').length;
         const paidBills    = billsData.filter(b => b.payment_status === 'paid').length;
         const partBills    = billsData.filter(b => b.payment_status === 'part').length;
         const unpaidBills  = billsData.filter(b => b.payment_status === 'unpaid').length;
@@ -1313,7 +1419,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
         // Sheet 1 — All Bills
         const aoa1 = [];
-        aoa1.push(['💎 MAA GOURI JEWELLERS', '', '', '', '', '', '', '', '', '', '', '']);
+        aoa1.push(['💎 MOTI JEWELLERS', '', '', '', '', '', '', '', '', '', '', '']);
         aoa1.push(['All Bills Report — Generated: ' + today, '', '', '', '', '', '', '', '', '', '', '']);
         aoa1.push([]);
         aoa1.push(['Total Bills', billsData.length, '', 'Total Amount', inrFmt(totalAmt), '', 'Total GST Collected', inrFmt(totalGST), '', 'Balance Due', inrFmt(totalBalance), '']);
@@ -1322,8 +1428,6 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         // ★ UPDATED: Added GSTIN column header
         aoa1.push(['#', 'Invoice No', 'Customer Name', 'GSTIN', 'Mobile', 'Address', 'Total Amount (₹)', 'Paid Amount (₹)', 'Balance Due (₹)', 'GST Type', 'GST Amount (₹)', 'Payment Status', 'Date']);
         billsData.forEach((b, i) => {
-            const isGstType = b.gst_type && b.gst_type.startsWith('gst') && b.gst_type !== 'non_gst';
-            const gstLabel  = isGstType ? (b.gst_type === 'gst_18' ? 'GST (18%)' : 'GST (3%)') : 'Non-GST';
             aoa1.push([
                 i + 1,
                 b.invoice_no,
@@ -1334,7 +1438,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 parseFloat(b.total_amount||0),
                 parseFloat(b.paid_amount||0),
                 parseFloat(b.balance_amount||0),
-                gstLabel,
+                b.gst_type === 'gst' ? 'GST (3%)' : 'Non-GST',
                 parseFloat(b.gst_amount||0),
                 b.payment_status === 'paid' ? 'Full Paid' : b.payment_status === 'part' ? 'Part Payment' : 'Unpaid',
                 fmtDate(b.created_at)
@@ -1349,7 +1453,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
         // Sheet 2 — Payment Summary
         const aoa2 = [];
-        aoa2.push(['💎 MAA GOURI JEWELLERS — Payment Summary']);
+        aoa2.push(['💎 MOTI JEWELLERS — Payment Summary']);
         aoa2.push(['Generated: ' + today]);
         aoa2.push([]);
         aoa2.push(['Category', 'Count', 'Amount (₹)']);
@@ -1380,8 +1484,216 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         ws3['!cols'] = [{wch:5},{wch:20},{wch:22},{wch:20},{wch:14},{wch:18},{wch:16},{wch:18},{wch:14},{wch:14}];
         XLSX.utils.book_append_sheet(wb, ws3, 'Pending Payments');
 
-        XLSX.writeFile(wb, `MaaGouriJewellers_Report_${todayFile}.xlsx`);
+        XLSX.writeFile(wb, `MAA GOURIJewellers_Report_${todayFile}.xlsx`);
+    }
+
+    let currentDeleteInvoiceNo = '';
+    let currentDeleteMode = '';
+    let invoiceItemsCache = [];
+
+    function confirmDeleteInvoice(invoiceNo) {
+        currentDeleteInvoiceNo = invoiceNo;
+        currentDeleteMode = '';
+        
+        // Reset modal UI
+        document.getElementById('deleteInvoiceNoText').textContent = invoiceNo;
+        document.getElementById('btnDeletePerm').className = 'flex-1 py-3 px-4 rounded-xl border border-red-300 text-red-700 bg-red-50 hover:bg-red-100 font-semibold text-xs transition duration-200 text-center cursor-pointer';
+        document.getElementById('btnDeleteRestore').className = 'flex-1 py-3 px-4 rounded-xl border border-green-300 text-green-700 bg-green-50 hover:bg-green-100 font-semibold text-xs transition duration-200 text-center cursor-pointer';
+        document.getElementById('restoreStockForm').classList.add('hidden');
+        document.getElementById('btnConfirmDeleteSubmit').disabled = true;
+        document.getElementById('btnConfirmDeleteSubmit').style.opacity = '0.5';
+        
+        // Open Modal
+        const modal = document.getElementById('deleteInvoiceModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        
+        // Fetch invoice items dynamically
+        const itemsList = document.getElementById('restoreItemsList');
+        itemsList.innerHTML = '<div class="text-center py-4 text-xs text-gray-500"><i class="fas fa-spinner fa-spin mr-2"></i>Loading items...</div>';
+        
+        fetch('reports.php?action=get_invoice_items&invoice_no=' + encodeURIComponent(invoiceNo))
+            .then(response => response.json())
+            .then(data => {
+                invoiceItemsCache = data;
+                itemsList.innerHTML = '';
+                
+                if (data.length === 0) {
+                    itemsList.innerHTML = '<p class="text-xs text-gray-500 text-center py-2">No items found in this invoice.</p>';
+                    return;
+                }
+                
+                data.forEach((item, index) => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'p-3 bg-yellow-50 bg-opacity-50 rounded-xl border border-yellow-100 flex flex-col gap-2 mb-2';
+                    itemDiv.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs font-semibold text-gray-800">${item.product_name}</span>
+                            <span class="text-[10px] text-gray-500 font-mono">Sold: ${item.quantity} ${item.unit || 'pcs'}</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] font-semibold text-gray-600 mb-1">Qty to Restore</label>
+                                <input type="number" id="restoreQty_${index}" value="${item.quantity}" step="0.001" min="0" max="${item.quantity}" class="jewel-input w-full rounded-lg px-2 py-1 text-xs" style="background:#fff;">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-semibold text-gray-600 mb-1">HSN Code</label>
+                                <input type="text" id="restoreHsn_${index}" value="0" class="jewel-input w-full rounded-lg px-2 py-1 text-xs" style="background:#fff;">
+                            </div>
+                        </div>
+                    `;
+                    itemsList.appendChild(itemDiv);
+                });
+            })
+            .catch(err => {
+                console.error('Error fetching invoice items:', err);
+                itemsList.innerHTML = '<p class="text-xs text-red-500 text-center py-2">Failed to load invoice items.</p>';
+            });
+    }
+
+    function closeDeleteModal() {
+        const modal = document.getElementById('deleteInvoiceModal');
+        modal.classList.remove('flex');
+        modal.classList.add('hidden');
+    }
+
+    function selectDeleteMode(mode) {
+        currentDeleteMode = mode;
+        const btnSubmit = document.getElementById('btnConfirmDeleteSubmit');
+        btnSubmit.disabled = false;
+        btnSubmit.style.opacity = '1';
+        
+        const btnPerm = document.getElementById('btnDeletePerm');
+        const btnRestore = document.getElementById('btnDeleteRestore');
+        const form = document.getElementById('restoreStockForm');
+        
+        if (mode === 'permanent') {
+            btnPerm.className = 'flex-1 py-3 px-4 rounded-xl border-2 border-red-600 text-red-700 bg-red-100 font-bold text-xs transition duration-200 text-center cursor-pointer';
+            btnRestore.className = 'flex-1 py-3 px-4 rounded-xl border border-green-300 text-green-700 bg-green-50 hover:bg-green-100 font-semibold text-xs transition duration-200 text-center cursor-pointer';
+            form.classList.add('hidden');
+        } else {
+            btnRestore.className = 'flex-1 py-3 px-4 rounded-xl border-2 border-green-600 text-green-700 bg-green-100 font-bold text-xs transition duration-200 text-center cursor-pointer';
+            btnPerm.className = 'flex-1 py-3 px-4 rounded-xl border border-red-300 text-red-700 bg-red-50 hover:bg-red-100 font-semibold text-xs transition duration-200 text-center cursor-pointer';
+            form.classList.remove('hidden');
+        }
+    }
+
+    function submitDeleteInvoiceAction() {
+        if (!currentDeleteMode) return;
+        
+        let confirmMsg = '';
+        if (currentDeleteMode === 'permanent') {
+            confirmMsg = "⚠️ FINAL WARNING: This action is permanent and CANNOT be undone.\nAre you sure you want to delete Invoice #" + currentDeleteInvoiceNo + " permanently (without restoring stock)?";
+        } else {
+            confirmMsg = "Are you sure you want to delete Invoice #" + currentDeleteInvoiceNo + " and move the specified quantities back to stock?";
+        }
+        
+        if (!confirm(confirmMsg)) return;
+        
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = 'reports.php';
+        
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action_delete_invoice';
+        actionInput.value = '1';
+        form.appendChild(actionInput);
+        
+        const invoiceInput = document.createElement('input');
+        invoiceInput.type = 'hidden';
+        invoiceInput.name = 'invoice_no';
+        invoiceInput.value = currentDeleteInvoiceNo;
+        form.appendChild(invoiceInput);
+        
+        const modeInput = document.createElement('input');
+        modeInput.type = 'hidden';
+        modeInput.name = 'delete_mode';
+        modeInput.value = currentDeleteMode;
+        form.appendChild(modeInput);
+        
+        if (currentDeleteMode === 'restore_stock') {
+            const restoreData = invoiceItemsCache.map((item, index) => {
+                const qtyInput = document.getElementById('restoreQty_' + index);
+                const hsnInput = document.getElementById('restoreHsn_' + index);
+                
+                return {
+                    product_id: item.product_id,
+                    product_name: item.product_name,
+                    serial_no: item.serial_no || '',
+                    huid_code: item.huid_code || '',
+                    price: item.price || 0,
+                    unit: item.unit || '',
+                    category: item.category || '',
+                    weight: item.weight || '',
+                    restore_qty: parseFloat(qtyInput ? qtyInput.value : item.quantity) || 0,
+                    hsn_code: hsnInput ? hsnInput.value.trim() : '0'
+                };
+            });
+            
+            const restoreInput = document.createElement('input');
+            restoreInput.type = 'hidden';
+            restoreInput.name = 'items_restore';
+            restoreInput.value = JSON.stringify(restoreData);
+            form.appendChild(restoreInput);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
     }
 </script>
+
+<!-- Custom Delete Invoice Modal -->
+<div id="deleteInvoiceModal" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-black bg-opacity-60 backdrop-filter backdrop-blur-sm p-4">
+    <div class="bg-white rounded-2xl border border-yellow-200 shadow-2xl w-full max-w-md overflow-hidden flex flex-col transform transition-transform duration-300">
+        <!-- Modal Header -->
+        <div class="px-5 py-4 bg-gradient-to-r from-red-800 to-red-600 flex justify-between items-center text-white">
+            <h3 class="text-sm font-bold flex items-center gap-2">
+                <i class="fas fa-trash-alt"></i> Delete Invoice #<span id="deleteInvoiceNoText"></span>
+            </h3>
+            <button onclick="closeDeleteModal()" class="text-white hover:text-gray-200 text-xl font-bold">&times;</button>
+        </div>
+        
+        <!-- Modal Body -->
+        <div class="p-5 space-y-4 max-h-[60vh] overflow-y-auto">
+            <p class="text-xs text-gray-600">
+                Choose how you want to handle the items in this invoice when deleting it:
+            </p>
+            
+            <div class="flex gap-3">
+                <button type="button" onclick="selectDeleteMode('permanent')" id="btnDeletePerm" class="flex-1 py-3 px-4 rounded-xl border border-red-300 text-red-700 bg-red-50 hover:bg-red-100 font-semibold text-xs transition duration-200 text-center cursor-pointer">
+                    🗑️ Delete Permanently<br><span class="text-[9px] font-normal text-red-500">(Stock is NOT updated)</span>
+                </button>
+                <button type="button" onclick="selectDeleteMode('restore_stock')" id="btnDeleteRestore" class="flex-1 py-3 px-4 rounded-xl border border-green-300 text-green-700 bg-green-50 hover:bg-green-100 font-semibold text-xs transition duration-200 text-center cursor-pointer">
+                    📦 Move to Stock<br><span class="text-[9px] font-normal text-green-500">(Add items to inventory)</span>
+                </button>
+            </div>
+            
+            <!-- Items Form (Visible only when 'restore_stock' is selected) -->
+            <div id="restoreStockForm" class="hidden space-y-3 pt-3 border-t border-dashed border-gray-200">
+                <h4 class="text-xs font-bold text-yellow-800 uppercase tracking-wider">Quantities & HSN to move back:</h4>
+                <div class="space-y-1" id="restoreItemsList">
+                    <!-- Dynamic Items list populated by JS -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal Footer -->
+        <div class="px-5 py-3 bg-gray-50 flex justify-end gap-2.5 border-t border-gray-100">
+            <button type="button" onclick="closeDeleteModal()" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 text-xs font-semibold rounded-lg transition cursor-pointer">
+                Cancel
+            </button>
+            <button type="button" id="btnConfirmDeleteSubmit" onclick="submitDeleteInvoiceAction()" disabled class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition cursor-pointer">
+                Confirm Delete
+            </button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
+
+
+
+
+
+

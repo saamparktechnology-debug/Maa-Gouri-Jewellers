@@ -30,3 +30,4 @@ try {
 } catch (Exception $e) {
     echo "\nFAILED: " . $mail->ErrorInfo . "\n";
 }
+

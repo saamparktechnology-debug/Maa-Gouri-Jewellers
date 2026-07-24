@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'config/database.php';
+require_once 'config/company_config.php';
 
 if(!isset($_SESSION['user_id'])) {
     header("Location: login.php");
@@ -10,7 +11,7 @@ if(!isset($_SESSION['user_id'])) {
 // Handle add/edit/delete product
 if($_SERVER['REQUEST_METHOD'] == 'POST') {
     if(isset($_POST['add_product'])) {
-        $serial_no = mysqli_real_escape_string($conn, $_POST['serial_no']);
+        $serial_no = mysqli_real_escape_string($conn, trim($_POST['serial_no'] ?? ''));
         $name = mysqli_real_escape_string($conn, $_POST['name']);
         $item_name_raw = $_POST['item_name'] ?? '';
         if($item_name_raw === 'Other' && !empty($_POST['item_name_custom'])) {
@@ -19,6 +20,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         $item_name = mysqli_real_escape_string($conn, $item_name_raw);
         $category = mysqli_real_escape_string($conn, $_POST['category']);
         $weight = mysqli_real_escape_string($conn, $_POST['weight']);
+        $huid_code = mysqli_real_escape_string($conn, trim($_POST['huid_code'] ?? ''));
         $price = $_POST['price'];
         $quantity = $_POST['quantity'];
 
@@ -31,7 +33,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
             mysqli_query($conn, "ALTER TABLE products ADD COLUMN created_at DATETIME DEFAULT NULL");
         }
 
-        $query = "INSERT INTO products (serial_no, name, item_name, category, weight, price, quantity, created_at) VALUES ('$serial_no', '$name', '$item_name', '$category', '$weight', '$price', '$quantity', NOW())";
+        $query = "INSERT INTO products (serial_no, name, item_name, category, weight, price, quantity, huid_code, created_at) VALUES ('$serial_no', '$name', '$item_name', '$category', '$weight', '$price', '$quantity', '$huid_code', NOW())";
         if(mysqli_query($conn, $query)) {
             $success = "✨ Product added successfully! ✨";
         } else {
@@ -49,17 +51,18 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
     elseif(isset($_POST['update_product'])) {
         $id = $_POST['product_id'];
-        $serial_no = mysqli_real_escape_string($conn, $_POST['serial_no']);
+        $serial_no = mysqli_real_escape_string($conn, trim($_POST['serial_no'] ?? ''));
         $name = mysqli_real_escape_string($conn, $_POST['name']);
         $item_name_raw2 = $_POST['item_name'] ?? '';
         if($item_name_raw2 === 'Other' && !empty($_POST['item_name_custom'])) { $item_name_raw2 = $_POST['item_name_custom']; }
         $item_name = mysqli_real_escape_string($conn, $item_name_raw2);
         $category = mysqli_real_escape_string($conn, $_POST['category']);
         $weight = mysqli_real_escape_string($conn, $_POST['weight']);
+        $huid_code = mysqli_real_escape_string($conn, trim($_POST['huid_code'] ?? ''));
         $price = $_POST['price'];
         $quantity = $_POST['quantity'];
 
-        $query = "UPDATE products SET serial_no='$serial_no', name='$name', item_name='$item_name', category='$category', weight='$weight', price='$price', quantity='$quantity' WHERE id=$id";
+        $query = "UPDATE products SET serial_no='$serial_no', name='$name', item_name='$item_name', category='$category', weight='$weight', price='$price', quantity='$quantity', huid_code='$huid_code' WHERE id=$id";
         if(mysqli_query($conn, $query)) {
             $success = "💎 Product updated successfully! 💎";
         } else {
@@ -81,7 +84,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
 
 $search = isset($_GET['search']) ? mysqli_real_escape_string($conn, $_GET['search']) : '';
 if(!empty($search)) {
-    $products = mysqli_query($conn, "SELECT * FROM products WHERE serial_no LIKE '%$search%' OR name LIKE '%$search%' ORDER BY id");
+    $products = mysqli_query($conn, "SELECT * FROM products WHERE serial_no LIKE '%$search%' OR name LIKE '%$search%' OR item_name LIKE '%$search%' OR category LIKE '%$search%' OR huid_code LIKE '%$search%' ORDER BY id");
 } else {
     $products = mysqli_query($conn, "SELECT * FROM products ORDER BY id");
 }
@@ -93,9 +96,8 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <meta name="author" content="MANU GUPTA Suraj Chandra">
-    <meta name="description" content="Live Stock Management for Gouri Jewellers">
-    <title>Live Stock - gouri JEWELLERS</title>
+    <meta name="author" content="MANU GUPTA">
+    <title>Live Stock - MAA GOURI JEWELLERS</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/theme.css">
@@ -103,7 +105,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap');
 
         * { font-family: 'Poppins', sans-serif; box-sizing: border-box; }
-        h1,h2,h3,.gold-font { font-family: 'Playfair Display', serif; }
+        h1,h2,h3,.gold-font { font-family: 'Poppins', sans-serif; font-weight: 700; }
 
         /* ========== SIDEBAR (identical to index.php) ========== */
         .sidebar {
@@ -111,19 +113,18 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             top: 0; left: 0;
             width: 240px;
             height: 100vh;
-            background: linear-gradient(180deg, #7a4e0a 0%, #b5730e 40%, #d68b16 100%);
+            background: linear-gradient(180deg, #011921 0%, #03373b 50%, #044e54 80%, #011921 100%);
             z-index: 1000;
             display: flex;
             flex-direction: column;
             box-shadow: 4px 0 24px rgba(0,0,0,0.25);
             transition: transform 0.35s cubic-bezier(.4,0,.2,1);
-            overflow-y: auto;
-            overflow-x: hidden;
+            overflow: hidden;
         }
 
-        .sidebar::-webkit-scrollbar { width: 4px; }
-        .sidebar::-webkit-scrollbar-track { background: transparent; }
-        .sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+        .sidebar-nav::-webkit-scrollbar { width: 4px; }
+        .sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+        .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
 
         .sidebar-logo {
             padding: 22px 18px 16px;
@@ -148,7 +149,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             font-size: 13px;
             font-weight: 700;
             line-height: 1.3;
-            font-family: 'Playfair Display', serif;
+            font-family: 'Poppins', serif;
             letter-spacing: 0.5px;
         }
 
@@ -158,7 +159,12 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             margin-top: 1px;
         }
 
-        .sidebar-nav { flex: 1; padding: 10px 0; }
+        .sidebar-nav {
+            flex: 1;
+            padding: 10px 0;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
 
         .sidebar-section-label {
             padding: 10px 20px 4px;
@@ -167,6 +173,10 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             font-weight: 700;
             letter-spacing: 1.5px;
             text-transform: uppercase;
+            position: sticky;
+            top: 0;
+            background: #011921; color: #f5c842;
+            z-index: 10;
         }
 
         .sidebar-nav a {
@@ -278,8 +288,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         }
 
         /* ========== TOP NAVBAR ========== */
-        nav.nav-gold {
-            background: linear-gradient(135deg, #b5730e, #d68b16) !important;
+        nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important; border-bottom: 2.5px solid #ffd700; box-shadow: 0 0 12px rgba(255, 215, 0, 0.5) !important;
         }
 
         /* ========== BURGER MENU ========== */
@@ -338,6 +347,43 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             box-shadow: 0 8px 30px rgba(181,115,14,0.15);
         }
 
+        /* Sticky Summary Bar */
+        .sticky-stock-summary {
+            position: sticky;
+            bottom: 0;
+            background: linear-gradient(135deg, #1a0a00, #4a2000);
+            border-top: 2px solid #d68b16;
+            padding: 14px 24px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            border-radius: 0 0 20px 20px;
+            z-index: 10;
+            color: #fff;
+            box-shadow: 0 -10px 30px rgba(0,0,0,0.15);
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: auto;
+            margin-left: -20px;
+            margin-right: -20px;
+            margin-bottom: -20px;
+        }
+        .sticky-stock-summary .summary-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+        .sticky-stock-summary .summary-item i {
+            color: #ffd700;
+            font-size: 16px;
+        }
+        .sticky-stock-summary .summary-item span strong {
+            color: #ffd700;
+            font-size: 15px;
+            font-weight: 700;
+        }
+
         /* Form Inputs */
         .jewel-input {
             background: #fdf6e3;
@@ -366,20 +412,23 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
         /* Table */
         .jewel-table { width: 100%; border-collapse: collapse; }
-        .jewel-table th {
+        .jewel-table thead th {
             background: linear-gradient(135deg, #7a4e0a, #d68b16);
             color: #fff;
             font-weight: 600;
-            padding: 12px 10px;
-            font-size: 12px;
+            padding: 8px 10px;
+            font-size: 11px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 2;
         }
         .jewel-table td {
             border-bottom: 1px solid rgba(181,115,14,0.1);
-            padding: 10px;
+            padding: 6px 10px;
             color: #3a2800;
-            font-size: 13px;
+            font-size: 12px;
         }
         .jewel-table tbody tr:hover { background: #fdf6e3; }
 
@@ -419,21 +468,21 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             background: linear-gradient(135deg, #3b82f6, #1d4ed8);
             color: #fff;
             border: 1px solid rgba(59,130,246,0.6);
-            border-radius: 10px;
-            padding: 8px 14px;
-            font-size: 12px;
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 10px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            box-shadow: 0 2px 8px rgba(59,130,246,0.3);
-            letter-spacing: 0.3px;
+            gap: 3px;
+            box-shadow: 0 2px 6px rgba(59,130,246,0.25);
+            letter-spacing: 0.2px;
         }
         .btn-edit:hover { 
-            transform: translateY(-2px); 
-            box-shadow: 0 6px 16px rgba(59,130,246,0.5);
+            transform: translateY(-1px); 
+            box-shadow: 0 4px 10px rgba(59,130,246,0.4);
             background: linear-gradient(135deg, #60a5fa, #3b82f6);
         }
         .btn-edit:active { transform: translateY(0); }
@@ -442,21 +491,21 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             background: linear-gradient(135deg, #d68b16, #a85a0a);
             color: #fff;
             border: 1px solid rgba(214,139,22,0.6);
-            border-radius: 10px;
-            padding: 8px 14px;
-            font-size: 12px;
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 10px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            box-shadow: 0 2px 8px rgba(214,139,22,0.3);
-            letter-spacing: 0.3px;
+            gap: 3px;
+            box-shadow: 0 2px 6px rgba(214,139,22,0.25);
+            letter-spacing: 0.2px;
         }
         .btn-addstock:hover { 
-            transform: translateY(-2px); 
-            box-shadow: 0 6px 16px rgba(214,139,22,0.5);
+            transform: translateY(-1px); 
+            box-shadow: 0 4px 10px rgba(214,139,22,0.4);
             background: linear-gradient(135deg, #e89917, #d68b16);
         }
         .btn-addstock:active { transform: translateY(0); }
@@ -465,21 +514,21 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             background: linear-gradient(135deg, #ef4444, #dc2626);
             color: #fff;
             border: 1px solid rgba(239,68,68,0.6);
-            border-radius: 10px;
-            padding: 8px 14px;
-            font-size: 12px;
+            border-radius: 6px;
+            padding: 4px 8px;
+            font-size: 10px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            box-shadow: 0 2px 8px rgba(239,68,68,0.3);
-            letter-spacing: 0.3px;
+            gap: 3px;
+            box-shadow: 0 2px 6px rgba(239,68,68,0.25);
+            letter-spacing: 0.2px;
         }
         .btn-delete:hover { 
-            transform: translateY(-2px); 
-            box-shadow: 0 6px 16px rgba(239,68,68,0.5);
+            transform: translateY(-1px); 
+            box-shadow: 0 4px 10px rgba(239,68,68,0.4);
             background: linear-gradient(135deg, #f87171, #ef4444);
         }
         .btn-delete:active { transform: translateY(0); }
@@ -574,7 +623,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         }
     }
 
-    const texts = ["MOTI JEWELLERS"];
+    const texts = ["MAA GOURI JEWELLERS"];
     let textIndex = 0, charIndex = 0, isDeleting = false, typingSpeed = 100;
 
     function typeEffect() {
@@ -606,12 +655,24 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     }
 
     window.addEventListener('load', function() {
-        createJewelSparkles();
-        setTimeout(typeEffect, 600);
-        setTimeout(function() {
+        const isReload = performance.getEntriesByType("navigation")[0]?.type === "reload";
+        const hasVisited = sessionStorage.getItem('visited');
+
+        if (!hasVisited || isReload) {
+            sessionStorage.setItem('visited', 'true');
+            createJewelSparkles();
+            setTimeout(typeEffect, 600);
+            setTimeout(function() {
+                const ov = document.getElementById('loadingOverlay');
+                if(ov) { ov.style.opacity = '0'; ov.style.visibility = 'hidden'; setTimeout(()=>ov.style.display='none', 500); }
+            }, 2000);
+        } else {
             const ov = document.getElementById('loadingOverlay');
-            if(ov) { ov.style.opacity = '0'; ov.style.visibility = 'hidden'; setTimeout(()=>ov.style.display='none', 500); }
-        }, 2000);
+            if(ov) { ov.style.display = 'none'; }
+            // Animate the content wrapper, NOT body (body transform breaks position:fixed sidebar)
+            const pw = document.querySelector('.page-wrapper');
+            if(pw) { pw.style.animation = 'slideInFromRightGlobal 0.3s ease-out forwards'; }
+        }
     });
 </script>
 
@@ -625,35 +686,12 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     <div id="loaderStars" style="position:absolute;inset:0;pointer-events:none;z-index:2;"></div>
     <div id="loaderRings" style="position:absolute;inset:0;pointer-events:none;z-index:2;display:flex;align-items:center;justify-content:center;"></div>
     <div style="position:relative;z-index:10;text-align:center;">
-        <div style="position:relative;width:110px;height:110px;margin:0 auto 28px;">
-            <div style="position:absolute;inset:-12px;border-radius:50%;border:2px solid rgba(214,139,22,0.4);animation:haloPulse 1.5s ease-in-out infinite;"></div>
-            <div style="position:absolute;inset:-24px;border-radius:50%;border:1px solid rgba(214,139,22,0.2);animation:haloPulse 1.5s ease-in-out infinite 0.5s;"></div>
-            <img src="./assets/images/moti-removebg-preview.png" alt="Moti Jewellers Logo" style="width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 0 8px #d68b16);animation:gemGlowPulse 1.5s ease-in-out infinite;">
-                <defs>
-                    <linearGradient id="lg1" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" style="stop-color:#ff9900"/>
-                        <stop offset="45%" style="stop-color:#d68b16"/>
-                        <stop offset="100%" style="stop-color:#800020"/>
-                    </linearGradient>
-                    <linearGradient id="lg2" x1="100%" y1="0%" x2="0%" y2="100%">
-                        <stop offset="0%" style="stop-color:#f5c842;stop-opacity:0.9"/>
-                        <stop offset="100%" style="stop-color:#b5730e;stop-opacity:0.9"/>
-                    </linearGradient>
-                </defs>
-                <polygon points="40,2 76,22 76,58 40,78 4,58 4,22" fill="url(#lg1)" stroke="#f5c842" stroke-width="1.5"/>
-                <polygon points="40,2 76,22 40,40" fill="url(#lg2)" opacity="0.7"/>
-                <polygon points="76,22 76,58 40,40" fill="#800020" opacity="0.5"/>
-                <polygon points="76,58 40,78 40,40" fill="#b5730e" opacity="0.6"/>
-                <polygon points="40,78 4,58 40,40" fill="#d68b16" opacity="0.4"/>
-                <polygon points="4,58 4,22 40,40" fill="#ff9900" opacity="0.35"/>
-                <polygon points="4,22 40,2 40,40" fill="url(#lg2)" opacity="0.55"/>
-                <polygon points="40,14 68,28 68,52 40,66 12,52 12,28" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="0.8"/>
-            </svg>
-        </div>
-        <div style="color:#d68b16;font-size:22px;letter-spacing:6px;font-family:'Playfair Display',serif;margin-bottom:6px;animation:titleGold 2s ease infinite alternate;">MAA GOURI JEWELLERS</div>
-        <p style="color:rgba(201,169,110,0.7);font-size:10px;letter-spacing:4px;text-transform:uppercase;margin-bottom:24px;">Crafting Timeless Elegance</p>
-        <div style="width:200px;height:3px;background:rgba(255,255,255,0.08);border-radius:3px;margin:0 auto 16px;overflow:hidden;">
-            <div style="height:100%;width:35%;background:linear-gradient(90deg,#7a4e0a,#d68b16,#f5c842);border-radius:3px;animation:barSlide 1.8s ease-in-out infinite;"></div>
+                <div style="position:relative;width:120px;height:120px;margin:0 auto 24px;display:flex;align-items:center;justify-content:center;">
+            
+            
+            <div style="width:120px;height:120px;background:transparent;animation:gemGlowPulse 1.5s ease-in-out infinite;">
+                <img src="assets/images/moti-removebg-preview.png" alt="MAA GOURI JEWELLERS Logo" style="width:100%;height:100%;object-fit:contain;display:block;">
+            </div>
         </div>
         <div style="display:flex;gap:9px;justify-content:center;">
             <div style="width:6px;height:6px;border-radius:50%;background:#d68b16;animation:dotBounce 1.2s ease-in-out infinite;"></div>
@@ -675,14 +713,14 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         $logo_found = false;
         foreach($logo_paths as $path) {
             if(file_exists($path)) {
-                echo '<img src="'.$path.'" alt="MOTI JEWELLERS Logo">';
+                echo '<img src="'.$path.'" alt="MAA GOURI JEWELLERS Logo" style="height:38px;width:auto;max-width:44px;object-fit:contain;display:inline-block;margin-right:8px;">';
                 $logo_found = true; break;
             }
         }
         if(!$logo_found) echo '<i class="fas fa-gem" style="color:#fff;font-size:30px;flex-shrink:0;"></i>';
         ?>
         <div class="sidebar-logo-text">
-            <h2>GOURI JEWELLERS</h2>
+            <h2>MAA GOURI JEWELLERS</h2>
             <p>Premium Since 2026</p>
         </div>
     </div>
@@ -691,14 +729,14 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     <nav class="sidebar-nav">
         <div class="sidebar-section-label">Main Menu</div>
 
-        <a href="index.php" >
-            <i class="fas fa-home"></i> Home
+        <a href="index.php">
+            <i class="fas fa-home"></i> DASHBOARD
         </a>
         <a href="billing.php">
             <i class="fas fa-receipt"></i> BILLING
         </a>
-        <a href="stock.php">
-            <i class="fas fa-boxes" class="active"></i> STOCK
+        <a href="stock.php" class="active">
+            <i class="fas fa-boxes"></i> STOCK
         </a>
         <a href="customers.php">
             <i class="fas fa-users"></i> CUSTOMERS
@@ -710,6 +748,9 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         <a href="reports.php">
             <i class="fas fa-chart-bar"></i> REPORTS
         </a>
+        <a href="due_list.php">
+            <i class="fas fa-hourglass-half"></i> DUE LIST
+        </a>
         <a href="income_expenses.php">
             <i class="fas fa-chart-line"></i> INCOME & EXP
         </a>
@@ -720,7 +761,6 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         <a href="whatsapp_automation.php">
             <i class="fab fa-whatsapp"></i> WHATSAPP
         </a>
-       
         <a href="purchase.php">
             <i class="fas fa-book"></i> PURCHASE
         </a>
@@ -813,11 +853,11 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         <?php endif; ?>
 
         <!-- Main Grid -->
-        <div class="stock-grid grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="stock-grid grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
 
             <!-- Add Product Form -->
-            <div>
-                <div class="jewel-card p-5">
+            <div class="h-full">
+                <div class="jewel-card p-5 h-full flex flex-col justify-between">
                     <h2 class="text-lg font-bold mb-4 gold-font" style="color:#800020;">
                         <i class="fas fa-plus-circle mr-2" style="color:#d68b16;"></i> Add New Product
                     </h2>
@@ -866,7 +906,12 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
                         <div class="mb-3">
                             <label>🔢 Serial Number</label>
-                            <input type="text" name="serial_no" placeholder="Unique serial number" required class="jewel-input">
+                            <input type="text" name="serial_no" placeholder="Enter serial number" required class="jewel-input">
+                        </div>
+
+                        <div class="mb-3">
+                            <label>🏷️ HUID Code</label>
+                            <input type="text" name="huid_code" placeholder="Enter HUID code (optional)" class="jewel-input">
                         </div>
 
                         <div class="mb-3">
@@ -889,8 +934,8 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             </div>
 
             <!-- Products List -->
-            <div class="lg:col-span-2">
-                <div class="jewel-card p-5">
+            <div class="lg:col-span-2 h-full">
+                <div class="jewel-card p-5 h-full flex flex-col">
                     <div class="flex flex-wrap justify-between items-center mb-4 gap-3">
                         <h2 class="text-lg font-bold gold-font" style="color:#800020;">
                             <i class="fas fa-list mr-2" style="color:#d68b16;"></i> Current Stock
@@ -900,7 +945,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         <form method="GET" class="flex flex-wrap gap-2">
                             <div class="search-wrapper">
                                 <i class="fas fa-search search-icon"></i>
-                                <input type="text" name="search" placeholder="Search by Serial No / Name"
+                                <input type="text" name="search" placeholder="Search by HUID, Serial No, Name..."
                                     value="<?php echo htmlspecialchars($search); ?>"
                                     class="jewel-input" style="padding-left:32px;width:220px;">
                             </div>
@@ -922,13 +967,15 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         </div>
                     <?php endif; ?>
 
-                    <div class="table-container overflow-x-auto rounded-xl" style="border:1px solid rgba(181,115,14,0.15);">
+                    <div class="table-container overflow-x-auto overflow-y-auto flex-1" style="max-height: 580px; margin-bottom: 0;">
                         <table class="jewel-table">
                             <thead>
                                 <tr>
                                     <th class="text-left" style="border-radius:12px 0 0 0;">SL</th>
                                     <th class="text-left">Product Details</th>
                                     <th class="text-left">Item Name</th>
+                                    <th class="text-left">Serial No</th>
+                                    <th class="text-left">HUID</th>
                                     <th class="text-left">Weight</th>
                                     <th class="text-left">Added On</th>
                                     <th class="text-center">Stock</th>
@@ -944,7 +991,13 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                     $qty = $product['quantity'];
                                     $status_class = $qty < 5 ? 'status-low' : ($qty < 20 ? 'status-medium' : 'status-high');
                                     $status_text  = $qty < 5 ? 'Critical' : ($qty < 20 ? 'Low' : 'Good');
-                                    $highlight = (!empty($search) && ($product['serial_no'] == $search || stripos($product['name'], $search) !== false)) ? 'search-highlight' : '';
+                                    $highlight = (!empty($search) && (
+                                        stripos($product['serial_no'] ?? '', $search) !== false ||
+                                        stripos($product['name'] ?? '', $search) !== false ||
+                                        stripos($product['item_name'] ?? '', $search) !== false ||
+                                        stripos($product['category'] ?? '', $search) !== false ||
+                                        stripos($product['huid_code'] ?? '', $search) !== false
+                                    )) ? 'search-highlight' : '';
                                 ?>
                                 <tr class="<?php echo $highlight; ?>">
                                     <td class="serial-number-col"><?php echo $serial++; ?></td>
@@ -954,7 +1007,12 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                     </td>
                                     <td>
                                         <div class="font-medium text-sm" style="color:#b5730e;"><?php echo htmlspecialchars($product['item_name'] ?? '—'); ?></div>
-                                        <div class="text-xs" style="color:#9ca3af;">SN: <?php echo htmlspecialchars($product['serial_no']); ?></div>
+                                    </td>
+                                    <td>
+                                        <div class="text-sm font-semibold" style="color:#4b5563;"><?php echo htmlspecialchars($product['serial_no'] ?? '—'); ?></div>
+                                    </td>
+                                    <td>
+                                        <div class="text-sm font-semibold" style="color:#4b5563;"><?php echo htmlspecialchars($product['huid_code'] ?: '—'); ?></div>
                                     </td>
                                     <td class="text-sm">
                                         <?php echo htmlspecialchars($product['weight'] ?? 'N/A'); ?>
@@ -975,7 +1033,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                     </td>
                                     <td class="text-center">
                                         <div class="action-btns flex flex-wrap gap-1 justify-center">
-                                            <button onclick="openEditModal(<?php echo $product['id']; ?>,'<?php echo addslashes($product['serial_no']); ?>','<?php echo addslashes($product['name']); ?>','<?php echo addslashes($product['item_name'] ?? ''); ?>','<?php echo $product['category']; ?>','<?php echo addslashes($product['weight'] ?? ''); ?>',<?php echo $product['price']; ?>,<?php echo $product['quantity']; ?>)" class="btn-edit">
+                                            <button onclick="openEditModal(<?php echo $product['id']; ?>,'<?php echo addslashes($product['serial_no']); ?>','<?php echo addslashes($product['name']); ?>','<?php echo addslashes($product['item_name'] ?? ''); ?>','<?php echo $product['category']; ?>','<?php echo addslashes($product['weight'] ?? ''); ?>',<?php echo $product['price']; ?>,<?php echo $product['quantity']; ?>,'<?php echo addslashes($product['huid_code'] ?? ''); ?>')" class="btn-edit">
                                                 <i class="fas fa-edit"></i> Edit
                                             </button>
                                             <button onclick="openUpdateModal(<?php echo $product['id']; ?>,'<?php echo addslashes($product['name']); ?>')" class="btn-addstock">
@@ -990,14 +1048,53 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                 <?php endwhile; ?>
                                 <?php if(mysqli_num_rows($products) == 0 && empty($search)): ?>
                                 <tr>
-                                    <td colspan="8" class="text-center py-10" style="color:#7a4e0a;">
+                                    <td colspan="10" class="text-center py-10" style="color:#7a4e0a;">
                                         <i class="fas fa-gem text-3xl mb-3 block" style="color:#d68b16;opacity:0.4;"></i>
                                         No products found. Please add some products.
                                     </td>
                                 </tr>
-                                <?php endif; ?>
+                                 <?php endif; ?>
                             </tbody>
                         </table>
+                    </div>
+
+                    <!-- Sticky Summary Bar -->
+                    <?php
+                    $total_unique_items = 0;
+                    $total_qty = 0;
+                    $total_weight = 0.0;
+                    $total_price = 0.0;
+
+                    if ($products && mysqli_num_rows($products) > 0) {
+                        mysqli_data_seek($products, 0);
+                        while($row = mysqli_fetch_assoc($products)) {
+                            $total_unique_items++;
+                            $q = intval($row['quantity']);
+                            $total_qty += $q;
+                            $w = floatval($row['weight'] ?? 0);
+                            $total_weight += $w * $q;
+                            $p = floatval($row['price'] ?? 0);
+                            $total_price += $p * $q;
+                        }
+                    }
+                    ?>
+                    <div class="sticky-stock-summary">
+                        <div class="summary-item">
+                            <i class="fas fa-boxes"></i>
+                            <span>Unique Items: <strong><?php echo $total_unique_items; ?></strong></span>
+                        </div>
+                        <div class="summary-item">
+                            <i class="fas fa-cubes"></i>
+                            <span>Total Qty: <strong><?php echo number_format($total_qty); ?> pcs</strong></span>
+                        </div>
+                        <div class="summary-item">
+                            <i class="fas fa-weight-hanging"></i>
+                            <span>Total Weight: <strong><?php echo number_format($total_weight, 3); ?> g</strong></span>
+                        </div>
+                        <div class="summary-item">
+                            <i class="fas fa-coins"></i>
+                            <span>Est. Value: <strong>₹<?php echo number_format($total_price, 2); ?></strong></span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1007,8 +1104,8 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     <!-- Footer -->
     <footer style="background:linear-gradient(0deg,#f5e6c8,#fdf6e3);border-top:2px solid #d68b16;padding:20px;margin-top:40px;text-align:center;">
         <p class="text-xs" style="color:#7a4e0a;">
-            &copy; 2026 Gouri JEWELLERS &nbsp;|&nbsp; CRAFTED WITH ELEGANCE &nbsp;|&nbsp;
-            Developed by <a href="https://saamparktechnologyresearch.in/" target="_blank" style="text-decoration:underline;color:#800020;">Saampark Technology</a>
+            &copy; 2026 MAA GOURI JEWELLERS &nbsp;|&nbsp; CRAFTED WITH ELEGANCE &nbsp;|&nbsp;
+            Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology</a>
         </p>
     </footer>
 </div><!-- end .page-wrapper -->
@@ -1025,6 +1122,10 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             <div class="mb-3">
                 <label>🔢 Serial Number</label>
                 <input type="text" name="serial_no" id="editProductSerial" required class="jewel-input">
+            </div>
+            <div class="mb-3">
+                <label>🏷️ HUID Code</label>
+                <input type="text" name="huid_code" id="editProductHuid" class="jewel-input">
             </div>
             <div class="mb-3">
                 <label>💎 Product Name</label>
@@ -1137,12 +1238,12 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
     /* ---------- Item types ---------- */
     const itemsByCategory = {
-        'Gold 22K': ['Chur','Bala','Churi','Necklace','Chain','Jhumka','Jhumkolol','Tops','Ladies Ring','Gents Ring','Chokey','Breslet','Ladies Breslet','Tika','Takti','Mantasa','Loket','Mangal Sutra','Moti Chokey','Nosepin','Sankha','Pola','Baby Ring','Bali','Pitaring','Breslet Noya','Steu Noya','Other'],
-        'Gold 18K': ['Chur','Bala','Churi','Necklace','Chain','Jhumka','Jhumkolol','Tops','Ladies Ring','Gents Ring','Chokey','Breslet','Ladies Breslet','Tika','Takti','Mantasa','Loket','Mangal Sutra','Baby Ring','Bali','Pitaring','Other'],
-        'Silver':   ['Chur','Bala','Churi','Necklace','Chain','Jhumka','Tops','Ladies Ring','Gents Ring','Breslet','Tika','Loket','Mankha','Payal','Bichiya','Nosering','Baby Ring','Pat (Gross)','S- (Gross)','Nosepin (Gross)','Sankha','Pola','Silver Thali','Silver Bali','Silver Thali', 'Silver Bati ', 'Silver Glass', 'Silver Spoon ', 'Silver Showpiece', 'B.B.C Silver', 'Mix Silver', 'Other'],
+        'Gold 22K': ['Necklace','Chur','Bala','Chain','Tops','Single Loket','Double Loket','Churi','Jhuladul','Jhumka','Ladies Ring','Gold Choker','Gents Ring','Gents Breslet','Ladies Breslet','Tika','Takti','Mantasa','Pearl Choker','Bauti Chur','Soket Bauti','Breslet Noya','Stell Noya','Baby Ring','Bali','Pitaring','Baby Breslet','Pearl Sitahar','Nose Pin','Other'],
+        'Gold 18K': ['Necklace','Chur','Bala','Chain','Tops','Single Loket','Double Loket','Churi','Jhuladul','Jhumka','Ladies Ring','Gold Choker','Gents Ring','Gents Breslet','Ladies Breslet','Tika','Takti','Mantasa','Pearl Choker','Bauti Chur','Soket Bauti','Breslet Noya','Stell Noya','Baby Ring','Bali','Pitaring','Baby Breslet','Pearl Sitahar','Nose Pin','Other'],
+        'Silver':   ['Thali','Bati','Glass','Spoon','Showpiece','B.B.C Silver','Mix Silver','Other'],
         'Stone':    ['Natural Pearl','Gomed','Red Coral','Nila','Panna','Jerkon','Amethist','Cats Eye','Other'],
-        'Diamond':  ['Ladies Ring','Gents Ring','Tops','Mangal Sutra','Nose pin','Necklace','Other'],
-        'Other':    ['Chur','Bala','Churi','Necklace','Chain','Jhumka','Jhumkolol','Tops','Ladies Ring','Gents Ring','Chokey','Breslet','Ladies Breslet','Tika','Takti','Mantasa','Loket','Mangal Sutra','Moti Chokey','Nosepin','Sankha','Pola','Baby Ring','Bali','Pitaring','Breslet Noya','Steu Noya','Shankha','Pala','Mala','Moti Mala','Trasel','Branch Fram','Braslate Pala','parl Mala','Gala','Reparing','Stamp Charg','Other']
+        'Diamond':  ['Ladies Ring','Gents Ring','Tops','Mangal Sutra','Nose Pin','Necklace','Other'],
+        'Other':    ['Shankha','Pala','Mala','Moti Mala','Trasel','Branch Fram','Braslate Pala','Parl Mala','Gala','Reparing','Stamp Charg','Other']
     };
 
     function updateItemTypes(catSelectId, itemSelectId, customDivId) {
@@ -1164,8 +1265,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
         itemSel.innerHTML = '<option value="">-- Select Item Type --</option>';
 
-        const addName = document.getElementById('addProductName');
-        if(addName && catSelectId === 'addCategorySelect') addName.value = cat;
+        // Do NOT auto-fill product name — admin must type it manually
 
         itemsByCategory[cat].forEach(function(item) {
             const opt = document.createElement('option');
@@ -1193,13 +1293,14 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     }
 
     /* ---------- Modals ---------- */
-    function openEditModal(id, serial_no, name, item_name, category, weight, price, quantity) {
+    function openEditModal(id, serial_no, name, item_name, category, weight, price, quantity, huid_code) {
         document.getElementById('editProductId').value = id;
         document.getElementById('editProductSerial').value = serial_no;
         document.getElementById('editProductName').value = name;
         document.getElementById('editProductWeight').value = weight;
         document.getElementById('editProductPrice').value = price;
         document.getElementById('editProductQuantity').value = quantity;
+        document.getElementById('editProductHuid').value = huid_code || '';
 
         const catSel = document.getElementById('editProductCategory');
         catSel.value = category;
@@ -1254,3 +1355,8 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
 </body>
 </html>
+
+
+
+
+

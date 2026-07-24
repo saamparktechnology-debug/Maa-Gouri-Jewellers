@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'config/database.php';
+require_once 'config/company_config.php';
 require_once 'config/mail_config.php';
 
 $is_logged_in = isset($_SESSION['user_id']);
@@ -18,6 +19,68 @@ $create_due_history = "CREATE TABLE IF NOT EXISTS due_update_history (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 )";
 mysqli_query($conn, $create_due_history);
+
+$chkModeCol = mysqli_query($conn, "SHOW COLUMNS FROM due_update_history LIKE 'payment_mode'");
+if ($chkModeCol && mysqli_num_rows($chkModeCol) == 0) {
+    @mysqli_query($conn, "ALTER TABLE due_update_history ADD COLUMN payment_mode VARCHAR(50) DEFAULT 'Cash'");
+}
+
+// ── AJAX: Receive Due Payment ───────────────────────────────────────────────
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'receive_due_payment') {
+    header('Content-Type: application/json');
+    $id          = intval($_POST['id'] ?? 0);
+    $amount_paid = floatval($_POST['amount_paid'] ?? 0);
+    $mode        = mysqli_real_escape_string($conn, trim($_POST['payment_mode'] ?? 'Cash'));
+
+    if ($id <= 0 || $amount_paid <= 0) {
+        echo json_encode(['success' => false, 'message' => 'Invalid payment amount or invoice ID.']);
+        exit();
+    }
+
+    $current = mysqli_fetch_assoc(mysqli_query($conn, "SELECT invoice_no, balance_amount, total_amount, paid_amount FROM invoices WHERE id = $id LIMIT 1"));
+    if (!$current) {
+        echo json_encode(['success' => false, 'message' => 'Invoice not found.']);
+        exit();
+    }
+
+    $invoice_no_val   = $current['invoice_no'] ?? '';
+    $previous_balance = floatval($current['balance_amount'] ?? 0);
+    $current_paid     = floatval($current['paid_amount'] ?? 0);
+    
+    $new_balance  = max(0, $previous_balance - $amount_paid);
+    $new_paid     = $current_paid + $amount_paid;
+    $payment_date = date('Y-m-d');
+    $payment_status = ($new_balance <= 0) ? 'paid' : 'part';
+
+    $next_due_date = trim($_POST['next_due_date'] ?? '');
+    $due_date_sql  = "";
+    if ($new_balance <= 0) {
+        $due_date_sql = ", due_date = NULL";
+    } elseif (!empty($next_due_date)) {
+        $safe_next_due = mysqli_real_escape_string($conn, $next_due_date);
+        $due_date_sql  = ", due_date = '$safe_next_due'";
+    }
+
+    // Insert history
+    mysqli_query($conn, "INSERT INTO due_update_history (invoice_id, previous_balance, new_balance, amount_paid, payment_date, payment_mode) VALUES ($id, $previous_balance, $new_balance, $amount_paid, '$payment_date', '$mode')");
+    $history_id = mysqli_insert_id($conn);
+
+    // Update invoice
+    $upd = mysqli_query($conn, "UPDATE invoices SET balance_amount = $new_balance, paid_amount = $new_paid, payment_status = '$payment_status'$due_date_sql WHERE id = $id");
+
+    echo json_encode([
+        'success'          => (bool)$upd,
+        'message'          => 'Payment of ₹' . number_format($amount_paid, 2) . ' received (' . $mode . ') successfully!',
+        'id'               => $id,
+        'invoice_no'       => $invoice_no_val,
+        'previous_balance' => $previous_balance,
+        'new_balance'      => $new_balance,
+        'next_due_date'    => $next_due_date,
+        'history_id'       => $history_id,
+        'is_fully_paid'    => ($new_balance <= 0)
+    ]);
+    exit();
+}
 
 // ── AJAX: send reminder ───────────────────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'ajax_send_reminder') {
@@ -46,12 +109,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'ajax_
         exit();
     }
 
-    $subject = 'Payment Reminder from Maa Gouri Jewellers';
+    $subject = 'Payment Reminder from MAA GOURI JEWELLERS';
     $body    = '<p>Dear ' . htmlspecialchars($customer_name) . ',</p>'
              . '<p>This is a reminder that an amount of <strong>&#8377;' . number_format($balance_amount, 2) . '</strong> is still due.'
              . ($invoice_no ? ' (Invoice: ' . htmlspecialchars($invoice_no) . ')' : '') . '</p>'
              . '<p>Please make the remaining payment at your earliest convenience.</p>'
-             . '<p>Thank you,<br>Maa Gouri Jewellers</p>';
+             . '<p>Thank you,<br>MAA GOURI JEWELLERS</p>';
 
     error_log('[due_list] Reminder attempt -> to: ' . $customer_email . ' | invoice: ' . $invoice_no . ' | balance: ' . $balance_amount);
     $res = sendSMTPMail($customer_email, $subject, $body);
@@ -88,16 +151,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'ajax_
         exit();
     }
 
-    // Fetch the invoice's already paid amount so the modal total includes earlier billing payments
-    $invoicePaidResult = mysqli_query($conn, "SELECT COALESCE(paid_amount, 0) AS paid_amount FROM invoices WHERE id = $id LIMIT 1");
-    $running = 0.0;
-    if ($invoicePaidResult) {
-        $invoicePaidRow = mysqli_fetch_assoc($invoicePaidResult);
-        $running = floatval($invoicePaidRow['paid_amount'] ?? 0);
-    }
+    $inv_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT invoice_no, COALESCE(paid_amount, 0) AS paid_amount FROM invoices WHERE id = $id LIMIT 1"));
+    $invoice_no = $inv_row['invoice_no'] ?? '';
+    $running = floatval($inv_row['paid_amount'] ?? 0);
+    $history = [];
 
-    // Fetch due-update history in chronological order to compute the updated total paid amount
-    $res = mysqli_query($conn, "SELECT DATE_FORMAT(payment_date, '%d-%m-%Y') AS payment_date, amount_paid, previous_balance, new_balance, payment_date AS pd, created_at
+    $res = mysqli_query($conn, "SELECT id AS history_id, DATE_FORMAT(payment_date, '%d-%m-%Y') AS payment_date, amount_paid, previous_balance, new_balance
                                FROM due_update_history
                                WHERE invoice_id = $id
                                ORDER BY payment_date ASC, created_at ASC");
@@ -105,13 +164,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'ajax_
         while ($row = mysqli_fetch_assoc($res)) {
             $amt = floatval($row['amount_paid'] ?? 0);
             $running += $amt;
+            $row['invoice_no'] = $invoice_no;
             $row['total_amount_paid'] = number_format($running, 2, '.', '');
-            // remove helper fields if present
-            unset($row['pd']);
-            unset($row['created_at']);
             $history[] = $row;
         }
-        // return newest-first for the modal display
         $history = array_reverse($history);
     }
     echo json_encode(['success' => true, 'history' => $history]);
@@ -150,33 +206,33 @@ if (($_GET['action'] ?? '') === 'export_due_history') {
                 while ($h = mysqli_fetch_assoc($historyRes)) {
                     $running += floatval($h['amount_paid']);
                     fputcsv($output, [
-                        $invoiceId,
+                        $inv['id'],
                         $inv['invoice_no'],
                         $inv['customer_name'],
                         $inv['customer_mobile'],
                         $inv['customer_email'],
-                        number_format(floatval($inv['total_amount']), 2, '.', ''),
-                        number_format(floatval($inv['balance_amount']), 2, '.', ''),
+                        $inv['total_amount'],
+                        $inv['balance_amount'],
                         $inv['due_date'],
-                        number_format(floatval($inv['initial_paid_amount']), 2, '.', ''),
+                        $inv['initial_paid_amount'],
                         $h['payment_date'],
-                        number_format(floatval($h['amount_paid']), 2, '.', ''),
+                        $h['amount_paid'],
                         number_format($running, 2, '.', ''),
-                        number_format(floatval($h['previous_balance']), 2, '.', ''),
-                        number_format(floatval($h['new_balance']), 2, '.', '')
+                        $h['previous_balance'],
+                        $h['new_balance']
                     ]);
                 }
             } else {
                 fputcsv($output, [
-                    $invoiceId,
+                    $inv['id'],
                     $inv['invoice_no'],
                     $inv['customer_name'],
                     $inv['customer_mobile'],
                     $inv['customer_email'],
-                    number_format(floatval($inv['total_amount']), 2, '.', ''),
-                    number_format(floatval($inv['balance_amount']), 2, '.', ''),
+                    $inv['total_amount'],
+                    $inv['balance_amount'],
                     $inv['due_date'],
-                    number_format(floatval($inv['initial_paid_amount']), 2, '.', ''),
+                    $inv['initial_paid_amount'],
                     '',
                     '',
                     number_format($running, 2, '.', ''),
@@ -190,6 +246,99 @@ if (($_GET['action'] ?? '') === 'export_due_history') {
     exit();
 }
 
+// ── Helper: build & send account statement email after a due update ────────────
+function sendDueStatementEmail($conn, $id, $new_balance, $due_date) {
+    $result = ['attempted' => false, 'sent' => false, 'message' => ''];
+
+    $invRes = mysqli_query($conn, "SELECT i.invoice_no, i.customer_name, i.customer_mobile,
+                                            COALESCE(c.email, '') AS customer_email,
+                                            COALESCE(i.total_amount, 0) AS total_amount,
+                                            COALESCE(i.paid_amount, 0) AS paid_amount
+                                     FROM invoices i
+                                     LEFT JOIN customers c ON c.mobile = i.customer_mobile
+                                     WHERE i.id = $id
+                                     LIMIT 1");
+    $inv = $invRes ? mysqli_fetch_assoc($invRes) : null;
+    if (!$inv) {
+        $result['message'] = 'Invoice not found — statement not sent.';
+        return $result;
+    }
+
+    $email = trim($inv['customer_email']);
+    if (empty($email)) {
+        $result['message'] = 'No email on file — statement not sent.';
+        return $result;
+    }
+
+    $result['attempted'] = true;
+
+    // Payment history in chronological order with a running "total paid" total
+    $running  = floatval($inv['paid_amount']);
+    $histRows = [];
+    $histRes = mysqli_query($conn, "SELECT DATE_FORMAT(payment_date, '%d-%m-%Y') AS payment_date,
+                                            amount_paid, previous_balance, new_balance
+                                     FROM due_update_history
+                                     WHERE invoice_id = $id
+                                     ORDER BY payment_date ASC, created_at ASC");
+    if ($histRes) {
+        while ($h = mysqli_fetch_assoc($histRes)) {
+            $running += floatval($h['amount_paid']);
+            $h['total_paid'] = $running;
+            $histRows[] = $h;
+        }
+    }
+
+    $historyHtml = '<p style="color:#6b7280;">No previous payments recorded yet.</p>';
+    if (!empty($histRows)) {
+        $historyHtml = '<table style="width:100%;border-collapse:collapse;margin-top:10px;font-size:13px;">'
+                      . '<thead><tr style="background:#f3f4f6;">'
+                      . '<th style="padding:8px;border:1px solid #e5e7eb;text-align:left;">Date</th>'
+                      . '<th style="padding:8px;border:1px solid #e5e7eb;text-align:left;">Amount Paid</th>'
+                      . '<th style="padding:8px;border:1px solid #e5e7eb;text-align:left;">Total Paid</th>'
+                      . '<th style="padding:8px;border:1px solid #e5e7eb;text-align:left;">Previous Due</th>'
+                      . '<th style="padding:8px;border:1px solid #e5e7eb;text-align:left;">New Due</th>'
+                      . '</tr></thead><tbody>';
+        foreach ($histRows as $h) {
+            $historyHtml .= '<tr>'
+                           . '<td style="padding:8px;border:1px solid #e5e7eb;">' . htmlspecialchars($h['payment_date']) . '</td>'
+                           . '<td style="padding:8px;border:1px solid #e5e7eb;">&#8377;' . number_format(floatval($h['amount_paid']), 2) . '</td>'
+                           . '<td style="padding:8px;border:1px solid #e5e7eb;">&#8377;' . number_format(floatval($h['total_paid']), 2) . '</td>'
+                           . '<td style="padding:8px;border:1px solid #e5e7eb;">&#8377;' . number_format(floatval($h['previous_balance']), 2) . '</td>'
+                           . '<td style="padding:8px;border:1px solid #e5e7eb;">&#8377;' . number_format(floatval($h['new_balance']), 2) . '</td>'
+                           . '</tr>';
+        }
+        $historyHtml .= '</tbody></table>';
+    }
+
+    $due_date_display = ($due_date !== '') ? date('d-m-Y', strtotime($due_date)) : 'Not set';
+
+    $subject = 'Account Statement - Invoice ' . $inv['invoice_no'] . ' | MAA GOURI JEWELLERS';
+    $body = '<p>Dear ' . htmlspecialchars($inv['customer_name']) . ',</p>'
+         . '<p>Thank you for doing business with <strong>MAA GOURI JEWELLERS</strong>. Below is your updated statement of account for Invoice <strong>' . htmlspecialchars($inv['invoice_no']) . '</strong>:</p>'
+         . '<table style="width:100%;border-collapse:collapse;margin:12px 0;font-size:14px;">'
+         . '<tr style="background:#f9fafb;"><td style="padding:8px;border:1px solid #e5e7eb;"><strong>Invoice Total Amount</strong></td><td style="padding:8px;border:1px solid #e5e7eb;">&#8377;' . number_format(floatval($inv['total_amount']), 2) . '</td></tr>'
+         . '<tr><td style="padding:8px;border:1px solid #e5e7eb;"><strong>Current Due Balance</strong></td><td style="padding:8px;border:1px solid #e5e7eb;color:#dc2626;font-weight:bold;">&#8377;' . number_format(floatval($new_balance), 2) . '</td></tr>'
+         . '<tr style="background:#f9fafb;"><td style="padding:8px;border:1px solid #e5e7eb;"><strong>Due Date</strong></td><td style="padding:8px;border:1px solid #e5e7eb;">' . htmlspecialchars($due_date_display) . '</td></tr>'
+         . '</table>'
+         . '<h4 style="margin:16px 0 6px;color:#374151;">Payment History</h4>'
+         . $historyHtml
+         . '<p style="margin-top:16px;">If you have any questions regarding this statement, please contact us at +91-8617536679.</p>'
+         . '<p>Best regards,<br><strong>MAA GOURI JEWELLERS</strong></p>';
+
+    error_log('[due_list] Statement attempt -> to: ' . $email . ' | invoice: ' . $inv['invoice_no'] . ' | new balance: ' . $new_balance);
+    $send = sendSMTPMail($email, $subject, $body);
+    if (!empty($send['success'])) {
+        error_log('[due_list] Statement sent OK -> ' . $email);
+        $result['sent'] = true;
+    } else {
+        $errMsg = $send['message'] ?? 'Failed to send statement email.';
+        error_log('[due_list] Statement failed -> ' . $email . ' | error: ' . $errMsg);
+        $result['sent']    = false;
+        $result['message'] = $errMsg;
+    }
+    return $result;
+}
+
 // ── POST: update due amount / due date ────────────────────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update') {
     $id       = intval($_POST['id'] ?? 0);
@@ -197,41 +346,62 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
     $due_date = trim($_POST['due_date'] ?? '');
     $due_date_sql = ($due_date === '') ? 'NULL' : "'" . mysqli_real_escape_string($conn, $due_date) . "'";
 
+    $statement = ['attempted' => false, 'sent' => false, 'message' => ''];
+    $history_id = 0;
+
     if ($id > 0) {
         $bal = mysqli_real_escape_string($conn, number_format($balance, 2, '.', ''));
-        $current = mysqli_fetch_assoc(mysqli_query($conn, "SELECT balance_amount FROM invoices WHERE id = $id LIMIT 1"));
+        $current = mysqli_fetch_assoc(mysqli_query($conn, "SELECT invoice_no, balance_amount FROM invoices WHERE id = $id LIMIT 1"));
+        $invoice_no_val = $current['invoice_no'] ?? '';
         $previous_balance = floatval($current['balance_amount'] ?? 0);
         $new_balance = floatval($bal);
         if ($previous_balance > $new_balance) {
             $amount_paid = $previous_balance - $new_balance;
             $payment_date = date('Y-m-d');
             mysqli_query($conn, "INSERT INTO due_update_history (invoice_id, previous_balance, new_balance, amount_paid, payment_date) VALUES ($id, $previous_balance, $new_balance, $amount_paid, '$payment_date')");
+            $history_id = mysqli_insert_id($conn);
         }
         $upd = mysqli_query($conn, "UPDATE invoices SET balance_amount = $bal, due_date = $due_date_sql WHERE id = $id");
         $ok  = (bool)$upd;
         $msg = $ok ? 'Updated successfully.' : 'Update failed: ' . mysqli_error($conn);
 
+        // Auto-send the account statement email to the customer on every successful save
+        if ($ok) {
+            $statement = sendDueStatementEmail($conn, $id, $new_balance, $due_date);
+            if ($statement['attempted']) {
+                $msg .= $statement['sent'] ? ' Statement emailed to customer.' : (' Statement email failed: ' . $statement['message']);
+            }
+        }
+
         $isAjax = (isset($_POST['ajax']) && $_POST['ajax'] == '1')
                || (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
         if ($isAjax) {
             header('Content-Type: application/json');
-            echo json_encode(['success' => $ok, 'message' => $msg]);
+            echo json_encode([
+                'success'             => $ok,
+                'message'             => $msg,
+                'invoice_no'          => $invoice_no_val,
+                'history_id'          => $history_id,
+                'statement_attempted' => $statement['attempted'],
+                'statement_sent'      => $statement['sent'],
+                'statement_message'   => $statement['message'],
+            ]);
             exit();
         }
         $message = $msg;
     }
 }
 
-// ── Fetch all invoices with a due balance ─────────────────────────────────────
-$search_term = trim($_GET['search'] ?? '');
+// ── Fetch all invoices with a due balance (with search support) ───────────────
+$search_query = mysqli_real_escape_string($conn, trim($_GET['search'] ?? ''));
 $search_where = "";
-if ($search_term !== '') {
-    $s = mysqli_real_escape_string($conn, $search_term);
-    $search_where = " AND (i.customer_name LIKE '%$s%' OR i.customer_mobile LIKE '%$s%' OR i.invoice_no LIKE '%$s%' OR c.email LIKE '%$s%')";
+if (!empty($search_query)) {
+    $search_where = " AND (i.customer_name LIKE '%$search_query%' OR i.customer_mobile LIKE '%$search_query%' OR i.invoice_no LIKE '%$search_query%' OR c.email LIKE '%$search_query%') ";
 }
 
 $q = "SELECT i.id, i.invoice_no, i.customer_name, i.customer_mobile,
              COALESCE(c.email, '') AS customer_email,
+             COALESCE(i.total_amount, 0) AS total_amount,
              i.balance_amount, i.due_date,
              GROUP_CONCAT(DISTINCT COALESCE(ii.product_name, '') SEPARATOR ', ') AS items
       FROM invoices i
@@ -254,7 +424,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-<title>Due List – Maa Gouri Jewellers</title>
+<title>Due List – MAA GOURI JEWELLERS</title>
 <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <!-- Fallback CDN for Font Awesome in case the primary is blocked -->
@@ -264,7 +434,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; font-family: 'Poppins', sans-serif; }
-h1, h2, h3, .gold-font { font-family: 'Playfair Display', serif; }
+h1, h2, h3, .gold-font { font-family: 'Poppins', sans-serif; font-weight: 700; }
 
 /* ========== SIDEBAR ========== */
 .sidebar {
@@ -273,18 +443,17 @@ h1, h2, h3, .gold-font { font-family: 'Playfair Display', serif; }
     left: 0;
     width: 240px;
     height: 100vh;
-    background: linear-gradient(180deg, #7a4e0a 0%, #b5730e 40%, #d68b16 100%);
+    background: linear-gradient(180deg, #011921 0%, #03373b 50%, #044e54 80%, #011921 100%);
     z-index: 1000;
     display: flex;
     flex-direction: column;
     box-shadow: 4px 0 24px rgba(0,0,0,0.25);
     transition: transform 0.35s cubic-bezier(.4,0,.2,1);
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden;
 }
 
-.sidebar::-webkit-scrollbar { width: 4px; }
-.sidebar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+.sidebar-nav::-webkit-scrollbar { width: 4px; }
+.sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
 
 .sidebar-logo {
     padding: 22px 18px 16px;
@@ -310,7 +479,7 @@ h1, h2, h3, .gold-font { font-family: 'Playfair Display', serif; }
     font-size: 13px;
     font-weight: 700;
     line-height: 1.3;
-    font-family: 'Playfair Display', serif;
+    font-family: 'Poppins', serif;
     letter-spacing: 0.5px;
 }
 
@@ -320,8 +489,8 @@ h1, h2, h3, .gold-font { font-family: 'Playfair Display', serif; }
     margin-top: 1px;
 }
 
-.sidebar-nav { flex: 1; padding: 10px 0; }
-.sidebar-section-label { padding: 10px 20px 4px; color: rgba(255,255,255,0.45); font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; }
+.sidebar-nav { flex: 1; padding: 10px 0; overflow-y: auto; overflow-x: hidden; }
+.sidebar-section-label { padding: 10px 20px 4px; color: rgba(255,255,255,0.45); font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; position: sticky; top: 0; background: #011921; color: #f5c842; z-index: 10; }
 .sidebar-nav a { display: flex; align-items: center; gap: 12px; padding: 11px 20px; color: rgba(255,255,255,0.85); text-decoration: none; font-size: 13px; font-weight: 500; transition: all 0.2s ease; border-left: 3px solid transparent; position: relative; }
 .sidebar-nav a:hover { background: rgba(255,255,255,0.13); color: #fff; border-left-color: rgba(255,255,255,0.8); padding-left: 26px; }
 .sidebar-nav a.active { background: rgba(255,255,255,0.22); color: #fff; border-left-color: #fff; font-weight: 700; }
@@ -342,7 +511,7 @@ h1, h2, h3, .gold-font { font-family: 'Playfair Display', serif; }
 
 /* ========== MAIN LAYOUT ========== */
 .page-wrapper { margin-left: 240px; min-height: 100vh; transition: margin-left 0.35s ease; background: #f9fafb; }
-nav.nav-gold { background: linear-gradient(135deg, #b5730e, #d68b16) !important; margin-left: 0; }
+nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important; border-bottom: 2.5px solid #ffd700; box-shadow: 0 0 12px rgba(255, 215, 0, 0.5) !important; margin-left: 0; }
 
 /* ========== BURGER MENU ========== */
 .burger-menu { width: 28px; height: 20px; position: relative; cursor: pointer; }
@@ -436,6 +605,55 @@ nav.nav-gold { background: linear-gradient(135deg, #b5730e, #d68b16) !important;
 .btn-back:hover { background: linear-gradient(135deg, #e8a020, #c8830e); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(214,139,22,0.35); }
     .btn-export { background: #111827; color: #fff; padding: 10px 18px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.15); }
     .btn-export:hover { background: #1f2937; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+
+/* ── Action Grid Buttons ──────────────────────── */
+.action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 100%; min-width: 220px; }
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    height: 34px;
+    width: 100%;
+    padding: 0 8px;
+    border-radius: 8px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.action-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.12); }
+.action-btn-save { background: #10b981; color: #fff; }
+.action-btn-save:hover { background: #059669; }
+.action-btn-receive { background: linear-gradient(135deg, #7a4e0a, #d68b16); color: #fff; }
+.action-btn-receive:hover { background: linear-gradient(135deg, #8a5e1a, #e69b26); }
+.action-btn-history { background: #2563eb; color: #fff; }
+.action-btn-history:hover { background: #1d4ed8; }
+.action-btn-delete { background: #fee2e2; color: #dc2626; border: 1px solid rgba(239,68,68,0.3); }
+.action-btn-delete:hover { background: #ef4444; color: #fff; }
+.action-btn-whatsapp { background: linear-gradient(135deg, #25d366, #128c7e); color: #fff; }
+.action-btn-whatsapp:hover { background: linear-gradient(135deg, #20bd5a, #0e7a6e); }
+
+/* Due amount display - read only red */
+.due-amount-display {
+    font-size: 16px;
+    font-weight: 800;
+    color: #dc2626;
+    padding: 6px 4px;
+    display: block;
+    letter-spacing: 0.3px;
+}
+.due-amount-label {
+    font-size: 10px;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+    display: block;
+}
 /* ── Toast ────────────────────────────────────── */
 #toast {
     position: fixed; bottom: 28px; right: 28px; z-index: 9999;
@@ -517,17 +735,12 @@ nav.nav-gold { background: linear-gradient(135deg, #b5730e, #d68b16) !important;
     <div style="position:relative;z-index:10;text-align:center;">
 
         <!-- Logo -->
-        <div style="position:relative;width:110px;height:110px;margin:0 auto 28px;display:flex;align-items:center;justify-content:center;">
-            <img src="assets/images/moti-removebg-preview.png" alt="Logo" style="max-width:100%;max-height:100%;animation:gemGlowPulse 2s ease-in-out infinite;">
-        </div>
-
-        <!-- Title -->
-        <div style="color:#d68b16;font-size:22px;letter-spacing:6px;font-family:'Playfair Display',serif;margin-bottom:6px;animation:titleGold 2s ease infinite alternate;">MAA GOURI JEWELLERS</div>
-        <p style="color:rgba(201,169,110,0.7);font-size:10px;letter-spacing:4px;text-transform:uppercase;margin-bottom:24px;">Crafting Timeless Elegance</p>
-
-        <!-- Progress bar -->
-        <div style="width:200px;height:3px;background:rgba(255,255,255,0.08);border-radius:3px;margin:0 auto 16px;overflow:hidden;">
-            <div style="height:100%;width:35%;background:linear-gradient(90deg,#7a4e0a,#d68b16,#f5c842);border-radius:3px;animation:barSlide 1.8s ease-in-out infinite;"></div>
+                <div style="position:relative;width:120px;height:120px;margin:0 auto 24px;display:flex;align-items:center;justify-content:center;">
+            
+            
+            <div style="width:120px;height:120px;background:transparent;animation:gemGlowPulse 1.5s ease-in-out infinite;">
+                <img src="assets/images/moti-removebg-preview.png" alt="MAA GOURI JEWELLERS Logo" style="width:100%;height:100%;object-fit:contain;display:block;">
+            </div>
         </div>
 
         <!-- Dots -->
@@ -552,17 +765,30 @@ nav.nav-gold { background: linear-gradient(135deg, #b5730e, #d68b16) !important;
 
 <script>
 function hideLoadingOverlay() {
+    const isReload = performance.getEntriesByType("navigation")[0]?.type === "reload";
+    const hasVisited = sessionStorage.getItem('visited');
+
     const overlay = document.getElementById('loadingOverlay');
     if(overlay) {
-        setTimeout(() => {
+        if (!hasVisited || isReload) {
+            sessionStorage.setItem('visited', 'true');
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+            }, 300);
+        } else {
+            overlay.style.display = 'none';
             overlay.classList.add('hidden');
-        }, 300);
+            // Animate the content wrapper, NOT body (body transform breaks position:fixed sidebar)
+            const pw = document.querySelector('.page-wrapper');
+            if(pw) { pw.style.animation = 'slideInFromRightGlobal 0.3s ease-out forwards'; }
+        }
     }
 }
 
 function showLoadingOverlay() {
     const overlay = document.getElementById('loadingOverlay');
     if(overlay) {
+        overlay.style.display = 'flex';
         overlay.classList.remove('hidden');
     }
 }
@@ -589,6 +815,19 @@ function closeSidebar() {
     document.getElementById('burgerMenu').classList.remove('active');
     document.body.style.overflow = '';
 }
+function filterDueTable(query) {
+    const term = query.trim().toLowerCase();
+    const rows = document.querySelectorAll('.due-table tbody tr');
+    rows.forEach(row => {
+        if (row.classList.contains('empty-row')) return;
+        const text = row.innerText.toLowerCase();
+        if (term === '' || text.includes(term)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
 </script>
 
 <!-- Sidebar Overlay (mobile) -->
@@ -603,7 +842,7 @@ function closeSidebar() {
         $logo_found = false;
         foreach($logo_paths as $path) {
             if(file_exists($path)) {
-                echo '<img src="'.$path.'" alt="Moti Jewellers Logo">';
+                echo '<img src="'.$path.'" alt="MAA GOURI JEWELLERS Logo" style="height:38px;width:auto;max-width:44px;object-fit:contain;display:inline-block;margin-right:8px;">';
                 $logo_found = true; break;
             }
         }
@@ -615,17 +854,25 @@ function closeSidebar() {
         </div>
     </div>
 
-    <!-- Navigation -->
     <nav class="sidebar-nav">
-        <div class="sidebar-section-label">Menu</div>
-        <a href="reports.php">
-            <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" style="color:inherit;flex-shrink:0;">
-                <rect x="3" y="11" width="4" height="10" rx="1" ry="1" fill="currentColor"></rect>
-                <rect x="10" y="7" width="4" height="14" rx="1" ry="1" fill="currentColor"></rect>
-                <rect x="17" y="3" width="4" height="18" rx="1" ry="1" fill="currentColor"></rect>
-            </svg>
-            REPORTS
-        </a>
+        <div class="sidebar-section-label">Main Menu</div>
+        <a href="index.php"><i class="fas fa-home"></i> HOME</a>
+        <a href="billing.php"><i class="fas fa-receipt"></i> BILLING</a>
+        <a href="stock.php"><i class="fas fa-boxes"></i> STOCK</a>
+        <a href="customers.php"><i class="fas fa-users"></i> CUSTOMERS</a>
+
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-section-label">Analytics</div>
+        <a href="reports.php"><i class="fas fa-chart-bar"></i> REPORTS</a>
+        <a href="due_list.php" class="active"><i class="fas fa-hourglass-half"></i> DUE LIST</a>
+        <a href="income_expenses.php"><i class="fas fa-chart-line"></i> INCOME &amp; EXP</a>
+
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-section-label">Tools</div>
+        <a href="whatsapp_automation.php"><i class="fab fa-whatsapp"></i> WHATSAPP</a>
+        <a href="purchase.php"><i class="fas fa-book"></i> PURCHASE</a>
+        <a href="contacts.php"><i class="fas fa-address-book"></i> CONTACTS</a>
+        <a href="accounts.php"><i class="fas fa-calculator"></i> ACCOUNTS</a>
     </nav>
 
     <!-- User Info + Logout -->
@@ -662,7 +909,7 @@ function closeSidebar() {
                 $logo_found = false;
                 foreach($logo_paths as $path) {
                     if(file_exists($path)) {
-                        echo '<img src="'.$path.'" alt="Logo" style="height:40px;width:auto;object-fit:contain;">';
+                        echo '<img src="'.$path.'" alt="Logo" style="height:40px;width:auto;max-width:44px;object-fit:contain;display:inline-block;">';
                         $logo_found = true; break;
                     }
                 }
@@ -708,39 +955,38 @@ function closeSidebar() {
 
     <!-- Header -->
     <div class="page-heading">
-        <h2 class="text-2xl sm:text-3xl font-bold" style="color:#800020;font-family:'Playfair Display',serif;">
+        <h2 class="text-2xl sm:text-3xl font-bold" style="color:#800020;font-family:'Poppins',serif;">
             <i class="fas fa-list mr-2" style="color:#d68b16;"></i> Customers with Due Amounts
         </h2>
         <p>Pending invoices — update amount or due date, then save. Send email reminders directly.</p>
     </div>
 
-    <!-- Navigation Buttons & Search Bar -->
-    <div class="mb-4 flex flex-col md:flex-row gap-3 justify-between items-stretch md:items-center">
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+    <!-- Navigation & Search Bar -->
+    <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:center;justify-content:space-between;">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
             <a href="reports.php" class="btn-back">
                 <i class="fas fa-arrow-left mr-1"></i> Back to Reports
             </a>
             <a href="due_list.php?action=export_due_history" onclick="showLoadingOverlay()" class="btn btn-export">
-                Export Due History
+                <i class="fas fa-file-csv mr-1"></i> Export Due History
             </a>
         </div>
 
-        <!-- Search Bar -->
-        <form method="GET" action="due_list.php" class="flex flex-1 md:max-w-md gap-2 items-center">
-            <div class="relative flex-1">
-                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-amber-700 pointer-events-none">
-                    <i class="fas fa-search"></i>
-                </span>
-                <input type="text" name="search" value="<?php echo htmlspecialchars($search_term); ?>"
-                    placeholder="Search customer, mobile, invoice..."
-                    class="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-yellow-600/30 focus:outline-none focus:border-amber-600 bg-white shadow-sm">
+        <!-- Search Form & Live Filter -->
+        <form method="get" action="due_list.php" style="display:flex;gap:8px;align-items:center;margin:0;flex-wrap:wrap;flex:1;max-width:520px;justify-content:flex-end;">
+            <div style="position:relative;flex:1;min-width:240px;">
+                <i class="fas fa-search" style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:#d68b16;font-size:14px;"></i>
+                <input type="text" name="search" id="dueSearchInput" placeholder="Search Customer, Mobile, Inv No..."
+                       value="<?php echo htmlspecialchars($_GET['search'] ?? ''); ?>"
+                       onkeyup="filterDueTable(this.value)"
+                       style="width:100%;padding:9px 12px 9px 36px;border:1.5px solid #d68b16;border-radius:8px;font-size:13px;background:#fff;color:#1e293b;outline:none;box-shadow:0 2px 6px rgba(122,78,10,0.08);">
             </div>
-            <button type="submit" class="btn-gold py-2 px-4 text-xs font-bold rounded-xl flex items-center gap-1 shadow-sm">
-                <i class="fas fa-search"></i> Search
+            <button type="submit" class="btn" style="background:linear-gradient(135deg,#7a4e0a,#d68b16);color:#fff;padding:9px 18px;border-radius:8px;font-size:13px;font-weight:700;box-shadow:0 3px 10px rgba(214,139,22,0.3);border:none;cursor:pointer;">
+                <i class="fas fa-search mr-1"></i> Search
             </button>
-            <?php if ($search_term !== ''): ?>
-            <a href="due_list.php" class="py-2 px-3 text-xs font-bold rounded-xl border border-gray-300 text-gray-700 bg-gray-100 hover:bg-gray-200 flex items-center gap-1">
-                <i class="fas fa-times"></i> Clear
+            <?php if(!empty($_GET['search'])): ?>
+            <a href="due_list.php" class="btn" style="background:#e2e8f0;color:#475569;padding:9px 14px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;">
+                <i class="fas fa-times mr-1"></i> Clear
             </a>
             <?php endif; ?>
         </form>
@@ -762,8 +1008,7 @@ function closeSidebar() {
                 <th>Items</th>
                 <th style="width:130px">Due Amount (₹)</th>
                 <th style="width:135px">Due Date</th>
-                <!-- <th style="width:220px">Tracker</th> -->
-                <th style="width:210px">Actions</th>
+                <th style="width:280px;text-align:center;">Actions</th>
             </tr>
         </thead>
         <tbody>
@@ -797,13 +1042,14 @@ function closeSidebar() {
                 </div>
             </td>
 
-            <!-- Due Amount (editable) -->
+            <!-- Due Amount (READ-ONLY, red display) -->
             <td>
-                <div class="field-label">Due (₹)</div>
-                <input type="number" min="0" step="0.01"
-                       class="inline-input due-amount-input"
-                       data-id="<?php echo intval($r['id']); ?>"
-                       value="<?php echo htmlspecialchars(number_format((float)$r['balance_amount'], 2, '.', '')); ?>">
+                <span class="due-amount-label">Due (₹)</span>
+                <span class="due-amount-display due-amount-input"
+                      data-id="<?php echo intval($r['id']); ?>"
+                      data-balance="<?php echo floatval($r['balance_amount']); ?>">
+                    ₹<?php echo number_format((float)$r['balance_amount'], 2); ?>
+                </span>
             </td>
 
             <!-- Due Date (editable) -->
@@ -816,26 +1062,32 @@ function closeSidebar() {
             </td>
 
             <!-- Actions -->
-            <td>
-                <div style="display:flex;flex-direction:column;gap:7px;">
-                    <!-- Save -->
-                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                        <button class="btn btn-save"
-                                onclick="saveRow(<?php echo intval($r['id']); ?>, this)">
-                            Save
-                        </button>
-                        <button class="btn btn-history"
-                                type="button"
-                                onclick="openHistoryModal(<?php echo intval($r['id']); ?>, '<?php echo htmlspecialchars(addslashes($r['customer_name'])); ?>')">
-                            History
-                        </button>
-                    </div>
-                    <!-- Delete -->
-                    <form method="post" onsubmit="return confirm('Clear due for this invoice?');" style="margin:0;">
+            <td style="min-width:260px;">
+                <div class="action-grid" style="grid-template-columns:1fr 1fr;">
+                    <!-- 1. Receive Payment -->
+                    <button type="button" class="action-btn action-btn-receive"
+                            onclick="openReceiveModal(<?php echo intval($r['id']); ?>, '<?php echo htmlspecialchars(addslashes($r['invoice_no'])); ?>', '<?php echo htmlspecialchars(addslashes($r['customer_name'])); ?>', <?php echo floatval($r['total_amount']); ?>, <?php echo floatval($r['balance_amount']); ?>, '<?php echo htmlspecialchars(addslashes($r['due_date'] ?? '')); ?>')">
+                        <i class="fas fa-hand-holding-usd"></i> Receive
+                    </button>
+
+                    <!-- 2. WhatsApp Reminder -->
+                    <button type="button" class="action-btn action-btn-whatsapp"
+                            onclick="sendWhatsAppReminder('<?php echo htmlspecialchars(addslashes($r['customer_name'])); ?>', '<?php echo htmlspecialchars($r['customer_mobile']); ?>', '<?php echo htmlspecialchars(addslashes($r['invoice_no'])); ?>', <?php echo floatval($r['balance_amount']); ?>, <?php echo floatval($r['total_amount']); ?>)">
+                        <i class="fab fa-whatsapp"></i> Payment Reminder
+                    </button>
+
+                    <!-- 3. History -->
+                    <button type="button" class="action-btn action-btn-history"
+                            onclick="openHistoryModal(<?php echo intval($r['id']); ?>, '<?php echo htmlspecialchars(addslashes($r['customer_name'])); ?>')">
+                        <i class="fas fa-history"></i> History
+                    </button>
+
+                    <!-- 4. Delete Due -->
+                    <form method="post" onsubmit="return confirm('Clear due for this invoice?');" style="margin:0;width:100%;">
                         <input type="hidden" name="action" value="delete_due">
                         <input type="hidden" name="id"     value="<?php echo intval($r['id']); ?>">
-                        <button type="submit" class="btn-delete">
-                            Delete Due
+                        <button type="submit" class="action-btn action-btn-delete">
+                            <i class="fas fa-trash-alt"></i> Delete
                         </button>
                     </form>
                 </div>
@@ -847,6 +1099,12 @@ function closeSidebar() {
     </div><!-- /table-wrap -->
 
 </div><!-- /container -->
+    <footer style="background:linear-gradient(0deg,#f5e6c8,#fdf6e3);border-top:2px solid #d68b16;padding:20px;margin-top:40px;text-align:center;">
+        <p class="text-xs" style="color:#7a4e0a;">
+            &copy; 2026 MAA GOURI JEWELLERS &nbsp;|&nbsp; CRAFTED WITH ELEGANCE &nbsp;|&nbsp;
+            Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology</a>
+        </p>
+    </footer>
 </div><!-- /page-wrapper -->
 
 <!-- Toast -->
@@ -862,43 +1120,35 @@ function showToast(msg, type) {
     t._timer = setTimeout(function() { t.className = ''; }, 3200);
 }
 
-/* ── Save a row via AJAX ──────────────────────────── */
-function saveRow(id, btn) {
-    var row    = btn.closest('tr');
-    var amount = row.querySelector('.due-amount-input').value;
-    var ddate  = row.querySelector('.due-date-input').value;
+/* ── WhatsApp Reminder ────────────────────────────── */
+function sendWhatsAppReminder(name, mobile, invoiceNo, due, total) {
+    // Clean mobile: remove spaces, dashes, leading 0; add 91 country code
+    var cleaned = mobile.replace(/[\s\-\(\)]/g, '');
+    if (cleaned.startsWith('0')) cleaned = cleaned.substring(1);
+    if (!cleaned.startsWith('91')) cleaned = '91' + cleaned;
 
-    var params = new URLSearchParams();
-    params.append('action',         'update');
-    params.append('id',             id);
-    params.append('balance_amount', amount);
-    params.append('due_date',       ddate);
-    params.append('ajax',           '1');
+    var msg = '';
+    if (due <= 0) {
+        // Fully paid
+        msg = '🙏 Dear ' + name + ',';
+        msg += '\n\nThank you for your *complete payment* for Invoice *' + invoiceNo + '*.';
+        msg += '\n💰 Total Paid: ₹' + total.toFixed(2);
+        msg += '\n✅ Your account is fully cleared.';
+        msg += '\n\nThank you for trusting *MAA GOURI JEWELLERS*! 🌟\n📞 +91-8617536679';
+    } else {
+        // Part paid / still due
+        var paid = total - due;
+        msg = '🙏 Dear ' + name + ',';
+        msg += '\n\nThis is a gentle reminder regarding your pending due for Invoice *' + invoiceNo + '*.';
+        msg += '\n\n💳 Invoice Total: ₹' + total.toFixed(2);
+        msg += '\n✅ Amount Paid: ₹' + paid.toFixed(2);
+        msg += '\n🔴 *Remaining Due: ₹' + due.toFixed(2) + '*';
+        msg += '\n\nKindly clear the pending amount at your earliest convenience.';
+        msg += '\n\nThank you,\n*MAA GOURI JEWELLERS*\n📞 +91-8617536679';
+    }
 
-    btn.disabled    = true;
-    btn.innerHTML   = '<i class="fas fa-spinner fa-spin mr-1"></i> Saving…';
-
-    fetch('due_list.php', {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body:    params.toString()
-    })
-    .then(r => r.json())
-    .then(data => {
-            if (data.success) {
-            showToast('Saved successfully!', 'success');
-            btn.innerHTML = '<i class="fas fa-check mr-1"></i> Saved';
-            setTimeout(function() { btn.innerHTML = '<i class="fas fa-save mr-1"></i> Save'; }, 2000);
-        } else {
-            showToast(data.message || 'Save failed.', 'error');
-            btn.innerHTML = '<i class="fas fa-save mr-1"></i> Save';
-        }
-    })
-    .catch(function(err) {
-        showToast('Error: ' + (err.message || err), 'error');
-        btn.innerHTML = '<i class="fas fa-save mr-1"></i> Save';
-    })
-    .finally(function() { btn.disabled = false; });
+    var url = 'https://wa.me/' + cleaned + '?text=' + encodeURIComponent(msg);
+    window.open(url, '_blank');
 }
 
 function openHistoryModal(invoiceId, customerName) {
@@ -928,20 +1178,25 @@ function openHistoryModal(invoiceId, customerName) {
             body.innerHTML = '<div style="padding:16px;color:#374151;">No update history found.</div>';
             return;
         }
-        var html = '<table style="width:100%;border-collapse:collapse;text-align:left;font-size:14px;"><thead><tr>' +
+        var html = '<table style="width:100%;border-collapse:collapse;text-align:left;font-size:13px;"><thead><tr style="background:#f3f4f6;">' +
                '<th style="padding:10px;border-bottom:1px solid #e5e7eb;">Date</th>' +
                '<th style="padding:10px;border-bottom:1px solid #e5e7eb;">Amount Paid</th>' +
-               '<th style="padding:10px;border-bottom:1px solid #e5e7eb;">Total Amount Paid</th>' +
+               '<th style="padding:10px;border-bottom:1px solid #e5e7eb;">Total Paid</th>' +
                '<th style="padding:10px;border-bottom:1px solid #e5e7eb;">Old Due</th>' +
                '<th style="padding:10px;border-bottom:1px solid #e5e7eb;">New Due</th>' +
+               '<th style="padding:10px;border-bottom:1px solid #e5e7eb;text-align:center;">Action</th>' +
                '</tr></thead><tbody>';
         data.history.forEach(function(row) {
+            var receiptUrl = 'view_pdf.php?invoice_no=' + encodeURIComponent(row.invoice_no) + '&receipt=1' + (row.history_id ? '&history_id=' + row.history_id : '');
             html += '<tr>' +
                 '<td style="padding:10px;border-bottom:1px solid #e5e7eb;">' + row.payment_date + '</td>' +
-                '<td style="padding:10px;border-bottom:1px solid #e5e7eb;">₹' + parseFloat(row.amount_paid).toFixed(2) + '</td>' +
+                '<td style="padding:10px;border-bottom:1px solid #e5e7eb;color:#059669;font-weight:700;">₹' + parseFloat(row.amount_paid).toFixed(2) + '</td>' +
                 '<td style="padding:10px;border-bottom:1px solid #e5e7eb;">₹' + parseFloat(row.total_amount_paid || 0).toFixed(2) + '</td>' +
-                '<td style="padding:10px;border-bottom:1px solid #e5e7eb;">₹' + parseFloat(row.previous_balance).toFixed(2) + '</td>' +
-                '<td style="padding:10px;border-bottom:1px solid #e5e7eb;">₹' + parseFloat(row.new_balance).toFixed(2) + '</td>' +
+                '<td style="padding:10px;border-bottom:1px solid #e5e7eb;color:#b91c1c;">₹' + parseFloat(row.previous_balance).toFixed(2) + '</td>' +
+                '<td style="padding:10px;border-bottom:1px solid #e5e7eb;font-weight:700;">₹' + parseFloat(row.new_balance).toFixed(2) + '</td>' +
+                '<td style="padding:10px;border-bottom:1px solid #e5e7eb;text-align:center;">' +
+                '<a href="' + receiptUrl + '" target="_blank" style="background:linear-gradient(135deg,#059669,#047857);color:#fff;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:bold;text-decoration:none;display:inline-block;box-shadow:0 2px 6px rgba(5,150,105,0.3);">🧾 Print Receipt</a>' +
+                '</td>' +
                 '</tr>';
         });
         html += '</tbody></table>';
@@ -957,7 +1212,136 @@ function closeHistoryModal() {
     modal.style.display = 'none';
 }
 
+/* ── Receive Modal JS ── */
+function openReceiveModal(id, invoiceNo, customerName, totalAmt, currentDue, currentDueDate) {
+    document.getElementById('rcvInvoiceId').value = id;
+    document.getElementById('rcvRawDue').value = currentDue;
+    document.getElementById('rcvCustomerName').textContent = customerName;
+    document.getElementById('rcvInvoiceNo').textContent = 'Inv: ' + invoiceNo;
+    document.getElementById('rcvTotalAmt').textContent = '₹' + parseFloat(totalAmt).toFixed(2);
+    document.getElementById('rcvCurrentDue').textContent = '₹' + parseFloat(currentDue).toFixed(2);
+    
+    const input = document.getElementById('rcvAmountInput');
+    input.value = currentDue;
+    document.getElementById('rcvNextDueDate').value = currentDueDate || '';
+    calcReceivePreview();
+    
+    selectRcvMode('Cash');
+    document.getElementById('receiveModal').style.display = 'flex';
+    setTimeout(() => input.focus(), 150);
+}
+
+function selectRcvMode(mode) {
+    const radios = document.getElementsByName('rcv_mode');
+    for (let r of radios) { if (r.value === mode) r.checked = true; }
+    
+    const lblCash = document.getElementById('lblModeCash');
+    const lblUpi  = document.getElementById('lblModeUpi');
+    if (mode === 'Cash') {
+        lblCash.style.borderColor = '#d68b16'; lblCash.style.background = '#fff9ee';
+        lblUpi.style.borderColor  = '#cbd5e1'; lblUpi.style.background  = '#fff';
+    } else {
+        lblUpi.style.borderColor  = '#800020'; lblUpi.style.background  = '#fff1f2';
+        lblCash.style.borderColor = '#cbd5e1'; lblCash.style.background = '#fff';
+    }
+}
+
+function calcReceivePreview() {
+    const rawDue = parseFloat(document.getElementById('rcvRawDue').value) || 0;
+    const rcvAmt = parseFloat(document.getElementById('rcvAmountInput').value) || 0;
+    const pending = Math.max(0, rawDue - rcvAmt);
+    
+    const disp = document.getElementById('rcvPendingDisplay');
+    const box  = document.getElementById('rcvPendingBox');
+    
+    if (rcvAmt >= rawDue && rawDue > 0) {
+        disp.textContent = '₹0.00 (Fully Cleared! ✅)';
+        disp.style.color = '#15803d';
+        box.style.background = '#f0fdf4';
+        box.style.borderColor = '#86efac';
+    } else {
+        disp.textContent = '₹' + pending.toFixed(2);
+        disp.style.color = '#b91c1c';
+        box.style.background = '#f8fafc';
+        box.style.borderColor = '#94a3b8';
+    }
+}
+
+function closeReceiveModal() {
+    document.getElementById('receiveModal').style.display = 'none';
+}
+
+function submitReceivePayment() {
+    const id          = document.getElementById('rcvInvoiceId').value;
+    const amt         = parseFloat(document.getElementById('rcvAmountInput').value) || 0;
+    const rawDue      = parseFloat(document.getElementById('rcvRawDue').value) || 0;
+    const nextDueDate = document.getElementById('rcvNextDueDate').value || '';
+    
+    const radios = document.getElementsByName('rcv_mode');
+    let mode = 'Cash';
+    for (let r of radios) { if (r.checked) mode = r.value; }
+
+    if (amt <= 0) {
+        alert('Please enter a valid amount to receive.');
+        document.getElementById('rcvAmountInput').focus();
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('action', 'receive_due_payment');
+    formData.append('id', id);
+    formData.append('amount_paid', amt);
+    formData.append('payment_mode', mode);
+    formData.append('next_due_date', nextDueDate);
+
+    fetch('due_list.php', { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(res => {
+        if (res.success) {
+            closeReceiveModal();
+            showToast('✅ Payment received (₹' + amt.toFixed(2) + ' ' + mode + ')!');
+            
+            // Open printable invoice / payment receipt PDF (uses invoice_no to avoid "Invoice number missing" error)
+            var printUrl = 'view_pdf.php?invoice_no=' + encodeURIComponent(res.invoice_no) + '&receipt=1&history_id=' + res.history_id;
+            window.open(printUrl, '_blank');
+            
+            // Update table DOM - due amount & next due date
+            const rowDisplay = document.querySelector('.due-amount-input[data-id="' + id + '"]');
+            if (rowDisplay) {
+                if (res.is_fully_paid) {
+                    const row = rowDisplay.closest('tr');
+                    if (row) {
+                        row.style.transition = 'opacity 0.6s';
+                        row.style.opacity = '0';
+                        setTimeout(function() { row.remove(); }, 600);
+                    }
+                } else {
+                    rowDisplay.textContent = '₹' + parseFloat(res.new_balance).toFixed(2);
+                    rowDisplay.dataset.balance = res.new_balance;
+                    
+                    // Update due date input in table row
+                    const rowDateInput = rowDisplay.closest('tr').querySelector('.due-date-input');
+                    if (rowDateInput && res.next_due_date) {
+                        rowDateInput.value = res.next_due_date;
+                    }
+
+                    // Flash red to show update
+                    rowDisplay.style.transform = 'scale(1.15)';
+                    rowDisplay.style.transition = 'transform 0.3s';
+                    setTimeout(function() { rowDisplay.style.transform = 'scale(1)'; }, 300);
+                }
+            }
+        } else {
+            alert('Error recording payment: ' + (res.message || 'Unknown error'));
+        }
+    })
+    .catch(err => {
+        alert('Request failed: ' + err.message);
+    });
+}
 </script>
+
+<!-- History Modal -->
 <div id="historyModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;background:rgba(0,0,0,0.55);justify-content:center;align-items:center;padding:24px;">
     <div style="background:#fff;border-radius:12px;max-width:720px;width:100%;max-height:calc(100vh - 48px);box-shadow:0 18px 50px rgba(0,0,0,0.18);overflow:hidden;">
         <div style="padding:18px 22px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;">
@@ -965,6 +1349,75 @@ function closeHistoryModal() {
             <button type="button" onclick="closeHistoryModal()" style="border:none;background:none;font-size:18px;color:#6b7280;cursor:pointer;">✕</button>
         </div>
         <div id="historyModalBody" style="max-height:70vh;overflow:auto;padding:18px 22px;">Loading history…</div>
+    </div>
+</div>
+
+<!-- Receive Payment Modal -->
+<div id="receiveModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:10000;align-items:center;justify-content:center;backdrop-filter:blur(4px);">
+    <div style="background:#fff;border-radius:16px;max-width:440px;width:92%;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,0.25);border:1.5px solid #d68b16;">
+        <div style="background:linear-gradient(135deg, #7a4e0a, #d68b16);padding:16px 20px;color:#fff;display:flex;align-items:center;justify-content:space-between;">
+            <div style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-hand-holding-usd"></i> Receive Due Payment
+            </div>
+            <button onclick="closeReceiveModal()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;">✕</button>
+        </div>
+        <div style="padding:20px;display:flex;flex-direction:column;gap:14px;">
+            <!-- Customer & Inv Card -->
+            <div style="background:#fdfbf4;border:1px solid rgba(214,139,22,0.3);border-radius:10px;padding:12px 14px;font-size:12px;">
+                <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                    <span style="color:#7a4e0a;font-weight:700;" id="rcvCustomerName">Customer Name</span>
+                    <span style="font-weight:700;color:#111;" id="rcvInvoiceNo">INV-1001</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;color:#64748b;font-size:11px;">
+                    <span>Total Invoice: <strong id="rcvTotalAmt">₹0.00</strong></span>
+                    <span>Current Due: <strong style="color:#b91c1c;" id="rcvCurrentDue">₹0.00</strong></span>
+                </div>
+            </div>
+
+            <input type="hidden" id="rcvInvoiceId">
+            <input type="hidden" id="rcvRawDue">
+
+            <!-- Amount Receiving Now -->
+            <div>
+                <label style="font-size:11px;font-weight:700;color:#7a4e0a;display:block;margin-bottom:4px;">Amount Receiving Now (₹) *</label>
+                <input type="number" step="0.01" min="1" id="rcvAmountInput" class="inline-input" placeholder="Enter amount to receive..." oninput="calcReceivePreview()" style="font-size:15px;font-weight:700;padding:10px;border-color:#d68b16;">
+            </div>
+
+            <!-- Payment Mode Selection -->
+            <div>
+                <label style="font-size:11px;font-weight:700;color:#7a4e0a;display:block;margin-bottom:6px;">Payment Mode (Added to Accounts) *</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #d68b16;border-radius:10px;cursor:pointer;background:#fff9ee;" id="lblModeCash">
+                        <input type="radio" name="rcv_mode" value="Cash" checked onclick="selectRcvMode('Cash')">
+                        <span style="font-size:12px;font-weight:700;color:#7a4e0a;">💵 Cash</span>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;cursor:pointer;background:#fff;" id="lblModeUpi">
+                        <input type="radio" name="rcv_mode" value="UPI" onclick="selectRcvMode('UPI')">
+                        <span style="font-size:12px;font-weight:700;color:#800020;">📲 UPI / Digital</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Next Due Date Option -->
+            <div>
+                <label style="font-size:11px;font-weight:700;color:#7a4e0a;display:block;margin-bottom:4px;">Next Due Date (For Remaining Balance)</label>
+                <input type="date" id="rcvNextDueDate" class="inline-input" style="font-size:13px;padding:8px;border-color:#d68b16;">
+            </div>
+
+            <!-- Remaining Pending Due Preview -->
+            <div id="rcvPendingBox" style="background:#f8fafc;border:1px dashed #94a3b8;border-radius:10px;padding:10px 14px;font-size:12px;display:flex;justify-content:space-between;align-items:center;">
+                <span style="color:#475569;font-weight:600;">Remaining Pending Due:</span>
+                <span style="font-size:14px;font-weight:800;color:#b91c1c;" id="rcvPendingDisplay">₹0.00</span>
+            </div>
+
+            <!-- Submit Action -->
+            <div style="display:flex;gap:10px;margin-top:6px;">
+                <button type="button" onclick="closeReceiveModal()" style="flex:1;padding:10px;border-radius:10px;border:1px solid #cbd5e1;background:#f1f5f9;color:#475569;font-size:12px;font-weight:600;cursor:pointer;">Cancel</button>
+                <button type="button" onclick="submitReceivePayment()" style="flex:1.5;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg, #7a4e0a, #d68b16);color:#fff;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(214,139,22,0.3);">
+                    💾 Save &amp; Print Invoice
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 </body>
@@ -1018,3 +1471,6 @@ function closeHistoryModal() {
     }
 })();
 </script>
+
+
+

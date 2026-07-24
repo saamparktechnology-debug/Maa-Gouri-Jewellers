@@ -1,7 +1,8 @@
-<!-- moti-jewellers/logout.php -->
+<!-- radhe-shyam-jewellers/logout.php -->
 <?php
 session_start();
 session_destroy();
 header("Location: index.php");
 exit();
 ?>
+

@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once 'config/database.php';
+require_once 'config/company_config.php';
 
 if(!isset($_SESSION['user_id'])) {
     exit(json_encode([]));
@@ -24,3 +25,4 @@ while($row = mysqli_fetch_assoc($result)) {
 header('Content-Type: application/json');
 echo json_encode($invoices);
 ?>
+
