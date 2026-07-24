@@ -255,6 +255,14 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
     .sidebar.open { transform: translateX(0); }
     .page-wrapper { margin-left: 0 !important; }
 }
+
+/* Print statement styles */
+@media print {
+    .sidebar, .sidebar-overlay, header, .no-print, footer, form { display: none !important; }
+    .page-wrapper { margin-left: 0 !important; background: #fff !important; }
+    body { background: #fff !important; }
+    .card-gold { border: 1px solid #ccc !important; box-shadow: none !important; }
+}
 </style>
 </head>
 <body class="bg-amber-50/20 text-gray-800 antialiased">
@@ -532,7 +540,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
     <footer style="background:linear-gradient(0deg,#f5e6c8,#fdf6e3);border-top:2px solid #d68b16;padding:20px;margin-top:40px;text-align:center;">
         <p class="text-xs" style="color:#7a4e0a;">
             &copy; 2026 MAA GOURI JEWELLERS &nbsp;|&nbsp; CRAFTED WITH ELEGANCE &nbsp;|&nbsp;
-            Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology</a>
+            Design &amp; Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology &amp; Research Private Limited</a>
         </p>
     </footer>
 </div>

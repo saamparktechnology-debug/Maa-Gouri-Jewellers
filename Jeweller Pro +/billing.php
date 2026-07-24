@@ -547,19 +547,12 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
                 mysqli_query($conn, "DELETE FROM products WHERE id = $pid AND quantity <= 0");
             }
         }
-        $total_qty = 0;
-        if(is_array($items)) foreach($items as $item) { $total_qty += floatval($item['quantity'] ?? 0); }
-
         $redirect_url = 'view_pdf.php?invoice_no=' . urlencode($invoice_no);
-        // Use JS redirect — works reliably on Vercel/serverless where ob_start() may buffer headers
-        echo '<!DOCTYPE html><html><head>';
-        echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($redirect_url) . '">';
+        if(!headers_sent()) {
+            header("Location: " . $redirect_url);
+            exit();
+        }
         echo '<script>window.location.replace(' . json_encode($redirect_url) . ');</script>';
-        echo '</head><body style="background:#fffbf4;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">';
-        echo '<div style="text-align:center;"><div style="font-size:40px;margin-bottom:12px;">🧾</div>';
-        echo '<p style="color:#7a4e0a;font-weight:600;">Invoice saved! Redirecting...</p>';
-        echo '<a href="' . htmlspecialchars($redirect_url) . '" style="color:#d68b16;">Click here if not redirected</a></div>';
-        echo '</body></html>';
         exit();
     } else {
         $error = "&#10007; Error: " . mysqli_error($conn);
