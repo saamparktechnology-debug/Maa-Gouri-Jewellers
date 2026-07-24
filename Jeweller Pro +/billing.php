@@ -244,7 +244,7 @@ $last_upi_paid = 0;
 $last_is_split = 0;
 $last_old_gold_amount = 0;
 
-$logo_paths = ['logo.png','images/moti-removebg-preview.png','moti-removebg-preview.png'];
+$logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-preview.png', 'moti-removebg-preview.png', 'logo.png'];
 
 // Fetch products from DB
 $all_products = [];

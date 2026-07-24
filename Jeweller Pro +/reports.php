@@ -465,14 +465,14 @@ while($r = mysqli_fetch_assoc($bills_result)) $bills_rows[] = $r;
 $total_bills_amount = array_sum(array_column($bills_rows, 'total_amount'));
 $total_bills_count  = count($bills_rows);
 
-$logo_paths = ['logo.png','images/moti-removebg-preview.png','moti-removebg-preview.png'];
+$logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-preview.png', 'moti-removebg-preview.png', 'logo.png'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-    <title>Reports - MOTI JEWELLERS</title>
+    <title>Reports - MAA GOURI JEWELLERS</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -676,7 +676,7 @@ $logo_paths = ['logo.png','images/moti-removebg-preview.png','moti-removebg-prev
         }
     }
 
-    const texts = ["MOTI JEWELLERS"];
+    const texts = ["MAA GOURI JEWELLERS"];
     let textIndex = 0, charIndex = 0, isDeleting = false, typingSpeed = 100;
 
     function typeEffect() {
@@ -745,7 +745,7 @@ $logo_paths = ['logo.png','images/moti-removebg-preview.png','moti-removebg-prev
             
             
             <div style="width:120px;height:120px;background:transparent;animation:gemGlowPulse 1.5s ease-in-out infinite;">
-                <img src="logo.png" alt="MOTI JEWELLERS Logo" style="width:100%;height:100%;object-fit:contain;display:block;">
+                <img src="assets/images/moti-removebg-preview.png" alt="MAA GOURI JEWELLERS Logo" style="width:100%;height:100%;object-fit:contain;display:block;">
             </div>
         </div>
 
@@ -782,7 +782,7 @@ $logo_paths = ['logo.png','images/moti-removebg-preview.png','moti-removebg-prev
         if(!$logo_found) echo '<i class="fas fa-gem" style="color:#fff;font-size:30px;flex-shrink:0;"></i>';
         ?>
         <div class="sidebar-logo-text">
-            <h2>MOTI JEWELLERS</h2>
+            <h2>MAA GOURI JEWELLERS</h2>
             <p>Premium Since 2026</p>
         </div>
     </div>
@@ -793,9 +793,6 @@ $logo_paths = ['logo.png','images/moti-removebg-preview.png','moti-removebg-prev
         <a href="billing.php"><i class="fas fa-receipt"></i> BILLING</a>
         <a href="stock.php"><i class="fas fa-boxes"></i> STOCK</a>
         <a href="customers.php"><i class="fas fa-users"></i> CUSTOMERS</a>
-        <a href="sanchari_dashboard.php">
-            <i class="fas fa-piggy-bank"></i> SANCHAY SCHEME
-        </a>
 
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Analytics</div>
