@@ -1156,7 +1156,7 @@ function openHistoryModal(invoiceId, customerName) {
     var title = document.getElementById('historyModalTitle');
     var body  = document.getElementById('historyModalBody');
     title.textContent = 'Due Update History for ' + customerName;
-    body.innerHTML = '<div style="text-align:center;padding:24px;">Loading historyâ€¦</div>';
+    body.innerHTML = '<div style="text-align:center;padding:24px;">Loading history...</div>';
     modal.style.display = 'flex';
 
     var params = new URLSearchParams();
@@ -1348,7 +1348,7 @@ function submitReceivePayment() {
             <h2 id="historyModalTitle" style="font-size:18px;margin:0;color:#111827;">History</h2>
             <button type="button" onclick="closeHistoryModal()" style="border:none;background:none;font-size:18px;color:#6b7280;cursor:pointer;">✓•</button>
         </div>
-        <div id="historyModalBody" style="max-height:70vh;overflow:auto;padding:18px 22px;">Loading historyâ€¦</div>
+        <div id="historyModalBody" style="max-height:70vh;overflow:auto;padding:18px 22px;">Loading history...</div>
     </div>
 </div>
 

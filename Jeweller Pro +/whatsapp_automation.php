@@ -926,7 +926,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                     </div>
                     <div class="sm:col-span-2" id="singleMessageDiv">
                         <label class="field-label">📜 Message</label>
-                        <textarea name="message" rows="3" placeholder="Type your message hereâ€¦" class="jewel-input"></textarea>
+                        <textarea name="message" rows="3" placeholder="Type your message here..." class="jewel-input"></textarea>
                     </div>
                 </div>
                 <button type="submit" name="send_single" class="btn-green mt-4">
@@ -972,7 +972,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                     </div>
                     <div class="sm:col-span-2">
                         <label class="field-label">📜 Bulk Message</label>
-                        <textarea name="bulk_message" rows="3" placeholder="Message to send to all selected customersâ€¦" class="jewel-input"></textarea>
+                        <textarea name="bulk_message" rows="3" placeholder="Message to send to all selected customers..." class="jewel-input"></textarea>
                     </div>
                 </div>
                 <button type="submit" name="send_bulk" class="btn-purple mt-4">

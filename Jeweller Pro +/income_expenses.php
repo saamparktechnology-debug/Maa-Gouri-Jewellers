@@ -562,7 +562,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         </div>
                         <div class="sm:col-span-2">
                             <label class="field-label">📜 Description</label>
-                            <textarea name="description" rows="2" placeholder="Additional detailsâ€¦" class="jewel-input"></textarea>
+                            <textarea name="description" rows="2" placeholder="Additional details..." class="jewel-input"></textarea>
                         </div>
                     </div>
                     <button type="submit" name="add_income" class="btn-income mt-4 w-full">
@@ -612,7 +612,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         </div>
                         <div class="sm:col-span-2">
                             <label class="field-label">📜 Description</label>
-                            <textarea name="description" rows="2" placeholder="Additional detailsâ€¦" class="jewel-input"></textarea>
+                            <textarea name="description" rows="2" placeholder="Additional details..." class="jewel-input"></textarea>
                         </div>
                     </div>
                     <button type="submit" name="add_expense" class="btn-expense mt-4">

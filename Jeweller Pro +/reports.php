@@ -1147,7 +1147,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 </div>
                 <div>
                     <label class="filter-label">🔍 Name / Mobile</label>
-                    <input type="text" name="filter_name" value="<?php echo htmlspecialchars($filter_name); ?>" placeholder="Searchâ€¦" class="jewel-input w-full">
+                    <input type="text" name="filter_name" value="<?php echo htmlspecialchars($filter_name); ?>" placeholder="Search..." class="jewel-input w-full">
                 </div>
                 <div>
                     <label class="filter-label">💳 Payment</label>

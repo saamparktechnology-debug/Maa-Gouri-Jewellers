@@ -842,7 +842,7 @@ function addPurchaseItem() {
 
         const notif = document.getElementById('purchaseNotifMsg');
         if (notif) {
-            notif.innerHTML = 'Ã¢Å“â€¦ Added <strong>' + htmlEsc(desc) + '</strong> (' + qty + ' ' + htmlEsc(unit) + ' @ \u20B9' + fmt(rate) + ' | GST: ' + gstPct + '%) to purchase list!';
+            notif.innerHTML = 'Ã¢Å“... Added <strong>' + htmlEsc(desc) + '</strong> (' + qty + ' ' + htmlEsc(unit) + ' @ \u20B9' + fmt(rate) + ' | GST: ' + gstPct + '%) to purchase list!';
             notif.classList.remove('hidden');
             setTimeout(() => notif.classList.add('hidden'), 3500);
         }
