@@ -718,7 +718,7 @@ nav.nav-gold span{color:#fff!important;}
 
 <!--  ACTIONS  -->
 <div class="flex flex-wrap gap-4 justify-center mb-10 no-print">
-    <button type="submit" class="btn-save"><i class="fas fa-save mr-2"></i>SAVE PURCHASE</button>
+    <button type="submit" class="btn-save"><i class="fas fa-save mr-2"></i>SAVE & VIEW PDF</button>
     
     <a href="purchase_history.php" style="background:linear-gradient(135deg,#374151,#6b7280);color:#fff;border:none;border-radius:50px;padding:14px 36px;font-size:15px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:8px;">
         <i class="fas fa-history"></i>HISTORY
