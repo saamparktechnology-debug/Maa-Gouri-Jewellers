@@ -42,14 +42,14 @@ function fmt($v) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
 <title>Purchase View #<?php echo htmlspecialchars($purchase['purchase_no']); ?> | <?php echo htmlspecialchars($COMPANY['name']); ?></title>
 <link rel="icon" type="image/png" href="logo.png">
-<link rel="shortcut icon" type="image/png" href="assets/images/moti-removebg-preview.png">
+<link rel="shortcut icon" type="image/png" href="<?php echo htmlspecialchars($COMPANY['logo_path']); ?>">
 <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap');
 * { font-family: 'Poppins', sans-serif; box-sizing: border-box; }
 
-/* SIDEBAR */
+/* SIDEBAR & NAV (Screen Only) */
 .sidebar {
     position: fixed; top: 0; left: 0; width: 240px; height: 100vh;
     background: linear-gradient(180deg, #011921 0%, #03373b 50%, #044e54 80%, #011921 100%);
@@ -83,41 +83,92 @@ function fmt($v) {
 .sidebar-logout:hover { background: #ef4444; color: #fff; }
 .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999; backdrop-filter: blur(2px); }
 .sidebar-overlay.active { display: block; }
-.page-wrapper { margin-left: 240px; min-height: 100vh; transition: margin-left 0.35s ease; background: #F5F5F5; }
-nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important; border-bottom: 2.5px solid #ffd700; box-shadow: 0 0 12px rgba(255, 215, 0, 0.5) !important; }
+.page-wrapper { margin-left: 240px; min-height: 100vh; transition: margin-left 0.35s ease; background: #eaedf2; display: flex; flex-direction: column; align-items: center; padding: 30px 15px; }
+nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important; border-bottom: 2.5px solid #ffd700; box-shadow: 0 0 12px rgba(255, 215, 0, 0.5) !important; width: 100%; position: fixed; top: 0; left: 0; z-index: 50;}
 .burger-menu { width: 28px; height: 20px; position: relative; cursor: pointer; }
 .burger-menu span { display: block; position: absolute; height: 3px; width: 100%; background: #fff; border-radius: 3px; transition: all 0.3s ease; }
 .burger-menu span:nth-child(1) { top: 0; }
 .burger-menu span:nth-child(2) { top: 9px; }
 .burger-menu span:nth-child(3) { top: 18px; }
+
 @media (max-width: 768px) {
     .sidebar { transform: translateX(-100%); }
     .sidebar.open { transform: translateX(0); }
-    .page-wrapper { margin-left: 0 !important; }
-    nav.nav-gold { margin-left: 0 !important; }
+    .page-wrapper { margin-left: 0 !important; padding-top: 80px; }
+    nav.nav-gold { padding-left: 15px; padding-right: 15px; }
     .mobile-burger { display: block !important; }
 }
-@media (min-width: 769px) { .mobile-burger { display: none !important; } }
+@media (min-width: 769px) { 
+    .mobile-burger { display: none !important; } 
+    nav.nav-gold { padding-left: 260px; }
+    .page-wrapper { padding-top: 90px; }
+}
 
-.jewel-card { background: linear-gradient(145deg, #fdf6e3, #f5ead0); border-radius: 16px; border: 1px solid rgba(181,115,14,0.2); box-shadow: 0 4px 20px rgba(181,115,14,0.08); }
 .btn-gold { background: linear-gradient(135deg, #d68b16, #b5730e); border: none; color: #fff; font-weight: 700; cursor: pointer; transition: all 0.2s ease; }
 .btn-gold:hover { background: linear-gradient(135deg, #e8a020, #c8830e); box-shadow: 0 4px 16px rgba(214,139,22,0.35); transform: translateY(-1px); }
 
+/* A4 Print Layout Container */
+.print-container {
+    background: #fff;
+    width: 100%;
+    max-width: 210mm; /* A4 Width */
+    min-height: 297mm; /* A4 Height */
+    margin: 0 auto;
+    padding: 15mm;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    border-radius: 4px;
+    position: relative;
+}
+.invoice-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; border-bottom: 2px solid #f0f0f0; padding-bottom: 20px; }
+.invoice-logo { width: 80px; height: 80px; object-fit: contain; }
+.company-details h1 { font-family: 'Playfair Display', serif; font-size: 26px; color: #011921; font-weight: 800; margin: 0 0 5px 0; }
+.company-details p { font-size: 11px; color: #555; margin: 0; line-height: 1.5; }
+.invoice-title-badge { background: #011921; color: #ffd700; padding: 6px 15px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; display: inline-block; margin-bottom: 10px; }
+.invoice-meta { text-align: right; }
+.invoice-meta h2 { font-size: 22px; color: #333; margin: 0 0 5px 0; font-weight: 700; }
+.invoice-meta p { font-size: 11px; color: #666; margin: 0 0 3px 0; }
+
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px; }
+.info-box { background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #eee; }
+.info-box h3 { font-size: 11px; color: #999; text-transform: uppercase; font-weight: 700; margin: 0 0 8px 0; letter-spacing: 0.5px; }
+.info-box p { font-size: 13px; color: #222; margin: 0 0 4px 0; }
+.info-box p strong { font-weight: 600; color: #000; }
+
+table.invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+table.invoice-table th { background: #011921; color: #fff; font-size: 11px; text-transform: uppercase; font-weight: 600; padding: 12px 10px; text-align: left; }
+table.invoice-table th:last-child { border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
+table.invoice-table th:first-child { border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
+table.invoice-table td { padding: 15px 10px; font-size: 13px; color: #333; border-bottom: 1px solid #eee; }
+table.invoice-table td.money { font-weight: 600; }
+
+.totals-section { display: flex; justify-content: flex-end; margin-bottom: 40px; }
+.totals-box { width: 300px; }
+.total-line { display: flex; justify-content: space-between; padding: 8px 0; font-size: 13px; color: #555; }
+.total-line.grand-total { font-size: 18px; font-weight: 800; color: #011921; border-top: 2px solid #011921; padding-top: 12px; margin-top: 5px; }
+
+.footer-note { text-align: center; color: #888; font-size: 10px; padding-top: 20px; border-top: 1px solid #eee; position: absolute; bottom: 15px; left: 15px; right: 15px; }
+
+/* PRINT STYLES */
 @media print {
-    .no-print, .sidebar, .sidebar-overlay, nav.nav-gold, footer { display: none !important; }
-    .page-wrapper { margin-left: 0 !important; background: #fff !important; }
-    .jewel-card { box-shadow: none !important; border: 1px solid #ccc !important; background: #fff !important; }
+    @page { margin: 0; size: A4 portrait; }
+    body, html { background: #fff !important; margin: 0 !important; padding: 0 !important; }
+    .no-print, .sidebar, .sidebar-overlay, nav.nav-gold { display: none !important; }
+    .page-wrapper { margin: 0 !important; padding: 0 !important; background: #fff !important; display: block; }
+    .print-container { box-shadow: none !important; border-radius: 0 !important; width: 100% !important; max-width: none !important; margin: 0 !important; padding: 15mm 15mm !important; min-height: 0; }
+    
+    /* Ensure table borders and colors print correctly */
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }
 </style>
 </head>
-<body style="background:#F5F5F5;margin:0;padding:0;">
+<body>
 
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
 <!-- SIDEBAR -->
-<div class="sidebar" id="mainSidebar">
+<div class="sidebar no-print" id="mainSidebar">
     <div class="sidebar-logo">
-        <img src="assets/images/moti-removebg-preview.png" alt="Logo" onerror="this.src='logo.png'">
+        <img src="<?php echo htmlspecialchars($COMPANY['logo_path']); ?>" alt="Logo" onerror="this.src='logo.png'">
         <div class="sidebar-logo-text">
             <h2><?php echo htmlspecialchars($COMPANY['name']); ?></h2>
             <p>Trusted Jewellery System</p>
@@ -158,18 +209,13 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
 </div>
 
 <!-- TOP NAVBAR -->
-<nav class="nav-gold shadow-lg sticky top-0 z-50 no-print" style="margin-left:240px;">
-    <div class="container mx-auto px-4 sm:px-6 py-3 flex justify-between items-center">
+<nav class="nav-gold no-print">
+    <div class="container mx-auto px-4 sm:px-6 py-3 flex justify-between items-center h-full">
         <h1 style="color:#fff;font-family:'Poppins',serif;font-size:18px;font-weight:700;" class="flex items-center gap-2">
-            <i class="fas fa-file-invoice" style="color:#ffd700;"></i> Purchase Entry Details
+            <i class="fas fa-file-invoice" style="color:#ffd700;"></i> Purchase Statement
         </h1>
         <div class="flex items-center gap-4">
-            <?php if($is_logged_in): ?>
-            <span class="text-sm font-medium hidden sm:inline-block" style="color:#fff;">
-                <i class="fas fa-user-circle mr-1" style="color:#ffd700;"></i><?php echo htmlspecialchars($_SESSION['user_name']); ?>
-            </span>
-            <?php endif; ?>
-            <div class="mobile-burger" style="display:none;">
+            <div class="mobile-burger">
                 <div class="burger-menu" id="burgerMenu" onclick="toggleSidebar()">
                     <span></span><span></span><span></span>
                 </div>
@@ -180,81 +226,128 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
 
 <!-- MAIN CONTENT WRAPPER -->
 <div class="page-wrapper">
-<div class="container mx-auto px-4 sm:px-6 py-6" style="max-width:1000px;">
-
-<div class="jewel-card p-6 sm:p-8">
-    <div class="flex justify-between items-center pb-6 border-b border-amber-200 mb-6">
-        <div>
-            <h1 class="text-2xl font-bold text-amber-900"><?php echo htmlspecialchars($COMPANY['name']); ?></h1>
-            <p class="text-xs text-amber-800"><?php echo htmlspecialchars($COMPANY['address_line1']); ?>, <?php echo htmlspecialchars($COMPANY['address_line2']); ?></p>
-        </div>
-        <div class="text-right">
-            <span class="text-xs font-bold uppercase tracking-wider text-amber-900 bg-amber-200 px-3 py-1 rounded-full border border-amber-300">Purchase Entry</span>
-            <div class="text-sm font-bold text-gray-800 mt-2"># <?php echo htmlspecialchars($purchase['purchase_no']); ?></div>
-            <div class="text-xs text-gray-500">Date: <?php echo date('d-M-Y', strtotime($purchase['purchase_date'])); ?></div>
-        </div>
+    <div class="w-full flex justify-end max-w-4xl mb-4 no-print gap-3">
+        <a href="purchase_history.php" class="px-5 py-2.5 bg-white text-gray-700 rounded-lg shadow font-semibold text-sm hover:bg-gray-50 transition border border-gray-200">
+            &larr; Back
+        </a>
+        <button onclick="window.print()" class="btn-gold px-6 py-2.5 rounded-lg shadow-lg font-bold text-sm flex items-center gap-2">
+            <i class="fas fa-print"></i> Print Statement
+        </button>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8 text-xs">
-        <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
-            <h3 class="font-bold text-amber-900 mb-2 uppercase tracking-wide">Supplier (Seller)</h3>
-            <p class="font-bold text-gray-800 text-sm"><?php echo htmlspecialchars($purchase['supplier_name']); ?></p>
-            <p class="text-gray-600"><?php echo htmlspecialchars($purchase['supplier_addr'] ?? '-'); ?></p>
-            <p class="text-gray-600 mt-1">Mob: <?php echo htmlspecialchars($purchase['supplier_mobile'] ?? '-'); ?></p>
-            <p class="text-gray-600">GSTIN: <?php echo htmlspecialchars($purchase['supplier_gstin'] ?? '-'); ?></p>
-        </div>
-        <div class="bg-white p-4 rounded-xl border border-amber-200">
-            <h3 class="font-bold text-amber-900 mb-2 uppercase tracking-wide">Invoice Details</h3>
-            <p class="mb-1">Invoice No: <strong><?php echo htmlspecialchars($purchase['invoice_no']); ?></strong></p>
-            <p class="mb-1">Invoice Date: <?php echo date('d-M-Y', strtotime($purchase['invoice_date'])); ?></p>
-            <p>Payment Mode: <strong><?php echo htmlspecialchars($purchase['payment_mode']); ?></strong></p>
-        </div>
-    </div>
-
-    <table class="w-full text-left border-collapse text-xs mb-8 rounded-xl overflow-hidden shadow-sm">
-        <thead>
-            <tr style="background:linear-gradient(135deg, #7a4e0a, #d68b16);" class="text-white">
-                <th class="p-3">Material & Description</th>
-                <th class="p-3 text-center">HSN</th>
-                <th class="p-3 text-center">Qty</th>
-                <th class="p-3 text-right">Rate / Unit</th>
-                <th class="p-3 text-right" style="padding-right: 20px;">Tax (GST)</th>
-                <th class="p-3 text-right" style="padding-right: 20px;">Total Amount</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr class="border-b bg-white">
-                <td class="p-3">
-                    <strong class="text-gray-900"><?php echo htmlspecialchars($purchase['description']); ?></strong>
-                    <span class="ml-2 text-xs bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-bold border border-amber-300"><?php echo htmlspecialchars($purchase['material_type']); ?></span>
-                    <?php if(!empty($purchase['huid_code'])): ?>
-                    <div class="text-amber-800 text-xs mt-1">HUID: <strong><?php echo htmlspecialchars($purchase['huid_code']); ?></strong></div>
+    <!-- A4 PRINT CONTAINER -->
+    <div class="print-container">
+        
+        <!-- HEADER -->
+        <div class="invoice-header">
+            <div class="flex gap-4 items-center">
+                <img src="<?php echo htmlspecialchars($COMPANY['logo_path']); ?>" alt="Logo" class="invoice-logo" onerror="this.src='logo.png'">
+                <div class="company-details">
+                    <h1><?php echo htmlspecialchars($COMPANY['name']); ?></h1>
+                    <p><?php echo htmlspecialchars($COMPANY['address_line1']); ?>, <?php echo htmlspecialchars($COMPANY['address_line2']); ?></p>
+                    <p><?php echo htmlspecialchars($COMPANY['state']); ?> - <?php echo htmlspecialchars($COMPANY['state_code']); ?></p>
+                    <?php if(!empty($COMPANY['gstin'])): ?>
+                    <p><strong>GSTIN:</strong> <?php echo htmlspecialchars($COMPANY['gstin']); ?></p>
                     <?php endif; ?>
-                </td>
-                <td class="p-3 text-center text-gray-600"><?php echo htmlspecialchars($purchase['hsn_sac'] ?? '-'); ?></td>
-                <td class="p-3 text-center font-bold text-gray-800"><?php echo rtrim(rtrim(number_format((float)$purchase['qty'], 4), '0'), '.'); ?> <?php echo htmlspecialchars($purchase['unit']); ?></td>
-                <td class="p-3 text-right">₹ <?php echo fmt($purchase['rate_per_unit']); ?></td>
-                <td class="p-3 text-right" style="padding-right: 20px;">₹ <?php echo fmt($purchase['gst_total']); ?></td>
-                <td class="p-3 text-right font-bold text-amber-900 text-sm" style="padding-right: 20px;">₹ <?php echo fmt($purchase['total_amount']); ?></td>
-            </tr>
-        </tbody>
-    </table>
+                </div>
+            </div>
+            <div class="invoice-meta">
+                <div class="invoice-title-badge">Purchase Entry</div>
+                <h2># <?php echo htmlspecialchars($purchase['purchase_no']); ?></h2>
+                <p><strong>Date:</strong> <?php echo date('d-M-Y', strtotime($purchase['purchase_date'])); ?></p>
+            </div>
+        </div>
 
-    <div class="flex justify-between items-center pt-4 border-t border-amber-200 no-print">
-        <a href="purchase_history.php" class="px-4 py-2 bg-white border border-amber-300 text-amber-900 rounded-xl font-semibold text-xs text-decoration-none">&larr; Back to History</a>
-        <button onclick="window.print()" class="btn-gold px-5 py-2 rounded-xl font-bold text-xs"><i class="fas fa-print mr-1"></i> Print Statement</button>
+        <!-- INFO GRID -->
+        <div class="info-grid">
+            <div class="info-box">
+                <h3>Supplier (Seller) Details</h3>
+                <p><strong><?php echo htmlspecialchars($purchase['supplier_name']); ?></strong></p>
+                <?php if(!empty($purchase['supplier_addr'])): ?>
+                <p><?php echo htmlspecialchars($purchase['supplier_addr']); ?></p>
+                <?php endif; ?>
+                <?php if(!empty($purchase['supplier_mobile'])): ?>
+                <p>Mob: <?php echo htmlspecialchars($purchase['supplier_mobile']); ?></p>
+                <?php endif; ?>
+                <?php if(!empty($purchase['supplier_gstin'])): ?>
+                <p>GSTIN: <?php echo htmlspecialchars($purchase['supplier_gstin']); ?></p>
+                <?php endif; ?>
+            </div>
+            <div class="info-box">
+                <h3>Supplier Invoice Details</h3>
+                <p>Invoice No: <strong><?php echo htmlspecialchars($purchase['invoice_no']); ?></strong></p>
+                <p>Invoice Date: <strong><?php echo date('d-M-Y', strtotime($purchase['invoice_date'])); ?></strong></p>
+                <p>Payment Mode: <strong><?php echo htmlspecialchars($purchase['payment_mode']); ?></strong></p>
+            </div>
+        </div>
+
+        <!-- ITEMS TABLE -->
+        <table class="invoice-table">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th style="text-align:center;">HSN / SAC</th>
+                    <th style="text-align:right;">Quantity</th>
+                    <th style="text-align:right;">Rate / Unit</th>
+                    <th style="text-align:right;">Amount (<?php echo "\xe2\x82\xb9"; ?>)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+                        <strong style="display:block;margin-bottom:4px;"><?php echo htmlspecialchars($purchase['description']); ?></strong>
+                        <span style="display:inline-block;background:#fef3c7;color:#92400e;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:600;border:1px solid #fde68a;">
+                            <?php echo htmlspecialchars($purchase['material_type']); ?>
+                        </span>
+                        <?php if(!empty($purchase['huid_code'])): ?>
+                        <div style="font-size:11px;color:#666;margin-top:5px;">HUID: <strong><?php echo htmlspecialchars($purchase['huid_code']); ?></strong></div>
+                        <?php endif; ?>
+                    </td>
+                    <td style="text-align:center;color:#666;"><?php echo htmlspecialchars($purchase['hsn_sac'] ?? '-'); ?></td>
+                    <td style="text-align:right;font-weight:600;color:#222;">
+                        <?php echo rtrim(rtrim(number_format((float)$purchase['qty'], 4), '0'), '.'); ?> <?php echo htmlspecialchars($purchase['unit']); ?>
+                    </td>
+                    <td style="text-align:right;color:#444;">
+                        <?php echo "\xe2\x82\xb9"; ?> <?php echo fmt($purchase['rate_per_unit']); ?>
+                    </td>
+                    <td class="money" style="text-align:right;">
+                        <?php 
+                        $subtotal = (float)$purchase['total_amount'] - (float)$purchase['gst_total'];
+                        echo "\xe2\x82\xb9 " . fmt($subtotal); 
+                        ?>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- TOTALS -->
+        <div class="totals-section">
+            <div class="totals-box">
+                <div class="total-line">
+                    <span>Sub Total:</span>
+                    <span><?php echo "\xe2\x82\xb9"; ?> <?php echo fmt($subtotal); ?></span>
+                </div>
+                <?php if((float)$purchase['gst_total'] > 0): ?>
+                <div class="total-line">
+                    <span>Tax (GST):</span>
+                    <span><?php echo "\xe2\x82\xb9"; ?> <?php echo fmt($purchase['gst_total']); ?></span>
+                </div>
+                <?php endif; ?>
+                <div class="total-line grand-total">
+                    <span>Total Amount:</span>
+                    <span><?php echo "\xe2\x82\xb9"; ?> <?php echo fmt($purchase['total_amount']); ?></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- FOOTER -->
+        <div class="footer-note">
+            This is a system generated purchase statement. &copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars($COMPANY['name']); ?>
+            <br>
+            Printed on: <?php echo date("d-M-Y h:i A"); ?>
+        </div>
     </div>
 </div>
-
-</div><!-- /container -->
-
-<footer style="background:linear-gradient(0deg,#f5e6c8,#fdf6e3);border-top:2px solid #d68b16;padding:20px;margin-top:40px;text-align:center;" class="no-print">
-    <p class="text-xs" style="color:#7a4e0a;">
-        &copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars($COMPANY['name']); ?> &nbsp;|&nbsp; CRAFTED WITH ELEGANCE &nbsp;|&nbsp;
-        Printed on: <?php echo date("d-M-Y h:i A"); ?>
-    </p>
-</footer>
-</div><!-- /page-wrapper -->
 
 <script>
 function toggleSidebar(){
@@ -268,5 +361,3 @@ function closeSidebar(){
 </script>
 </body>
 </html>
-
-
