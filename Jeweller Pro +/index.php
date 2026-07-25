@@ -1349,9 +1349,9 @@ if($is_logged_in) {
                 <p>Real-time inventory management with low stock alerts</p>
             </div>
             <div class="gem-card p-8 text-center">
-                <div class="gem-icon"><i class="fas fa-calculator"></i></div>
-                <h3 class="text-xl font-bold mb-3">EMI Calculator</h3>
-                <p>Calculate EMI options for your customers easily</p>
+                <div class="gem-icon"><i class="fas fa-bell"></i></div>
+                <h3 class="text-xl font-bold mb-3">Due Reminder</h3>
+                <p>Send automated WhatsApp & email reminders for due payments</p>
             </div>
         </div>
     </div>
