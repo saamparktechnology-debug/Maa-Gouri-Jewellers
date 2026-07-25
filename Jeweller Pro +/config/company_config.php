@@ -1,13 +1,13 @@
-<?php
-// ══════════════════════════════════════════════════
-// COMPANY CONFIGURATION — Maa Gouri Jewellers
+﻿<?php
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// COMPANY CONFIGURATION â€” Maa Gouri Jewellers
 // Update this file only when details change.
-// ══════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 $COMPANY = [
     'name'          => 'MAA GOURI JEWELLERS',
     'name_short'    => 'Gouri Jewellers',
-    'tagline'       => 'Trusted Tradition · Timeless Elegance',
+    'tagline'       => 'Trusted Tradition Â· Timeless Elegance',
     'sub_tagline'   => 'Precious Jewellery, Precious Relationships',
     'proprietor'    => 'Prop: Maa Gouri Jewellers',
     'address_line1' => 'Sabang, Paschim Medinipur',
@@ -16,7 +16,7 @@ $COMPANY = [
     'state_code'    => '19',
     'mobile'        => '9647291299',
     'mobile2'       => '9635985848',
-    'email'         => 'admin@gourijewellers.com',
+    'email'         => 'jewellersmaagouri@gmail.com',
     'gstin'         => '',   // GST Registration Number
     'pan'           => '',
     'logo_path'     => 'assets/images/moti-removebg-preview.png',
@@ -34,3 +34,4 @@ $COMPANY_LOGO_PATHS = [
     'images/moti-removebg-preview.png',
     'moti-removebg-preview.png',
 ];
+

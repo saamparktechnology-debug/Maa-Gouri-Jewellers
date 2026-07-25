@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once 'config/database.php';
 require_once 'config/company_config.php';
@@ -43,7 +43,7 @@ mysqli_query($conn, "SET FOREIGN_KEY_CHECKS = 1");
 $admin_pass_hash = password_hash('123456', PASSWORD_DEFAULT);
 $required_admins = [
     ['subhapatra169@gmail.com', '9635985848', 'Subha Patra Admin'],
-    ['admin@gourijewellers.com', '9635985849', 'Moti Admin'],
+    ['jewellersmaagouri@gmail.com', '9635985849', 'Moti Admin'],
     ['saamparktechnology@gmail.com', '8617536679', 'Saampark Admin'],
     ['hiisupriya@gmail.com', '9876543210', 'Supriya Admin']
 ];
@@ -57,16 +57,17 @@ foreach ($required_admins as $adm) {
 }
 
 echo "<div style='font-family:sans-serif;padding:30px;max-width:600px;margin:50px auto;background:#f0fdf4;border:1px solid #86efac;border-radius:12px;color:#166534;'>";
-echo "<h2>✅ Database Reset Complete!</h2>";
+echo "<h2>âœ… Database Reset Complete!</h2>";
 echo "<p>All stock, products, customers, invoices, due records, purchases, and sanchari entries have been completely cleared for a fresh start.</p>";
 echo "<p>Admin logins created (Password: <code>123456</code>):</p>";
 echo "<ul>";
 echo "<li><strong>subhapatra169@gmail.com</strong> (Mobile: 9635985848)</li>";
-echo "<li><strong>admin@gourijewellers.com</strong></li>";
+echo "<li><strong>jewellersmaagouri@gmail.com</strong></li>";
 echo "<li><strong>saamparktechnology@gmail.com</strong></li>";
 echo "</ul>";
 echo "<a href='index.php' style='display:inline-block;margin-top:15px;padding:10px 20px;background:#15803d;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;'>Return to Home</a>";
 echo "</div>";
 ?>
+
 
 

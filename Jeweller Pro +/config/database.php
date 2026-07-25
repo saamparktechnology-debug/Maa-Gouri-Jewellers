@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 $host     = getenv('DB_HOST') ?: '127.0.0.1';
 $user     = getenv('DB_USER') ?: 'root';
 $password = getenv('DB_PASS') !== false ? getenv('DB_PASS') : '';
@@ -65,7 +65,7 @@ mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 if (!$conn) {
     $err_details = !empty($errors) ? implode(' | ', array_unique($errors)) : 'MySQL service unreachable';
     die("<div style='font-family:sans-serif;padding:30px;background:#fff5f5;border:1px solid #feb2b2;color:#9b2c2c;margin:40px auto;max-width:640px;border-radius:8px;'>"
-        . "<h3 style='margin-top:0;'>⚠️ Database Connection Failed</h3>"
+        . "<h3 style='margin-top:0;'>âš ï¸ Database Connection Failed</h3>"
         . "<p><strong>Diagnostic details:</strong><br><code style='background:#edf2f7;padding:4px 8px;border-radius:4px;font-size:12px;'>" . htmlspecialchars($err_details) . "</code></p>"
         . "</div>");
 }
@@ -266,7 +266,7 @@ if ($chk_qty && mysqli_num_rows($chk_qty) > 0) {
 // Ensure default required admin accounts exist (only insert if missing, do not overwrite existing passwords)
 $admin_pass_hash = password_hash('123456', PASSWORD_DEFAULT);
 $required_admins = [
-    ['admin@gourijewellers.com', '9647291299', 'Gouri Admin'],
+    ['jewellersmaagouri@gmail.com', '9647291299', 'Gouri Admin'],
     ['subhapatra169@gmail.com', '9635985848', 'Subha Patra Admin'],
     ['saamparktechnology@gmail.com', '8617536679', 'Saampark Admin'],
     ['hiisupriya@gmail.com', '9876543210', 'Supriya Admin']
@@ -502,4 +502,5 @@ if(isset($_SESSION['user_id'])) {
         $_SESSION['user_mobile'] = '9647291299';
     }
 }
+
 

@@ -12,7 +12,7 @@ if(file_exists('config/company_config.php')) {
         'state'         => 'West Bengal',
         'state_code'    => '19',
         'mobile'        => '9647291299',
-        'email'         => 'admin@gourijewellers.com',
+        'email'         => 'jewellersmaagouri@gmail.com',
         'gstin'         => '',
         'logo_path'     => 'assets/images/moti-removebg-preview.png',
     ];
@@ -268,4 +268,5 @@ function closeSidebar(){
 </script>
 </body>
 </html>
+
 
