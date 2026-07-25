@@ -530,12 +530,14 @@ if ($sanchari_cols4 && mysqli_num_rows($sanchari_cols4) == 0) {
 // Set session user if needed
 if(isset($_SESSION['user_id'])) {
     $check = mysqli_query($conn, "SELECT id FROM users WHERE id = '{$_SESSION['user_id']}'");
-    if(mysqli_num_rows($check) == 0) {
-        $admin = mysqli_query($conn, "SELECT id FROM users WHERE mobile = '9647291299'");
-        $admin_row = mysqli_fetch_assoc($admin);
-        $_SESSION['user_id'] = $admin_row['id'];
-        $_SESSION['user_name'] = 'Gouri Admin';
-        $_SESSION['user_mobile'] = '9647291299';
+    if($check && mysqli_num_rows($check) == 0) {
+        $admin = mysqli_query($conn, "SELECT id, name, mobile FROM users WHERE email = '$adm_email' OR mobile = '$adm_mob' LIMIT 1");
+        if ($admin && mysqli_num_rows($admin) > 0) {
+            $admin_row = mysqli_fetch_assoc($admin);
+            $_SESSION['user_id'] = $admin_row['id'];
+            $_SESSION['user_name'] = $admin_row['name'];
+            $_SESSION['user_mobile'] = $admin_row['mobile'];
+        }
     }
 }
 
