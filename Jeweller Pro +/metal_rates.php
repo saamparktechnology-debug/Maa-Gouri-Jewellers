@@ -1,6 +1,6 @@
 <?php
 // MAA GOURI-jewellers/metal_rates.php
-// Live Indian Metal Rates â€” Multi-source with accurate fallback
+// Live Indian Metal Rates — Multi-source with accurate fallback
 // Sources tried in order:
 //   1. metals-api.com (free tier)
 //   2. api.gold-api.com (free)
@@ -46,7 +46,7 @@ function fetchFromOpenMetals($usdInr) {
     // XAU = Gold troy oz, XAG = Silver troy oz, XPT = Platinum troy oz
     // 1 troy oz = 31.1035 grams
     $url = 'https://openexchangerates.org/api/latest.json?app_id=free&symbols=XAU,XAG,XPT&base=USD';
-    // This needs key â€” skip, use alternative
+    // This needs key — skip, use alternative
     return null;
 }
 
@@ -111,7 +111,7 @@ function fetchFromMetalsApi($usdInr) {
     $silver_10g = round(($inr_per_oz_silver / 3.11035) * 1.27);
     $plat_10g   = round(($inr_per_oz_plat   / 3.11035) * 1.05);
     
-    // sanity check â€” gold should be > 100000 per 10g in 2026
+    // sanity check — gold should be > 100000 per 10g in 2026
     if($gold24_10g < 100000 || $gold24_10g > 350000) return null;
     
     return [
@@ -175,10 +175,10 @@ function getAccurateFallback() {
         'success'  => true,
         'source'   => 'Fallback (17 Jul 2026)',
         'fallback' => true,
-        'gold24'   => 142530,   // â‚¹1,42,530 per 10g â€” GoodReturns July 2026
-        'gold22'   => 130650,   // â‚¹1,30,650 per 10g â€” GoodReturns July 2026
-        'silver'   => 2160,     // â‚¹2,160 per 10g (â‚¹2,16,000/kg) â€” GoodReturns July 2026
-        'platinum' => 51510,    // â‚¹51,510 per 10g â€” GoodReturns July 2026
+        'gold24'   => 142530,   // ₹1,42,530 per 10g — GoodReturns July 2026
+        'gold22'   => 130650,   // ₹1,30,650 per 10g — GoodReturns July 2026
+        'silver'   => 2160,     // ₹2,160 per 10g (₹2,16,000/kg) — GoodReturns July 2026
+        'platinum' => 51510,    // ₹51,510 per 10g — GoodReturns July 2026
     ];
 }
 

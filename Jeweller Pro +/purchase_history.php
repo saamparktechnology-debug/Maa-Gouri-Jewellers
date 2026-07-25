@@ -288,7 +288,7 @@ table.hist-table tbody tr:hover { background: rgba(214,139,22,0.06); }
     </div>
     <div class="stat-box">
         <div class="stat-label">Total Amount (Filtered)</div>
-        <div class="stat-value">â‚¹ <?php echo fmt_inr($total_amount_sum); ?></div>
+        <div class="stat-value">₹ <?php echo fmt_inr($total_amount_sum); ?></div>
     </div>
     <div class="stat-box flex flex-col justify-center">
         <div class="stat-label mb-1">Quick Action</div>
@@ -369,7 +369,7 @@ table.hist-table tbody tr:hover { background: rgba(214,139,22,0.06); }
                     <td><span class="mat-pill <?php echo htmlspecialchars($row['material_type']); ?>"><?php echo htmlspecialchars($row['material_type']); ?></span></td>
                     <td style="font-weight:600;"><?php echo rtrim(rtrim(number_format((float)$row['qty'],4),'0'),'.'); ?> <?php echo htmlspecialchars($row['unit']); ?></td>
                     <td><?php echo htmlspecialchars($row['payment_mode']); ?></td>
-                    <td style="font-weight:700;color:#800020;">â‚¹ <?php echo fmt_inr($row['total_amount']); ?></td>
+                    <td style="font-weight:700;color:#800020;">₹ <?php echo fmt_inr($row['total_amount']); ?></td>
                     <td style="text-align:center;">
                         <div class="flex gap-2 justify-center">
                             <a href="purchase_view.php?id=<?php echo intval($row['id']); ?>" class="action-btn action-view" title="View Details">

@@ -174,7 +174,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_delete_invoice'
             echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($redirect_url) . '">';
             echo '<script>window.location.replace(' . json_encode($redirect_url) . ');<\/script>';
             echo '</head><body style="background:#fffbf4;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">';
-            echo '<p style="color:#7a4e0a;font-weight:600;">âœ… Done! Redirecting...</p>';
+            echo '<p style="color:#7a4e0a;font-weight:600;">✓… Done! Redirecting...</p>';
             echo '</body></html>';
             exit();
         }
@@ -378,7 +378,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_reset_report'])
             echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($redirect_url) . '">';
             echo '<script>window.location.replace(' . json_encode($redirect_url) . ');<\/script>';
             echo '</head><body style="background:#fffbf4;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">';
-            echo '<p style="color:#7a4e0a;font-weight:600;">âœ… Done! Redirecting...</p>';
+            echo '<p style="color:#7a4e0a;font-weight:600;">✓… Done! Redirecting...</p>';
             echo '</body></html>';
             exit();
         }
@@ -890,7 +890,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                     foreach($products_array as $product): ?>
                     <div>
                         <div class="flex justify-between mb-1">
-                            <span class="text-sm font-semibold" style="color:#800020;">ðŸ’Ž <?php echo htmlspecialchars($product['name']); ?></span>
+                            <span class="text-sm font-semibold" style="color:#800020;">💎 <?php echo htmlspecialchars($product['name']); ?></span>
                             <span class="text-sm font-bold" style="color:#d68b16;"><?php echo $product['sold']; ?> units</span>
                         </div>
                         <div class="progress-bar-bg">
@@ -915,10 +915,10 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 <!-- Paid -->
                 <div class="stat-card-paid p-4">
                     <div class="flex justify-between items-start mb-2">
-                        <span class="font-bold text-sm" style="color:#166534;">âœ… Full Paid</span>
+                        <span class="font-bold text-sm" style="color:#166534;">✓… Full Paid</span>
                         <span class="text-2xl font-black" style="color:#166534;"><?php echo $pay_summary['paid_count']; ?></span>
                     </div>
-                    <p class="font-bold text-lg" style="color:#166534;">â‚¹<?php echo number_format($pay_summary['paid_amt'],2); ?></p>
+                    <p class="font-bold text-lg" style="color:#166534;">₹<?php echo number_format($pay_summary['paid_amt'],2); ?></p>
                     <p class="text-xs mt-1" style="color:#15803d;">Total collected (full payment)</p>
                     <button onclick="toggleDetail('detailPaid')" class="toggle-detail-btn">ðŸ‘ï¸ View Customers</button>
                 </div>
@@ -928,8 +928,8 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                         <span class="font-bold text-sm" style="color:#9a3412;">â³ Part Payment</span>
                         <span class="text-2xl font-black" style="color:#9a3412;"><?php echo $pay_summary['part_count']; ?></span>
                     </div>
-                    <p class="font-bold text-lg" style="color:#9a3412;">â‚¹<?php echo number_format($pay_summary['part_amt'],2); ?></p>
-                    <p class="text-xs mt-1" style="color:#c2410c;">âš ï¸ Balance: â‚¹<?php echo number_format($pay_summary['part_balance'],2); ?></p>
+                    <p class="font-bold text-lg" style="color:#9a3412;">₹<?php echo number_format($pay_summary['part_amt'],2); ?></p>
+                    <p class="text-xs mt-1" style="color:#c2410c;">âš ï¸ Balance: ₹<?php echo number_format($pay_summary['part_balance'],2); ?></p>
                     <button onclick="toggleDetail('detailPart')" class="toggle-detail-btn">ðŸ‘ï¸ View Customers</button>
                 </div>
                 <!-- Unpaid -->
@@ -938,15 +938,15 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                         <span class="font-bold text-sm" style="color:#9f1239;">âŒ Advanced (Credit)</span>
                         <span class="text-2xl font-black" style="color:#9f1239;"><?php echo $pay_summary['unpaid_count']; ?></span>
                     </div>
-                    <p class="font-bold text-lg" style="color:#9f1239;">â‚¹<?php echo number_format($pay_summary['unpaid_amt'],2); ?></p>
-                    <p class="text-xs mt-1" style="color:#be123c;">âš ï¸ Total due: â‚¹<?php echo number_format($pay_summary['unpaid_balance'],2); ?></p>
+                    <p class="font-bold text-lg" style="color:#9f1239;">₹<?php echo number_format($pay_summary['unpaid_amt'],2); ?></p>
+                    <p class="text-xs mt-1" style="color:#be123c;">âš ï¸ Total due: ₹<?php echo number_format($pay_summary['unpaid_balance'],2); ?></p>
                     <button onclick="toggleDetail('detailUnpaid')" class="toggle-detail-btn">ðŸ‘ï¸ View Customers</button>
                 </div>
             </div>
 
             <!-- Paid detail -->
             <div id="detailPaid" class="detail-collapse mb-3">
-                <h4 class="font-bold text-sm mb-3" style="color:#166534;">âœ… Full Paid Customers</h4>
+                <h4 class="font-bold text-sm mb-3" style="color:#166534;">✓… Full Paid Customers</h4>
                 <?php if(empty($paid_rows)): ?>
                     <p class="text-sm" style="color:#7a4e0a;">No paid customers found.</p>
                 <?php else: ?>
@@ -960,7 +960,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                             <tr>
                                 <td><?php echo htmlspecialchars($r['customer_name']); ?></td>
                                 <td><?php echo htmlspecialchars($r['customer_mobile']); ?></td>
-                                <td class="text-right font-bold" style="color:#16a34a;">â‚¹<?php echo number_format($r['total_amount'],2); ?></td>
+                                <td class="text-right font-bold" style="color:#16a34a;">₹<?php echo number_format($r['total_amount'],2); ?></td>
                                 <td class="text-center"><?php echo date('d M Y', strtotime($r['created_at'])); ?></td>
                                 <td class="text-center font-mono text-xs" style="color:#d68b16;"><?php echo htmlspecialchars($r['invoice_no']); ?></td>
                             </tr>
@@ -973,7 +973,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
 
             <!-- Part detail -->
             <div id="detailPart" class="detail-collapse mb-3">
-                <h4 class="font-bold text-sm mb-3" style="color:#c2410c;">â³ Part Payment â€” Balance Remaining</h4>
+                <h4 class="font-bold text-sm mb-3" style="color:#c2410c;">â³ Part Payment — Balance Remaining</h4>
                 <?php if(empty($part_rows)): ?>
                     <p class="text-sm" style="color:#7a4e0a;">No part payment customers found.</p>
                 <?php else: ?>
@@ -987,14 +987,14 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                             <tr>
                                 <td><?php echo htmlspecialchars($r['customer_name']); ?></td>
                                 <td><?php echo htmlspecialchars($r['customer_mobile']); ?></td>
-                                <td class="text-right font-bold" style="color:#d97706;">â‚¹<?php echo number_format($r['total_amount'],2); ?></td>
-                                <td class="text-right" style="color:#16a34a;">â‚¹<?php echo number_format($r['paid_amount'],2); ?></td>
-                                <td class="text-right font-bold" style="color:#dc2626;">â‚¹<?php echo number_format($r['balance_amount'],2); ?></td>
+                                <td class="text-right font-bold" style="color:#d97706;">₹<?php echo number_format($r['total_amount'],2); ?></td>
+                                <td class="text-right" style="color:#16a34a;">₹<?php echo number_format($r['paid_amount'],2); ?></td>
+                                <td class="text-right font-bold" style="color:#dc2626;">₹<?php echo number_format($r['balance_amount'],2); ?></td>
                                 <td class="text-center"><?php echo date('d M Y', strtotime($r['created_at'])); ?></td>
                                 <td class="text-center font-mono text-xs" style="color:#d68b16;"><?php echo htmlspecialchars($r['invoice_no']); ?></td>
                                 <td class="text-center">
                                     <button onclick='sendReminder(<?php echo json_encode($r['invoice_no']); ?>, <?php echo json_encode($r['customer_name']); ?>, <?php echo json_encode($r['customer_mobile']); ?>, <?php echo floatval($r['balance_amount']); ?>, <?php echo json_encode($r['customer_email'] ?? ''); ?>)' class="btn-jewel" style="padding:5px 8px;font-size:11px;border-radius:16px;margin-right:6px;">ðŸ”” Reminder</button>
-                                    <button onclick='markAsPaid(<?php echo json_encode($r['invoice_no']); ?>, <?php echo floatval($r['balance_amount']); ?>)' class="btn-jewel" style="background:linear-gradient(135deg,#16a34a,#15803d);padding:5px 8px;font-size:11px;border-radius:16px;">âœ… Mark Paid</button>
+                                    <button onclick='markAsPaid(<?php echo json_encode($r['invoice_no']); ?>, <?php echo floatval($r['balance_amount']); ?>)' class="btn-jewel" style="background:linear-gradient(135deg,#16a34a,#15803d);padding:5px 8px;font-size:11px;border-radius:16px;">✓… Mark Paid</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -1006,7 +1006,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
 
             <!-- Unpaid detail -->
             <div id="detailUnpaid" class="detail-collapse">
-                <h4 class="font-bold text-sm mb-3" style="color:#be123c;">âŒ Unpaid â€” Full Payment Pending</h4>
+                <h4 class="font-bold text-sm mb-3" style="color:#be123c;">âŒ Unpaid — Full Payment Pending</h4>
                 <?php if(empty($unpaid_rows)): ?>
                     <p class="text-sm" style="color:#16a34a;">No unpaid customers! ðŸŽ‰</p>
                 <?php else: ?>
@@ -1020,8 +1020,8 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                             <tr>
                                 <td><?php echo htmlspecialchars($r['customer_name']); ?></td>
                                 <td><?php echo htmlspecialchars($r['customer_mobile']); ?></td>
-                                <td class="text-right font-bold" style="color:#d97706;">â‚¹<?php echo number_format($r['total_amount'],2); ?></td>
-                                <td class="text-right font-bold" style="color:#dc2626;">â‚¹<?php echo number_format($r['balance_amount'],2); ?></td>
+                                <td class="text-right font-bold" style="color:#d97706;">₹<?php echo number_format($r['total_amount'],2); ?></td>
+                                <td class="text-right font-bold" style="color:#dc2626;">₹<?php echo number_format($r['balance_amount'],2); ?></td>
                                 <td class="text-center"><?php echo date('d M Y', strtotime($r['created_at'])); ?></td>
                                 <td class="text-center font-mono text-xs" style="color:#d68b16;"><?php echo htmlspecialchars($r['invoice_no']); ?></td>
                             </tr>
@@ -1072,41 +1072,41 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                     </div>
                     <div class="space-y-2 text-sm">
                         <div class="flex justify-between py-1" style="border-bottom:1px solid rgba(20,184,166,0.2);">
-                            <span style="color:#0d9488;">ðŸ’° Taxable Amount</span>
-                            <strong style="color:#134e4a;">â‚¹<?php echo number_format($taxable,2); ?></strong>
+                            <span style="color:#0d9488;">💰 Taxable Amount</span>
+                            <strong style="color:#134e4a;">₹<?php echo number_format($taxable,2); ?></strong>
                         </div>
                         <div class="flex justify-between py-1" style="border-bottom:1px solid rgba(20,184,166,0.2);">
-                            <span style="color:#0d9488;">ðŸ“Š CGST (1.5%)</span>
-                            <strong style="color:#0f766e;">â‚¹<?php echo number_format($cgst,2); ?></strong>
+                            <span style="color:#0d9488;">📊 CGST (1.5%)</span>
+                            <strong style="color:#0f766e;">₹<?php echo number_format($cgst,2); ?></strong>
                         </div>
                         <div class="flex justify-between py-1" style="border-bottom:1px solid rgba(20,184,166,0.2);">
-                            <span style="color:#0d9488;">ðŸ“Š SGST (1.5%)</span>
-                            <strong style="color:#0f766e;">â‚¹<?php echo number_format($sgst,2); ?></strong>
+                            <span style="color:#0d9488;">📊 SGST (1.5%)</span>
+                            <strong style="color:#0f766e;">₹<?php echo number_format($sgst,2); ?></strong>
                         </div>
                         <div class="flex justify-between py-2 px-3 rounded-xl mt-1" style="background:rgba(52,211,153,0.15);">
-                            <span class="font-bold" style="color:#134e4a;">âœ… Total GST</span>
-                            <strong class="text-lg" style="color:#0f766e;">â‚¹<?php echo number_format($actual_gst,2); ?></strong>
+                            <span class="font-bold" style="color:#134e4a;">✓… Total GST</span>
+                            <strong class="text-lg" style="color:#0f766e;">₹<?php echo number_format($actual_gst,2); ?></strong>
                         </div>
                     </div>
                 </div>
                 <!-- Non-GST Card -->
                 <div class="stat-card-nongst p-5">
                     <div class="flex justify-between items-center mb-3">
-                        <span class="font-bold text-sm" style="color:#475569;">ðŸ“‹ Non-GST Bills</span>
+                        <span class="font-bold text-sm" style="color:#475569;">📋 Non-GST Bills</span>
                         <span class="text-2xl font-black" style="color:#334155;"><?php echo $gst_summary['nongst_count']; ?> bills</span>
                     </div>
                     <div class="space-y-2 text-sm">
                         <div class="flex justify-between py-1" style="border-bottom:1px solid #e2e8f0;">
-                            <span style="color:#64748b;">ðŸ’° Total Sale Amount</span>
-                            <strong style="color:#334155;">â‚¹<?php echo number_format($gst_summary['nongst_amt'],2); ?></strong>
+                            <span style="color:#64748b;">💰 Total Sale Amount</span>
+                            <strong style="color:#334155;">₹<?php echo number_format($gst_summary['nongst_amt'],2); ?></strong>
                         </div>
                         <div class="flex justify-between py-1" style="border-bottom:1px solid #e2e8f0;">
-                            <span style="color:#64748b;">ðŸ“Š Tax Rate</span>
+                            <span style="color:#64748b;">📊 Tax Rate</span>
                             <strong style="color:#475569;">0% (No GST)</strong>
                         </div>
                         <div class="flex justify-between py-2 px-3 rounded-xl mt-1" style="background:rgba(100,116,139,0.1);">
                             <span class="font-bold" style="color:#475569;">âŒ GST Collected</span>
-                            <strong class="text-lg" style="color:#334155;">â‚¹0.00</strong>
+                            <strong class="text-lg" style="color:#334155;">₹0.00</strong>
                         </div>
                     </div>
                 </div>
@@ -1115,10 +1115,10 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
             <div class="gst-total-box">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                        <p class="font-bold text-sm" style="color:#0d9488;">ðŸ›ï¸ Total GST Payable to Govt â€” <?php echo $month_label; ?></p>
-                        <p class="text-xs mt-1" style="color:#14b8a6;">CGST â‚¹<?php echo number_format($cgst,2); ?> + SGST â‚¹<?php echo number_format($sgst,2); ?></p>
+                        <p class="font-bold text-sm" style="color:#0d9488;">ðŸ›ï¸ Total GST Payable to Govt — <?php echo $month_label; ?></p>
+                        <p class="text-xs mt-1" style="color:#14b8a6;">CGST ₹<?php echo number_format($cgst,2); ?> + SGST ₹<?php echo number_format($sgst,2); ?></p>
                     </div>
-                    <p class="text-2xl font-black" style="color:#0f766e;">â‚¹<?php echo number_format($actual_gst,2); ?></p>
+                    <p class="text-2xl font-black" style="color:#0f766e;">₹<?php echo number_format($actual_gst,2); ?></p>
                 </div>
             </div>
         </div>
@@ -1150,29 +1150,29 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                     <label class="filter-label">ðŸ’³ Payment</label>
                     <select name="filter_status" class="jewel-input w-full">
                         <option value="" <?php if(!$filter_status) echo 'selected'; ?>>All</option>
-                        <option value="paid"   <?php if($filter_status==='paid')   echo 'selected'; ?>>âœ… Paid</option>
+                        <option value="paid"   <?php if($filter_status==='paid')   echo 'selected'; ?>>✓… Paid</option>
                         <option value="part"   <?php if($filter_status==='part')   echo 'selected'; ?>>â³ Part</option>
                         <option value="unpaid" <?php if($filter_status==='unpaid') echo 'selected'; ?>>âŒ Unpaid</option>
                     </select>
                 </div>
                 <div>
-                    <label class="filter-label">ðŸ§¾ GST Type</label>
+                    <label class="filter-label">🧾 GST Type</label>
                     <select name="filter_gst" class="jewel-input w-full">
                         <option value="" <?php if(!$filter_gst) echo 'selected'; ?>>All</option>
                         <option value="gst"     <?php if($filter_gst==='gst')     echo 'selected'; ?>>ðŸ“„ GST (3%)</option>
-                        <option value="non_gst" <?php if($filter_gst==='non_gst') echo 'selected'; ?>>ðŸ“‹ Non-GST</option>
+                        <option value="non_gst" <?php if($filter_gst==='non_gst') echo 'selected'; ?>>📋 Non-GST</option>
                     </select>
                 </div>
                 <div class="col-span-2 sm:col-span-3 lg:col-span-5 flex gap-3">
                     <button type="submit" class="btn-jewel" style="padding:8px 20px;font-size:12px;">ðŸ” Filter</button>
-                    <a href="reports.php" class="btn-jewel" style="padding:8px 16px;font-size:12px;background:linear-gradient(135deg,#6b7280,#4b5563);">âœ– Clear</a>
+                    <a href="reports.php" class="btn-jewel" style="padding:8px 16px;font-size:12px;background:linear-gradient(135deg,#6b7280,#4b5563);">✓– Clear</a>
                 </div>
             </form>
 
             <!-- Summary chips -->
             <div class="flex flex-wrap gap-2 mb-4">
                 <span class="chip chip-yellow">Total Bills: <strong><?php echo $total_bills_count; ?></strong></span>
-                <span class="chip chip-green">Total Amount: <strong>â‚¹<?php echo number_format($total_bills_amount,2); ?></strong></span>
+                <span class="chip chip-green">Total Amount: <strong>₹<?php echo number_format($total_bills_amount,2); ?></strong></span>
                 <?php
                 $gst_filtered    = count(array_filter($bills_rows, fn($b)=>$b['gst_type']==='gst'));
                 $nongst_filtered = count(array_filter($bills_rows, fn($b)=>$b['gst_type']!=='gst'));
@@ -1183,8 +1183,8 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 <span class="chip chip-teal">GST Bills: <strong><?php echo $gst_filtered; ?></strong></span>
                 <span class="chip chip-gray">Non-GST: <strong><?php echo $nongst_filtered; ?></strong></span>
                 <?php if($total_gst_collected > 0): ?>
-                <span class="chip chip-emerald">Total GST: <strong>â‚¹<?php echo number_format($total_gst_collected,2); ?></strong>
-                    <span style="font-size:10px;opacity:0.7;">(CGST â‚¹<?php echo number_format($total_cgst,2); ?> + SGST â‚¹<?php echo number_format($total_sgst,2); ?>)</span>
+                <span class="chip chip-emerald">Total GST: <strong>₹<?php echo number_format($total_gst_collected,2); ?></strong>
+                    <span style="font-size:10px;opacity:0.7;">(CGST ₹<?php echo number_format($total_cgst,2); ?> + SGST ₹<?php echo number_format($total_sgst,2); ?>)</span>
                 </span>
                 <?php endif; ?>
             </div>
@@ -1198,7 +1198,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                             <th>Invoice No</th>
                             <th>Customer</th>
                             <th>Mobile</th>
-                            <th class="text-right">Amount (â‚¹)</th>
+                            <th class="text-right">Amount (₹)</th>
                             <th class="text-right">Paid</th>
                             <th class="text-right">Due</th>
                             <th class="text-center">GST</th>
@@ -1218,7 +1218,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                         $sgst_amt  = round($gst_amt/2, 2);
                         $gstin     = trim($bill['customer_gstin'] ?? '');
                         $ps = $bill['payment_status'];
-                        if ($ps === 'paid')        $status_badge = '<span class="badge-paid">âœ… Paid</span>';
+                        if ($ps === 'paid')        $status_badge = '<span class="badge-paid">✓… Paid</span>';
                         elseif ($ps === 'part')    $status_badge = '<span class="badge-part">â³ Part</span>';
                         elseif ($ps === 'unpaid')  $status_badge = '<span class="badge-unpaid">âŒ Unpaid</span>';
                         else                       $status_badge = htmlspecialchars($ps);
@@ -1231,25 +1231,25 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                         <td>
                             <span class="font-semibold" style="color:#800020;"><?php echo htmlspecialchars($bill['customer_name']); ?></span>
                             <?php if($gstin !== ''): ?>
-                                <br><span class="gstin-tag">ðŸ§¾ <?php echo htmlspecialchars($gstin); ?></span>
+                                <br><span class="gstin-tag">🧾 <?php echo htmlspecialchars($gstin); ?></span>
                             <?php endif; ?>
                         </td>
 
                         <td style="color:#6b7280;"><?php echo htmlspecialchars($bill['customer_mobile']); ?></td>
-                        <td class="text-right font-bold" style="color:#16a34a;">â‚¹<?php echo number_format($bill['total_amount'],2); ?></td>
-                        <td class="text-right" style="color:#15803d;">â‚¹<?php echo number_format($paid_show,2); ?></td>
+                        <td class="text-right font-bold" style="color:#16a34a;">₹<?php echo number_format($bill['total_amount'],2); ?></td>
+                        <td class="text-right" style="color:#15803d;">₹<?php echo number_format($paid_show,2); ?></td>
                         <td class="text-right font-bold" style="color:<?php echo $balance>0?'#dc2626':'#9ca3af'; ?>">
-                            <?php echo $balance>0 ? 'â‚¹'.number_format($balance,2) : 'â€”'; ?>
+                            <?php echo $balance>0 ? '₹'.number_format($balance,2) : '—'; ?>
                         </td>
                         <td class="text-center">
                             <?php if(strpos($bill['gst_type'], 'gst') === 0): ?>
                                 <span style="color:#0d9488;font-weight:700;font-size:11px;">ðŸ“„ GST</span>
                                 <?php if($gst_amt>0): ?>
-                                    <div style="font-size:9px;color:#14b8a6;">Total: â‚¹<?php echo number_format($gst_amt,2); ?></div>
-                                    <div style="font-size:9px;color:#14b8a6;">C+S: â‚¹<?php echo number_format($cgst_amt,2); ?> ea</div>
+                                    <div style="font-size:9px;color:#14b8a6;">Total: ₹<?php echo number_format($gst_amt,2); ?></div>
+                                    <div style="font-size:9px;color:#14b8a6;">C+S: ₹<?php echo number_format($cgst_amt,2); ?> ea</div>
                                 <?php endif; ?>
                             <?php else: ?>
-                                <span style="color:#9ca3af;font-size:11px;">ðŸ“‹ Non-GST</span>
+                                <span style="color:#9ca3af;font-size:11px;">📋 Non-GST</span>
                             <?php endif; ?>
                         </td>
                         <td class="text-center"><?php echo $status_badge; ?></td>
@@ -1344,7 +1344,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
     function markAsPaid(invoiceNo, balanceAmount) {
         console.log('markAsPaid called', {invoiceNo, balanceAmount});
         if(!invoiceNo) return alert('Invoice number is missing');
-        if(!confirm('Mark invoice ' + invoiceNo + ' as paid (â‚¹' + parseFloat(balanceAmount).toFixed(2) + ')?')) return;
+        if(!confirm('Mark invoice ' + invoiceNo + ' as paid (₹' + parseFloat(balanceAmount).toFixed(2) + ')?')) return;
         const fd = new FormData();
         fd.append('invoice_no', invoiceNo);
         fd.append('amount', balanceAmount || 0);
@@ -1369,7 +1369,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
             data: {
                 labels,
                 datasets: [{
-                    label: 'Sales (â‚¹)', data: salesData,
+                    label: 'Sales (₹)', data: salesData,
                     borderColor: '#d68b16', backgroundColor: 'rgba(214,139,22,0.1)',
                     borderWidth: 3, tension: 0.4, fill: true,
                     pointRadius: 5, pointHoverRadius: 8,
@@ -1382,12 +1382,12 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 plugins: {
                     legend: { labels: { font: { size: 12, weight: 'bold' }, color: '#800020' } },
                     tooltip: { backgroundColor: '#fdf6e3', titleColor: '#800020', bodyColor: '#7a4e0a', borderColor: '#d68b16', borderWidth: 1,
-                        callbacks: { label: ctx => 'ðŸ’° â‚¹ ' + ctx.raw.toLocaleString('en-IN') }
+                        callbacks: { label: ctx => '💰 ₹ ' + ctx.raw.toLocaleString('en-IN') }
                     }
                 },
                 scales: {
                     y: { beginAtZero: true, grid: { color: 'rgba(181,115,14,0.1)' },
-                        ticks: { callback: v => 'â‚¹' + v.toLocaleString('en-IN'), color:'#7a4e0a', font:{size:11} } },
+                        ticks: { callback: v => '₹' + v.toLocaleString('en-IN'), color:'#7a4e0a', font:{size:11} } },
                     x: { grid: { color: 'rgba(181,115,14,0.1)' },
                         ticks: { color:'#7a4e0a', font:{size:11} } }
                 }
@@ -1402,7 +1402,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
         if (!billsData || billsData.length === 0) { alert('No bills found to export!'); return; }
         const today     = '<?php echo date("d M Y"); ?>';
         const todayFile = '<?php echo date("Y-m-d"); ?>';
-        const inrFmt  = v => 'â‚¹' + parseFloat(v||0).toLocaleString('en-IN', {minimumFractionDigits:2});
+        const inrFmt  = v => '₹' + parseFloat(v||0).toLocaleString('en-IN', {minimumFractionDigits:2});
         const fmtDate = raw => {
             if (!raw) return '';
             const [yr, mo, dy] = raw.split(' ')[0].split('-');
@@ -1421,16 +1421,16 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
 
         const wb = XLSX.utils.book_new();
 
-        // Sheet 1 â€” All Bills
+        // Sheet 1 — All Bills
         const aoa1 = [];
-        aoa1.push(['ðŸ’Ž MAA GOURI JEWELLERS', '', '', '', '', '', '', '', '', '', '', '']);
-        aoa1.push(['All Bills Report â€” Generated: ' + today, '', '', '', '', '', '', '', '', '', '', '']);
+        aoa1.push(['💎 MAA GOURI JEWELLERS', '', '', '', '', '', '', '', '', '', '', '']);
+        aoa1.push(['All Bills Report — Generated: ' + today, '', '', '', '', '', '', '', '', '', '', '']);
         aoa1.push([]);
         aoa1.push(['Total Bills', billsData.length, '', 'Total Amount', inrFmt(totalAmt), '', 'Total GST Collected', inrFmt(totalGST), '', 'Balance Due', inrFmt(totalBalance), '']);
         aoa1.push(['Full Paid', paidBills, '', 'Part Payment', partBills, '', 'Unpaid', unpaidBills, '', 'GST Bills', gstBills, '']);
         aoa1.push([]);
         // â˜… UPDATED: Added GSTIN column header
-        aoa1.push(['#', 'Invoice No', 'Customer Name', 'GSTIN', 'Mobile', 'Address', 'Total Amount (â‚¹)', 'Paid Amount (â‚¹)', 'Balance Due (â‚¹)', 'GST Type', 'GST Amount (â‚¹)', 'Payment Status', 'Date']);
+        aoa1.push(['#', 'Invoice No', 'Customer Name', 'GSTIN', 'Mobile', 'Address', 'Total Amount (₹)', 'Paid Amount (₹)', 'Balance Due (₹)', 'GST Type', 'GST Amount (₹)', 'Payment Status', 'Date']);
         billsData.forEach((b, i) => {
             aoa1.push([
                 i + 1,
@@ -1455,12 +1455,12 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
         ws1['!merges'] = [{s:{r:0,c:0},e:{r:0,c:12}},{s:{r:1,c:0},e:{r:1,c:12}}];
         XLSX.utils.book_append_sheet(wb, ws1, 'All Bills');
 
-        // Sheet 2 â€” Payment Summary
+        // Sheet 2 — Payment Summary
         const aoa2 = [];
-        aoa2.push(['ðŸ’Ž MAA GOURI JEWELLERS â€” Payment Summary']);
+        aoa2.push(['💎 MAA GOURI JEWELLERS — Payment Summary']);
         aoa2.push(['Generated: ' + today]);
         aoa2.push([]);
-        aoa2.push(['Category', 'Count', 'Amount (â‚¹)']);
+        aoa2.push(['Category', 'Count', 'Amount (₹)']);
         aoa2.push(['Full Paid', paidBills, totalPaid]);
         aoa2.push(['Part Payment', partBills, billsData.filter(b=>b.payment_status==='part').reduce((s,b)=>s+parseFloat(b.total_amount||0),0)]);
         aoa2.push(['Unpaid (Credit)', unpaidBills, billsData.filter(b=>b.payment_status==='unpaid').reduce((s,b)=>s+parseFloat(b.total_amount||0),0)]);
@@ -1474,10 +1474,10 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
         ws2['!cols'] = [{wch:28},{wch:12},{wch:20}];
         XLSX.utils.book_append_sheet(wb, ws2, 'Payment Summary');
 
-        // Sheet 3 â€” Pending
+        // Sheet 3 — Pending
         const pendingData = billsData.filter(b => b.payment_status !== 'paid' && parseFloat(b.balance_amount||0) > 0);
         // â˜… UPDATED: Added GSTIN column in pending sheet too
-        const aoa3 = [['#','Invoice No','Customer','GSTIN','Mobile','Bill Total (â‚¹)','Paid (â‚¹)','Balance Due (â‚¹)','Status','Date']];
+        const aoa3 = [['#','Invoice No','Customer','GSTIN','Mobile','Bill Total (₹)','Paid (₹)','Balance Due (₹)','Status','Date']];
         pendingData.forEach((b,i) => aoa3.push([
             i+1, b.invoice_no, b.customer_name, b.customer_gstin||'', b.customer_mobile,
             parseFloat(b.total_amount||0), parseFloat(b.paid_amount||0), parseFloat(b.balance_amount||0),

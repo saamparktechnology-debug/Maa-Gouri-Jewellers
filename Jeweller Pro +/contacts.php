@@ -66,7 +66,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-<title>Contacts â€” MAA GOURI JEWELLERS</title>
+<title>Contacts — MAA GOURI JEWELLERS</title>
 <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
@@ -353,10 +353,10 @@ h1, h2, h3, .gold-font { font-family: 'Poppins', sans-serif; font-weight: 700; }
                             </a>
                         </td>
                         <td class="px-5 py-3.5 text-xs text-gray-600">
-                            <?= $c['email'] ? '<a href="mailto:'.htmlspecialchars($c['email']).'" class="text-blue-600 hover:underline flex items-center gap-1.5"><i class="fas fa-envelope text-blue-500"></i> '.htmlspecialchars($c['email']).'</a>' : '<span class="text-gray-300">â€”</span>' ?>
+                            <?= $c['email'] ? '<a href="mailto:'.htmlspecialchars($c['email']).'" class="text-blue-600 hover:underline flex items-center gap-1.5"><i class="fas fa-envelope text-blue-500"></i> '.htmlspecialchars($c['email']).'</a>' : '<span class="text-gray-300">—</span>' ?>
                         </td>
                         <td class="px-5 py-3.5 text-xs text-gray-600 max-w-xs">
-                            <?= $c['address'] ? htmlspecialchars($c['address']) : '<span class="text-gray-300">â€”</span>' ?>
+                            <?= $c['address'] ? htmlspecialchars($c['address']) : '<span class="text-gray-300">—</span>' ?>
                         </td>
                         <td class="px-5 py-3.5 text-center whitespace-nowrap">
                             <button onclick='editModal(<?= json_encode($c) ?>)' class="px-3 py-1 text-xs font-bold text-blue-900 bg-blue-100 rounded-lg hover:bg-blue-200 transition mr-1">
@@ -391,7 +391,7 @@ h1, h2, h3, .gold-font { font-family: 'Poppins', sans-serif; font-weight: 700; }
             <h3 class="text-lg font-bold text-white flex items-center gap-2" id="modalTitle">
                 <i class="fas fa-user-plus"></i> Add Contact
             </h3>
-            <button onclick="closeModal()" class="text-white hover:text-amber-200 text-lg font-bold">âœ•</button>
+            <button onclick="closeModal()" class="text-white hover:text-amber-200 text-lg font-bold">✓•</button>
         </div>
         <form method="POST" class="p-6 space-y-4">
             <input type="hidden" name="action" value="save">

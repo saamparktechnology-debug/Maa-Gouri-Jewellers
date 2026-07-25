@@ -172,7 +172,7 @@ function sendWhatsAppMessage($phone, $message, $conn, $mediaFile = null, $mediaT
 
         if($mediaType != 'text' && $mediaFile && file_exists($mediaFile)) {
             // NOTE: Confirm exact field names in Whinta's "Send media" doc (Developer Tools > Access Token tab).
-            // Many cloud WhatsApp APIs need a publicly reachable media URL rather than a raw local file path â€”
+            // Many cloud WhatsApp APIs need a publicly reachable media URL rather than a raw local file path —
             // if Whinta rejects this, upload the file somewhere public first and pass that URL instead.
             $url  = "{$baseUrl}/send-media";
             $body = json_encode(['phone' => $toPhone, 'caption' => $message, 'media' => $mediaFile]);
@@ -290,7 +290,7 @@ if($_SERVER['REQUEST_METHOD']=='POST' && isset($_POST['save_api_settings'])) {
     $reminder_days = intval($_POST['reminder_days']??3);
     mysqli_query($conn,"UPDATE whatsapp_settings SET status='inactive'");
     if(mysqli_query($conn,"INSERT INTO whatsapp_settings (api_type,api_url,api_token,instance_id,reminder_days,status) VALUES ('$api_type','$api_url','$api_token','$instance_id',$reminder_days,'active')"))
-        $api_success = "âœ… API settings saved successfully!";
+        $api_success = "✓… API settings saved successfully!";
     else $api_error = "âŒ Error: ".mysqli_error($conn);
 }
 
@@ -322,16 +322,16 @@ if($_SERVER['REQUEST_METHOD']=='POST' && isset($_POST['send_single'])) {
         } else {
             $dueDateFormatted = date('d-m-Y', strtotime($tpl_due_date));
             $amountFormatted  = number_format((float)$tpl_amount, 2);
-            $logMsg = "[Template: payment_reminder_1] Hello $customer_name, Your payment of â‚¹$amountFormatted is due on $dueDateFormatted.";
-            $result = sendWhatsAppTemplate($number, 'payment_reminder_1', 'en_US', [$customer_name, 'â‚¹'.$amountFormatted, $dueDateFormatted], $number, $conn);
-            if($result['success']) { logWhatsAppMessage($number,$customer_name,'single_template',$logMsg,'','','sent',json_encode($result),$conn); $single_success="âœ… Template message sent to $number!<br><small>Whinta response: ".htmlspecialchars($result['response']??'')."</small>"; }
+            $logMsg = "[Template: payment_reminder_1] Hello $customer_name, Your payment of ₹$amountFormatted is due on $dueDateFormatted.";
+            $result = sendWhatsAppTemplate($number, 'payment_reminder_1', 'en_US', [$customer_name, '₹'.$amountFormatted, $dueDateFormatted], $number, $conn);
+            if($result['success']) { logWhatsAppMessage($number,$customer_name,'single_template',$logMsg,'','','sent',json_encode($result),$conn); $single_success="✓… Template message sent to $number!<br><small>Whinta response: ".htmlspecialchars($result['response']??'')."</small>"; }
             else { logWhatsAppMessage($number,$customer_name,'single_template',$logMsg,'','','failed',$result['error'],$conn); $single_error="âŒ Failed: ".$result['error']; }
         }
     }
     elseif(empty($message) && empty($media_file_path)) $single_error = "âŒ Please enter a message or select media!";
     else {
         $result = sendWhatsAppMessage($number, $message, $conn, $media_file_path, $media_type);
-        if($result['success']) { logWhatsAppMessage($number,$customer_name,'single',$message,$media_file_path,$media_file_name,'sent',json_encode($result),$conn); $single_success="âœ… Message sent to $number!"; }
+        if($result['success']) { logWhatsAppMessage($number,$customer_name,'single',$message,$media_file_path,$media_file_name,'sent',json_encode($result),$conn); $single_success="✓… Message sent to $number!"; }
         else { logWhatsAppMessage($number,$customer_name,'single',$message,$media_file_path,$media_file_name,'failed',$result['error'],$conn); $single_error="âŒ Failed: ".$result['error']; }
     }
 }
@@ -365,7 +365,7 @@ if($_SERVER['REQUEST_METHOD']=='POST' && isset($_POST['send_bulk'])) {
                 else { $failed_count++; logWhatsAppMessage($c['mobile'],$c['name'],'bulk',$bulk_msg,$media_file_path,$media_file_name,'failed',$r['error'],$conn); }
             }
         }
-        $bulk_result="âœ… Sent: $sent_count | âŒ Failed: $failed_count";
+        $bulk_result="✓… Sent: $sent_count | âŒ Failed: $failed_count";
     }
 }
 
@@ -392,17 +392,17 @@ if(isset($_GET['send_advance_reminders'])) {
 
         if($use_template_for_reminders) {
             // payment_reminder_1 (Meta-approved): "Hello {{1}}, Your payment of {{2}} is due on {{3}}..."
-            $msg = "[Template: payment_reminder_1] Hello {$c['customer_name']}, Your payment of â‚¹$amountFormatted is due on $dueDateFormatted.";
-            $r = sendWhatsAppTemplate($c['customer_mobile'], 'payment_reminder_1', 'en_US', [$c['customer_name'], 'â‚¹'.$amountFormatted, $dueDateFormatted], $c['customer_mobile'], $conn);
+            $msg = "[Template: payment_reminder_1] Hello {$c['customer_name']}, Your payment of ₹$amountFormatted is due on $dueDateFormatted.";
+            $r = sendWhatsAppTemplate($c['customer_mobile'], 'payment_reminder_1', 'en_US', [$c['customer_name'], '₹'.$amountFormatted, $dueDateFormatted], $c['customer_mobile'], $conn);
         } else {
-            $msg="ðŸ’Ž *MAA GOURI JEWELLERS - PAYMENT REMINDER* ðŸ’Ž\n\nDear {$c['customer_name']},\n\nYour advance payment is due in *$dlv days*.\n\nðŸ“… Due: $dueDateFormatted\nðŸ’° Amount: â‚¹$amountFormatted\n\nPlease pay at earliest convenience.\n\nThank you! âœ¨";
+            $msg="💎 *MAA GOURI JEWELLERS - PAYMENT REMINDER* 💎\n\nDear {$c['customer_name']},\n\nYour advance payment is due in *$dlv days*.\n\nðŸ“… Due: $dueDateFormatted\n💰 Amount: ₹$amountFormatted\n\nPlease pay at earliest convenience.\n\nThank you! ✓¨";
             $r=sendWhatsAppMessage($c['customer_mobile'],$msg,$conn);
         }
 
         if($r['success']) { $sent_count++; logWhatsAppMessage($c['customer_mobile'],$c['customer_name'],'advance_reminder',$msg,'','','sent',json_encode($r),$conn); }
         else { $failed_count++; logWhatsAppMessage($c['customer_mobile'],$c['customer_name'],'advance_reminder',$msg,'','','failed',$r['error'],$conn); }
     }
-    $advance_reminder_result="âœ… Reminders Sent: $sent_count | âŒ Failed: $failed_count";
+    $advance_reminder_result="✓… Reminders Sent: $sent_count | âŒ Failed: $failed_count";
 }
 
 $api_settings         = mysqli_fetch_assoc(mysqli_query($conn,"SELECT * FROM whatsapp_settings WHERE status='active' LIMIT 1"));
@@ -426,7 +426,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <meta name="author" content="MANU GUPTA">
-    <title>WhatsApp Automation â€” MAA GOURI JEWELLERS</title>
+    <title>WhatsApp Automation — MAA GOURI JEWELLERS</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/theme.css">
@@ -828,8 +828,8 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             <div class="alert alert-info"><i class="fas fa-paper-plane"></i><?php echo $bulk_result; ?></div>
             <?php if(!empty($recipient_list)): ?>
                 <div class="recipient-box mb-4">
-                    <p class="font-semibold mb-2" style="color:#7a4e0a;">ðŸ“‹ Recipients (<?php echo count($recipient_list); ?> customers):</p>
-                    <?php foreach($recipient_list as $r): ?><div>ðŸ’Ž <?php echo htmlspecialchars($r); ?></div><?php endforeach; ?>
+                    <p class="font-semibold mb-2" style="color:#7a4e0a;">📋 Recipients (<?php echo count($recipient_list); ?> customers):</p>
+                    <?php foreach($recipient_list as $r): ?><div>💎 <?php echo htmlspecialchars($r); ?></div><?php endforeach; ?>
                 </div>
             <?php endif; ?>
         <?php endif; ?>
@@ -845,20 +845,20 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         <label class="field-label">ðŸŒ API Type</label>
                         <select name="api_type" class="jewel-input">
                             <option value="greenapi" <?php echo ($api_settings&&$api_settings['api_type']=='greenapi')?'selected':''; ?>> hunk API</option>
-                            <option value="whinta"   <?php echo ($api_settings&&$api_settings['api_type']=='whinta')?'selected':''; ?>>ðŸ“² Whinta API</option>
+                            <option value="whinta"   <?php echo ($api_settings&&$api_settings['api_type']=='whinta')?'selected':''; ?>>📱 Whinta API</option>
                             <option value="custom"   <?php echo ($api_settings&&$api_settings['api_type']=='custom')?'selected':''; ?>> Custom API</option>
                         </select>
                     </div>
                     <div>
-                        <label class="field-label">ðŸ”— API URL</label>
+                        <label class="field-label">🔗 API URL</label>
                         <input type="text" name="api_url" value="<?php echo htmlspecialchars($api_settings['api_url']??'https://api.hunk-api.com'); ?>" placeholder="https://api.hunk-api.com" class="jewel-input">
                     </div>
                     <div>
-                        <label class="field-label">ðŸ†” Instance ID</label>
+                        <label class="field-label">🆔 Instance ID</label>
                         <input type="text" name="instance_id" value="<?php echo htmlspecialchars($api_settings['instance_id']??''); ?>" placeholder="Your Instance ID" class="jewel-input">
                     </div>
                     <div>
-                        <label class="field-label">ðŸ”‘ API Token</label>
+                        <label class="field-label">🔑 API Token</label>
                         <input type="text" name="api_token" value="<?php echo htmlspecialchars($api_settings['api_token']??''); ?>" placeholder="Your API Token" class="jewel-input">
                     </div>
                 </div>
@@ -886,19 +886,19 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             <form method="POST" enctype="multipart/form-data">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="field-label">ðŸ“± Mobile Number *</label>
+                        <label class="field-label">📱 Mobile Number *</label>
                         <input type="tel" name="number" placeholder="9876543210" required class="jewel-input">
                     </div>
                     <div>
-                        <label class="field-label">ðŸ‘¤ Customer Name (Optional)</label>
+                        <label class="field-label">👤 Customer Name (Optional)</label>
                         <input type="text" name="customer_name" id="singleCustomerName" placeholder="Customer name" class="jewel-input">
                     </div>
                     <div>
-                        <label class="field-label">ðŸ“Ž Media Type</label>
+                        <label class="field-label">📎 Media Type</label>
                         <select name="single_media_type" id="singleMediaType" class="jewel-input" onchange="toggleMedia('single')">
                             <option value="text">ðŸ“ Text Only</option>
                             <option value="image">ðŸ–¼ï¸ Image</option>
-                            <option value="video">ðŸŽ¥ Video</option>
+                            <option value="video">🎥 Video</option>
                         </select>
                     </div>
                     <div id="singleMediaUploadDiv" style="display:none;">
@@ -908,12 +908,12 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                     <div class="sm:col-span-2">
                         <label class="field-label" style="display:flex;align-items:center;gap:6px;">
                             <input type="checkbox" name="use_template" id="singleUseTemplate" value="1" onchange="toggleSingleTemplate()" style="width:16px;height:16px;accent-color:#16a34a;">
-                            ðŸ§¾ Send as Approved Template (use this if the customer hasn't messaged you in the last 24 hours)
+                            🧾 Send as Approved Template (use this if the customer hasn't messaged you in the last 24 hours)
                         </label>
                     </div>
                     <div id="singleTemplateFieldsDiv" style="display:none;" class="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                            <label class="field-label">ðŸ’° Amount (â‚¹)</label>
+                            <label class="field-label">💰 Amount (₹)</label>
                             <input type="number" step="0.01" name="template_amount" placeholder="5000" class="jewel-input">
                         </div>
                         <div>
@@ -921,7 +921,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             <input type="date" name="template_due_date" class="jewel-input">
                         </div>
                         <div class="sm:col-span-2">
-                            <span class="text-xs" style="color:#7a4e0a;">Uses the Meta-approved "payment_reminder_1" template: "Hello {Customer Name}, Your payment of â‚¹{Amount} is due on {Due Date}." Fill Customer Name above too â€” it's used as the template's name variable.</span>
+                            <span class="text-xs" style="color:#7a4e0a;">Uses the Meta-approved "payment_reminder_1" template: "Hello {Customer Name}, Your payment of ₹{Amount} is due on {Due Date}." Fill Customer Name above too — it's used as the template's name variable.</span>
                         </div>
                     </div>
                     <div class="sm:col-span-2" id="singleMessageDiv">
@@ -941,9 +941,9 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 <span class="text-sm font-normal ml-2" style="color:#9ca3af;">(<?php echo $total_customers; ?> customers)</span>
             </h2>
             <form method="POST" enctype="multipart/form-data">
-                <label class="field-label mb-1">ðŸ“‹ Select Customers</label>
+                <label class="field-label mb-1">📋 Select Customers</label>
                 <div class="flex gap-3 mb-2">
-                    <button type="button" class="btn-sm-link" style="color:#16a34a;" onclick="selectAll()">âœ… Select All</button>
+                    <button type="button" class="btn-sm-link" style="color:#16a34a;" onclick="selectAll()">✓… Select All</button>
                     <button type="button" class="btn-sm-link" style="color:#dc2626;" onclick="deselectAll()">âŒ Deselect All</button>
                 </div>
                 <div class="customer-select-box mb-4">
@@ -951,7 +951,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         <?php mysqli_data_seek($all_customers, 0); while($c = mysqli_fetch_assoc($all_customers)): ?>
                             <label class="cust-label">
                                 <input type="checkbox" name="selected_customers[]" value="<?php echo $c['id']; ?>">
-                                <span>ðŸ’Ž <?php echo htmlspecialchars($c['name']); ?> (<?php echo $c['mobile']; ?>)</span>
+                                <span>💎 <?php echo htmlspecialchars($c['name']); ?> (<?php echo $c['mobile']; ?>)</span>
                             </label>
                         <?php endwhile; ?>
                     </div>
@@ -959,11 +959,11 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                        <label class="field-label">ðŸ“Ž Media Type</label>
+                        <label class="field-label">📎 Media Type</label>
                         <select name="media_type" id="bulkMediaType" class="jewel-input" onchange="toggleMedia('bulk')">
                             <option value="text">ðŸ“ Text Only</option>
                             <option value="image">ðŸ–¼ï¸ Image</option>
-                            <option value="video">ðŸŽ¥ Video</option>
+                            <option value="video">🎥 Video</option>
                         </select>
                     </div>
                     <div id="bulkMediaUploadDiv" style="display:none;">
@@ -1030,11 +1030,11 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         ?>
                         <tr>
                             <td class="text-center"><input type="checkbox" class="advance-reminder-checkbox" value="<?php echo (int)$adv['id']; ?>" style="accent-color:#db2777;width:16px;height:16px;"></td>
-                            <td class="font-semibold" style="color:#800020;">ðŸ’Ž <?php echo htmlspecialchars($adv['customer_name'] ?: 'Customer'); ?></td>
-                            <td>ðŸ“± <?php echo htmlspecialchars($adv['customer_mobile'] ?: 'â€”'); ?></td>
-                            <td class="text-right font-bold" style="color:#d68b16;">â‚¹<?php echo number_format((float)($adv['balance_amount'] ?? $adv['advance_amount']),2); ?></td>
-                            <td class="text-right" style="color:#7a4e0a;">â‚¹<?php echo number_format((float)($adv['total_amount'] ?? 0),2); ?></td>
-                            <td class="text-center">ðŸ“… <?php echo !empty($adv['due_date']) ? date('d M Y', strtotime($adv['due_date'])) : 'â€”'; ?></td>
+                            <td class="font-semibold" style="color:#800020;">💎 <?php echo htmlspecialchars($adv['customer_name'] ?: 'Customer'); ?></td>
+                            <td>📱 <?php echo htmlspecialchars($adv['customer_mobile'] ?: '—'); ?></td>
+                            <td class="text-right font-bold" style="color:#d68b16;">₹<?php echo number_format((float)($adv['balance_amount'] ?? $adv['advance_amount']),2); ?></td>
+                            <td class="text-right" style="color:#7a4e0a;">₹<?php echo number_format((float)($adv['total_amount'] ?? 0),2); ?></td>
+                            <td class="text-center">ðŸ“… <?php echo !empty($adv['due_date']) ? date('d M Y', strtotime($adv['due_date'])) : '—'; ?></td>
                             <td class="text-center"><?php echo $adv['reminder_days']; ?> days</td>
                             <td class="text-center <?php echo $dc; ?>"><?php echo $dt; ?></td>
                         </tr>
@@ -1067,13 +1067,13 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             <td class="font-semibold" style="color:#800020;"><?php echo htmlspecialchars($log['recipient_name'] ?: $log['recipient_number']); ?></td>
                             <td style="color:#7a4e0a;text-transform:capitalize;">
                                 <?php echo htmlspecialchars(str_replace('_',' ',$log['message_type'])); ?>
-                                <?php if(!empty($log['media_file_name'])): ?> <span title="Has media">ðŸ“Ž</span><?php endif; ?>
+                                <?php if(!empty($log['media_file_name'])): ?> <span title="Has media">📎</span><?php endif; ?>
                             </td>
                             <td class="text-center">
                                 <?php if($log['status']=='sent'): ?>
-                                    <span class="badge-sent">âœ“ Sent</span>
+                                    <span class="badge-sent">✓“ Sent</span>
                                 <?php else: ?>
-                                    <span class="badge-failed">âœ— Failed</span>
+                                    <span class="badge-failed">✓— Failed</span>
                                 <?php endif; ?>
                             </td>
                         </tr>

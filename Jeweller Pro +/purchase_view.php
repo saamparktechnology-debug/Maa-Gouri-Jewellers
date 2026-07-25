@@ -199,9 +199,9 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
         <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
             <h3 class="font-bold text-amber-900 mb-2 uppercase tracking-wide">Supplier (Seller)</h3>
             <p class="font-bold text-gray-800 text-sm"><?php echo htmlspecialchars($purchase['supplier_name']); ?></p>
-            <p class="text-gray-600"><?php echo htmlspecialchars($purchase['supplier_addr'] ?? 'â€”'); ?></p>
-            <p class="text-gray-600 mt-1">Mob: <?php echo htmlspecialchars($purchase['supplier_mobile'] ?? 'â€”'); ?></p>
-            <p class="text-gray-600">GSTIN: <?php echo htmlspecialchars($purchase['supplier_gstin'] ?? 'â€”'); ?></p>
+            <p class="text-gray-600"><?php echo htmlspecialchars($purchase['supplier_addr'] ?? '—'); ?></p>
+            <p class="text-gray-600 mt-1">Mob: <?php echo htmlspecialchars($purchase['supplier_mobile'] ?? '—'); ?></p>
+            <p class="text-gray-600">GSTIN: <?php echo htmlspecialchars($purchase['supplier_gstin'] ?? '—'); ?></p>
         </div>
         <div class="bg-white p-4 rounded-xl border border-amber-200">
             <h3 class="font-bold text-amber-900 mb-2 uppercase tracking-wide">Invoice Details</h3>
@@ -231,11 +231,11 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
                     <div class="text-amber-800 text-xs mt-1">HUID: <strong><?php echo htmlspecialchars($purchase['huid_code']); ?></strong></div>
                     <?php endif; ?>
                 </td>
-                <td class="p-3 text-center text-gray-600"><?php echo htmlspecialchars($purchase['hsn_sac'] ?? 'â€”'); ?></td>
+                <td class="p-3 text-center text-gray-600"><?php echo htmlspecialchars($purchase['hsn_sac'] ?? '—'); ?></td>
                 <td class="p-3 text-center font-bold text-gray-800"><?php echo rtrim(rtrim(number_format((float)$purchase['qty'], 4), '0'), '.'); ?> <?php echo htmlspecialchars($purchase['unit']); ?></td>
-                <td class="p-3 text-right">â‚¹ <?php echo fmt($purchase['rate_per_unit']); ?></td>
-                <td class="p-3 text-right">â‚¹ <?php echo fmt($purchase['gst_total']); ?></td>
-                <td class="p-3 text-right font-bold text-amber-900 text-sm">â‚¹ <?php echo fmt($purchase['total_amount']); ?></td>
+                <td class="p-3 text-right">₹ <?php echo fmt($purchase['rate_per_unit']); ?></td>
+                <td class="p-3 text-right">₹ <?php echo fmt($purchase['gst_total']); ?></td>
+                <td class="p-3 text-right font-bold text-amber-900 text-sm">₹ <?php echo fmt($purchase['total_amount']); ?></td>
             </tr>
         </tbody>
     </table>

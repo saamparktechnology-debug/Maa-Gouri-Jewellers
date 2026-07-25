@@ -35,7 +35,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         $query = "INSERT INTO products (serial_no, name, item_name, category, weight, price, quantity, huid_code, created_at) VALUES ('$serial_no', '$name', '$item_name', '$category', '$weight', '$price', '$quantity', '$huid_code', NOW())";
         if(mysqli_query($conn, $query)) {
-            $success = "âœ¨ Product added successfully! âœ¨";
+            $success = "✓¨ Product added successfully! ✓¨";
         } else {
             $error = "Error adding product: " . mysqli_error($conn);
         }
@@ -64,7 +64,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         $query = "UPDATE products SET serial_no='$serial_no', name='$name', item_name='$item_name', category='$category', weight='$weight', price='$price', quantity='$quantity', huid_code='$huid_code' WHERE id=$id";
         if(mysqli_query($conn, $query)) {
-            $success = "ðŸ’Ž Product updated successfully! ðŸ’Ž";
+            $success = "💎 Product updated successfully! 💎";
         } else {
             $error = "Error updating product: " . mysqli_error($conn);
         }
@@ -679,10 +679,10 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 <!-- Loading Overlay -->
 <div id="loadingOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;display:flex;justify-content:center;align-items:center;overflow:hidden;transition:opacity 0.6s ease,visibility 0.6s ease;background:radial-gradient(ellipse at 50% 60%, #1a0a00 0%, #0d0500 100%);">
     <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(214,139,22,0.015) 3px,rgba(214,139,22,0.015) 4px);pointer-events:none;z-index:1;"></div>
-    <!-- <div style="position:absolute;top:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite;">âœ¦</div>
-    <div style="position:absolute;top:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 1s;">âœ¦</div>
-    <div style="position:absolute;bottom:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 2s;">âœ¦</div>
-    <div style="position:absolute;bottom:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 3s;">âœ¦</div> -->
+    <!-- <div style="position:absolute;top:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite;">✓¦</div>
+    <div style="position:absolute;top:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 1s;">✓¦</div>
+    <div style="position:absolute;bottom:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 2s;">✓¦</div>
+    <div style="position:absolute;bottom:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 3s;">✓¦</div> -->
     <div id="loaderStars" style="position:absolute;inset:0;pointer-events:none;z-index:2;"></div>
     <div id="loaderRings" style="position:absolute;inset:0;pointer-events:none;z-index:2;display:flex;align-items:center;justify-content:center;"></div>
     <div style="position:relative;z-index:10;text-align:center;">
@@ -843,7 +843,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         mysqli_data_seek($low_stock, 0);
                         while($item = mysqli_fetch_assoc($low_stock)): ?>
                             <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold" style="background:#FEE2E2;color:#991B1B;">
-                                ðŸ’Ž <?php echo htmlspecialchars($item['name']); ?>: <?php echo $item['quantity']; ?> left
+                                💎 <?php echo htmlspecialchars($item['name']); ?>: <?php echo $item['quantity']; ?> left
                             </span>
                         <?php endwhile; ?>
                     </div>
@@ -864,7 +864,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                     <form method="POST">
 
                         <div class="mb-3">
-                            <label>ðŸ’Ž Product Name</label>
+                            <label>💎 Product Name</label>
                             <input list="productNameList" type="text" id="addProductName" name="name" placeholder="Enter product name or choose Others" required class="jewel-input" onchange="onAddProductNameChange()">
                             <datalist id="productNameList">
                                 <option value="Others"></option>
@@ -872,20 +872,20 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         </div>
 
                         <div class="mb-3">
-                            <label>âœ¨ Category</label>
+                            <label>✓¨ Category</label>
                             <select name="category" id="addCategorySelect" required class="jewel-input" onchange="updateItemTypes('addCategorySelect','addItemSelect','addCustomItem')">
                                 <option value="">-- Select Category --</option>
-                                <optgroup label="ðŸ¥‡ Gold">
+                                <optgroup label="🥇 Gold">
                                     <option value="Gold 22K">Gold 22K</option>
                                     <option value="Gold 18K">Gold 18K</option>
                                 </optgroup>
-                                <optgroup label="ðŸ¥ˆ Silver">
+                                <optgroup label="🥈 Silver">
                                     <option value="Silver">Silver</option>
                                 </optgroup>
-                                <optgroup label="ðŸ’Ž Stone">
+                                <optgroup label="💎 Stone">
                                     <option value="Stone">Stone</option>
                                 </optgroup>
-                                <optgroup label="ðŸ’Ž Diamond">
+                                <optgroup label="💎 Diamond">
                                     <option value="Diamond">Diamond</option>
                                 </optgroup>
                                 <optgroup label="ðŸŸ¤ Other">
@@ -1006,13 +1006,13 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                         <div class="text-xs" style="color:#7a4e0a;"><?php echo htmlspecialchars($product['category'] ?? ''); ?></div>
                                     </td>
                                     <td>
-                                        <div class="font-medium text-sm" style="color:#b5730e;"><?php echo htmlspecialchars($product['item_name'] ?? 'â€”'); ?></div>
+                                        <div class="font-medium text-sm" style="color:#b5730e;"><?php echo htmlspecialchars($product['item_name'] ?? '—'); ?></div>
                                     </td>
                                     <td>
-                                        <div class="text-sm font-semibold" style="color:#4b5563;"><?php echo htmlspecialchars($product['serial_no'] ?? 'â€”'); ?></div>
+                                        <div class="text-sm font-semibold" style="color:#4b5563;"><?php echo htmlspecialchars($product['serial_no'] ?? '—'); ?></div>
                                     </td>
                                     <td>
-                                        <div class="text-sm font-semibold" style="color:#4b5563;"><?php echo htmlspecialchars($product['huid_code'] ?: 'â€”'); ?></div>
+                                        <div class="text-sm font-semibold" style="color:#4b5563;"><?php echo htmlspecialchars($product['huid_code'] ?: '—'); ?></div>
                                     </td>
                                     <td class="text-sm">
                                         <?php echo htmlspecialchars($product['weight'] ?? 'N/A'); ?>
@@ -1022,7 +1022,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                         <?php if(!empty($product['created_at'])): ?>
                                             <span class="font-medium"><?php echo date('d M Y', strtotime($product['created_at'])); ?></span>
                                         <?php else: ?>
-                                            <span style="color:#d1d5db;">â€”</span>
+                                            <span style="color:#d1d5db;">—</span>
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-center font-bold text-sm" style="color:#800020;"><?php echo $qty; ?></td>
@@ -1093,7 +1093,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         </div>
                         <div class="summary-item">
                             <i class="fas fa-coins"></i>
-                            <span>Est. Value: <strong>â‚¹<?php echo number_format($total_price, 2); ?></strong></span>
+                            <span>Est. Value: <strong>₹<?php echo number_format($total_price, 2); ?></strong></span>
                         </div>
                     </div>
                 </div>
@@ -1128,24 +1128,24 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 <input type="text" name="huid_code" id="editProductHuid" class="jewel-input">
             </div>
             <div class="mb-3">
-                <label>ðŸ’Ž Product Name</label>
+                <label>💎 Product Name</label>
                 <input type="text" name="name" id="editProductName" required class="jewel-input">
             </div>
             <div class="mb-3">
-                <label>âœ¨ Category</label>
+                <label>✓¨ Category</label>
                 <select name="category" id="editProductCategory" required class="jewel-input" onchange="updateItemTypes('editProductCategory','editProductItemName','editCustomItem')">
                     <option value="">-- Select Category --</option>
-                    <optgroup label="ðŸ¥‡ Gold">
+                    <optgroup label="🥇 Gold">
                         <option value="Gold 22K">Gold 22K</option>
                         <option value="Gold 18K">Gold 18K</option>
                     </optgroup>
-                    <optgroup label="ðŸ¥ˆ Silver">
+                    <optgroup label="🥈 Silver">
                         <option value="Silver">Silver</option>
                     </optgroup>
-                    <optgroup label="ðŸ’Ž Stone">
+                    <optgroup label="💎 Stone">
                         <option value="Stone">Stone</option>
                     </optgroup>
-                    <optgroup label="ðŸ’Ž Diamond">
+                    <optgroup label="💎 Diamond">
                         <option value="Diamond">Diamond</option>
                     </optgroup>
                 </select>
@@ -1164,7 +1164,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 <input type="text" name="weight" id="editProductWeight" class="jewel-input">
             </div>
             <div class="mb-3">
-                <label>ðŸ’° Price (â‚¹)</label>
+                <label>💰 Price (₹)</label>
                 <input type="number" step="0.01" name="price" id="editProductPrice" required class="jewel-input">
             </div>
             <div class="mb-4">
@@ -1265,7 +1265,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
         itemSel.innerHTML = '<option value="">-- Select Item Type --</option>';
 
-        // Do NOT auto-fill product name â€” admin must type it manually
+        // Do NOT auto-fill product name — admin must type it manually
 
         itemsByCategory[cat].forEach(function(item) {
             const opt = document.createElement('option');

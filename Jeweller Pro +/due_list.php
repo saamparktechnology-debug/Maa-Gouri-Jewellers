@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'recei
 
     echo json_encode([
         'success'          => (bool)$upd,
-        'message'          => 'Payment of â‚¹' . number_format($amount_paid, 2) . ' received (' . $mode . ') successfully!',
+        'message'          => 'Payment of ₹' . number_format($amount_paid, 2) . ' received (' . $mode . ') successfully!',
         'id'               => $id,
         'invoice_no'       => $invoice_no_val,
         'previous_balance' => $previous_balance,
@@ -260,13 +260,13 @@ function sendDueStatementEmail($conn, $id, $new_balance, $due_date) {
                                      LIMIT 1");
     $inv = $invRes ? mysqli_fetch_assoc($invRes) : null;
     if (!$inv) {
-        $result['message'] = 'Invoice not found â€” statement not sent.';
+        $result['message'] = 'Invoice not found — statement not sent.';
         return $result;
     }
 
     $email = trim($inv['customer_email']);
     if (empty($email)) {
-        $result['message'] = 'No email on file â€” statement not sent.';
+        $result['message'] = 'No email on file — statement not sent.';
         return $result;
     }
 
@@ -958,7 +958,7 @@ function filterDueTable(query) {
         <h2 class="text-2xl sm:text-3xl font-bold" style="color:#800020;font-family:'Poppins',serif;">
             <i class="fas fa-list mr-2" style="color:#d68b16;"></i> Customers with Due Amounts
         </h2>
-        <p>Pending invoices â€” update amount or due date, then save. Send email reminders directly.</p>
+        <p>Pending invoices — update amount or due date, then save. Send email reminders directly.</p>
     </div>
 
     <!-- Navigation & Search Bar -->
@@ -1006,7 +1006,7 @@ function filterDueTable(query) {
                 <th style="width:115px">Phone</th>
                 <th style="width:155px">Email</th>
                 <th>Items</th>
-                <th style="width:130px">Due Amount (â‚¹)</th>
+                <th style="width:130px">Due Amount (₹)</th>
                 <th style="width:135px">Due Date</th>
                 <th style="width:280px;text-align:center;">Actions</th>
             </tr>
@@ -1031,24 +1031,24 @@ function filterDueTable(query) {
             <!-- Email -->
             <td>
                 <span class="email-text" title="<?php echo htmlspecialchars($r['customer_email']); ?>">
-                    <?php echo $r['customer_email'] ? htmlspecialchars($r['customer_email']) : '<span style="color:#d1d5db">â€”</span>'; ?>
+                    <?php echo $r['customer_email'] ? htmlspecialchars($r['customer_email']) : '<span style="color:#d1d5db">—</span>'; ?>
                 </span>
             </td>
 
             <!-- Items -->
             <td>
                 <div class="items-cell" title="<?php echo htmlspecialchars($r['items']); ?>">
-                    <?php echo htmlspecialchars($r['items'] ?: 'â€”'); ?>
+                    <?php echo htmlspecialchars($r['items'] ?: '—'); ?>
                 </div>
             </td>
 
             <!-- Due Amount (READ-ONLY, red display) -->
             <td>
-                <span class="due-amount-label">Due (â‚¹)</span>
+                <span class="due-amount-label">Due (₹)</span>
                 <span class="due-amount-display due-amount-input"
                       data-id="<?php echo intval($r['id']); ?>"
                       data-balance="<?php echo floatval($r['balance_amount']); ?>">
-                    â‚¹<?php echo number_format((float)$r['balance_amount'], 2); ?>
+                    ₹<?php echo number_format((float)$r['balance_amount'], 2); ?>
                 </span>
             </td>
 
@@ -1132,19 +1132,19 @@ function sendWhatsAppReminder(name, mobile, invoiceNo, due, total) {
         // Fully paid
         msg = 'ðŸ™ Dear ' + name + ',';
         msg += '\n\nThank you for your *complete payment* for Invoice *' + invoiceNo + '*.';
-        msg += '\nðŸ’° Total Paid: â‚¹' + total.toFixed(2);
-        msg += '\nâœ… Your account is fully cleared.';
-        msg += '\n\nThank you for trusting *MAA GOURI JEWELLERS*! ðŸŒŸ\nðŸ“ž +91-8617536679';
+        msg += '\n💰 Total Paid: ₹' + total.toFixed(2);
+        msg += '\n✓… Your account is fully cleared.';
+        msg += '\n\nThank you for trusting *MAA GOURI JEWELLERS*! ðŸŒŸ\n📞 +91-8617536679';
     } else {
         // Part paid / still due
         var paid = total - due;
         msg = 'ðŸ™ Dear ' + name + ',';
         msg += '\n\nThis is a gentle reminder regarding your pending due for Invoice *' + invoiceNo + '*.';
-        msg += '\n\nðŸ’³ Invoice Total: â‚¹' + total.toFixed(2);
-        msg += '\nâœ… Amount Paid: â‚¹' + paid.toFixed(2);
-        msg += '\nðŸ”´ *Remaining Due: â‚¹' + due.toFixed(2) + '*';
+        msg += '\n\nðŸ’³ Invoice Total: ₹' + total.toFixed(2);
+        msg += '\n✓… Amount Paid: ₹' + paid.toFixed(2);
+        msg += '\nðŸ”´ *Remaining Due: ₹' + due.toFixed(2) + '*';
         msg += '\n\nKindly clear the pending amount at your earliest convenience.';
-        msg += '\n\nThank you,\n*MAA GOURI JEWELLERS*\nðŸ“ž +91-8617536679';
+        msg += '\n\nThank you,\n*MAA GOURI JEWELLERS*\n📞 +91-8617536679';
     }
 
     var url = 'https://wa.me/' + cleaned + '?text=' + encodeURIComponent(msg);
@@ -1190,12 +1190,12 @@ function openHistoryModal(invoiceId, customerName) {
             var receiptUrl = 'view_pdf.php?invoice_no=' + encodeURIComponent(row.invoice_no) + '&receipt=1' + (row.history_id ? '&history_id=' + row.history_id : '');
             html += '<tr>' +
                 '<td style="padding:10px;border-bottom:1px solid #e5e7eb;">' + row.payment_date + '</td>' +
-                '<td style="padding:10px;border-bottom:1px solid #e5e7eb;color:#059669;font-weight:700;">â‚¹' + parseFloat(row.amount_paid).toFixed(2) + '</td>' +
-                '<td style="padding:10px;border-bottom:1px solid #e5e7eb;">â‚¹' + parseFloat(row.total_amount_paid || 0).toFixed(2) + '</td>' +
-                '<td style="padding:10px;border-bottom:1px solid #e5e7eb;color:#b91c1c;">â‚¹' + parseFloat(row.previous_balance).toFixed(2) + '</td>' +
-                '<td style="padding:10px;border-bottom:1px solid #e5e7eb;font-weight:700;">â‚¹' + parseFloat(row.new_balance).toFixed(2) + '</td>' +
+                '<td style="padding:10px;border-bottom:1px solid #e5e7eb;color:#059669;font-weight:700;">₹' + parseFloat(row.amount_paid).toFixed(2) + '</td>' +
+                '<td style="padding:10px;border-bottom:1px solid #e5e7eb;">₹' + parseFloat(row.total_amount_paid || 0).toFixed(2) + '</td>' +
+                '<td style="padding:10px;border-bottom:1px solid #e5e7eb;color:#b91c1c;">₹' + parseFloat(row.previous_balance).toFixed(2) + '</td>' +
+                '<td style="padding:10px;border-bottom:1px solid #e5e7eb;font-weight:700;">₹' + parseFloat(row.new_balance).toFixed(2) + '</td>' +
                 '<td style="padding:10px;border-bottom:1px solid #e5e7eb;text-align:center;">' +
-                '<a href="' + receiptUrl + '" target="_blank" style="background:linear-gradient(135deg,#059669,#047857);color:#fff;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:bold;text-decoration:none;display:inline-block;box-shadow:0 2px 6px rgba(5,150,105,0.3);">ðŸ§¾ Print Receipt</a>' +
+                '<a href="' + receiptUrl + '" target="_blank" style="background:linear-gradient(135deg,#059669,#047857);color:#fff;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:bold;text-decoration:none;display:inline-block;box-shadow:0 2px 6px rgba(5,150,105,0.3);">🧾 Print Receipt</a>' +
                 '</td>' +
                 '</tr>';
         });
@@ -1218,8 +1218,8 @@ function openReceiveModal(id, invoiceNo, customerName, totalAmt, currentDue, cur
     document.getElementById('rcvRawDue').value = currentDue;
     document.getElementById('rcvCustomerName').textContent = customerName;
     document.getElementById('rcvInvoiceNo').textContent = 'Inv: ' + invoiceNo;
-    document.getElementById('rcvTotalAmt').textContent = 'â‚¹' + parseFloat(totalAmt).toFixed(2);
-    document.getElementById('rcvCurrentDue').textContent = 'â‚¹' + parseFloat(currentDue).toFixed(2);
+    document.getElementById('rcvTotalAmt').textContent = '₹' + parseFloat(totalAmt).toFixed(2);
+    document.getElementById('rcvCurrentDue').textContent = '₹' + parseFloat(currentDue).toFixed(2);
     
     const input = document.getElementById('rcvAmountInput');
     input.value = currentDue;
@@ -1255,12 +1255,12 @@ function calcReceivePreview() {
     const box  = document.getElementById('rcvPendingBox');
     
     if (rcvAmt >= rawDue && rawDue > 0) {
-        disp.textContent = 'â‚¹0.00 (Fully Cleared! âœ…)';
+        disp.textContent = '₹0.00 (Fully Cleared! ✓…)';
         disp.style.color = '#15803d';
         box.style.background = '#f0fdf4';
         box.style.borderColor = '#86efac';
     } else {
-        disp.textContent = 'â‚¹' + pending.toFixed(2);
+        disp.textContent = '₹' + pending.toFixed(2);
         disp.style.color = '#b91c1c';
         box.style.background = '#f8fafc';
         box.style.borderColor = '#94a3b8';
@@ -1299,7 +1299,7 @@ function submitReceivePayment() {
     .then(res => {
         if (res.success) {
             closeReceiveModal();
-            showToast('âœ… Payment received (â‚¹' + amt.toFixed(2) + ' ' + mode + ')!');
+            showToast('✓… Payment received (₹' + amt.toFixed(2) + ' ' + mode + ')!');
             
             // Open printable invoice / payment receipt PDF (uses invoice_no to avoid "Invoice number missing" error)
             var printUrl = 'view_pdf.php?invoice_no=' + encodeURIComponent(res.invoice_no) + '&receipt=1&history_id=' + res.history_id;
@@ -1316,7 +1316,7 @@ function submitReceivePayment() {
                         setTimeout(function() { row.remove(); }, 600);
                     }
                 } else {
-                    rowDisplay.textContent = 'â‚¹' + parseFloat(res.new_balance).toFixed(2);
+                    rowDisplay.textContent = '₹' + parseFloat(res.new_balance).toFixed(2);
                     rowDisplay.dataset.balance = res.new_balance;
                     
                     // Update due date input in table row
@@ -1346,7 +1346,7 @@ function submitReceivePayment() {
     <div style="background:#fff;border-radius:12px;max-width:720px;width:100%;max-height:calc(100vh - 48px);box-shadow:0 18px 50px rgba(0,0,0,0.18);overflow:hidden;">
         <div style="padding:18px 22px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;">
             <h2 id="historyModalTitle" style="font-size:18px;margin:0;color:#111827;">History</h2>
-            <button type="button" onclick="closeHistoryModal()" style="border:none;background:none;font-size:18px;color:#6b7280;cursor:pointer;">âœ•</button>
+            <button type="button" onclick="closeHistoryModal()" style="border:none;background:none;font-size:18px;color:#6b7280;cursor:pointer;">✓•</button>
         </div>
         <div id="historyModalBody" style="max-height:70vh;overflow:auto;padding:18px 22px;">Loading historyâ€¦</div>
     </div>
@@ -1359,7 +1359,7 @@ function submitReceivePayment() {
             <div style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;">
                 <i class="fas fa-hand-holding-usd"></i> Receive Due Payment
             </div>
-            <button onclick="closeReceiveModal()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;">âœ•</button>
+            <button onclick="closeReceiveModal()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;">✓•</button>
         </div>
         <div style="padding:20px;display:flex;flex-direction:column;gap:14px;">
             <!-- Customer & Inv Card -->
@@ -1369,8 +1369,8 @@ function submitReceivePayment() {
                     <span style="font-weight:700;color:#111;" id="rcvInvoiceNo">INV-1001</span>
                 </div>
                 <div style="display:flex;justify-content:space-between;color:#64748b;font-size:11px;">
-                    <span>Total Invoice: <strong id="rcvTotalAmt">â‚¹0.00</strong></span>
-                    <span>Current Due: <strong style="color:#b91c1c;" id="rcvCurrentDue">â‚¹0.00</strong></span>
+                    <span>Total Invoice: <strong id="rcvTotalAmt">₹0.00</strong></span>
+                    <span>Current Due: <strong style="color:#b91c1c;" id="rcvCurrentDue">₹0.00</strong></span>
                 </div>
             </div>
 
@@ -1379,7 +1379,7 @@ function submitReceivePayment() {
 
             <!-- Amount Receiving Now -->
             <div>
-                <label style="font-size:11px;font-weight:700;color:#7a4e0a;display:block;margin-bottom:4px;">Amount Receiving Now (â‚¹) *</label>
+                <label style="font-size:11px;font-weight:700;color:#7a4e0a;display:block;margin-bottom:4px;">Amount Receiving Now (₹) *</label>
                 <input type="number" step="0.01" min="1" id="rcvAmountInput" class="inline-input" placeholder="Enter amount to receive..." oninput="calcReceivePreview()" style="font-size:15px;font-weight:700;padding:10px;border-color:#d68b16;">
             </div>
 
@@ -1393,7 +1393,7 @@ function submitReceivePayment() {
                     </label>
                     <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;cursor:pointer;background:#fff;" id="lblModeUpi">
                         <input type="radio" name="rcv_mode" value="UPI" onclick="selectRcvMode('UPI')">
-                        <span style="font-size:12px;font-weight:700;color:#800020;">ðŸ“² UPI / Digital</span>
+                        <span style="font-size:12px;font-weight:700;color:#800020;">📱 UPI / Digital</span>
                     </label>
                 </div>
             </div>
@@ -1407,7 +1407,7 @@ function submitReceivePayment() {
             <!-- Remaining Pending Due Preview -->
             <div id="rcvPendingBox" style="background:#f8fafc;border:1px dashed #94a3b8;border-radius:10px;padding:10px 14px;font-size:12px;display:flex;justify-content:space-between;align-items:center;">
                 <span style="color:#475569;font-weight:600;">Remaining Pending Due:</span>
-                <span style="font-size:14px;font-weight:800;color:#b91c1c;" id="rcvPendingDisplay">â‚¹0.00</span>
+                <span style="font-size:14px;font-weight:800;color:#b91c1c;" id="rcvPendingDisplay">₹0.00</span>
             </div>
 
             <!-- Submit Action -->
@@ -1440,10 +1440,10 @@ function submitReceivePayment() {
 
     if (!faLoaded()) {
         var map = {
-            'fa-user': 'ðŸ‘¤', 'fa-user-circle':'ðŸ‘¤', 'fa-sign-out-alt':'ðŸ”“', 'fa-sign-in-alt':'ðŸ”',
-            'fa-list':'ðŸ“‹', 'fa-arrow-left':'â†', 'fa-check-circle':'âœ…', 'fa-save':'ðŸ’¾',
-            'fa-trash-alt':'ðŸ—‘ï¸', 'fa-spinner':'â³', 'fa-check':'âœ“', 'fa-chart-bar':'ðŸ“Š',
-            'fa-receipt':'ðŸ§¾','fa-chart-line':'ðŸ“ˆ','fa-boxes':'ðŸ“¦','fa-users':'ðŸ‘¥','fa-gem':'ðŸ’Ž',
+            'fa-user': '👤', 'fa-user-circle':'👤', 'fa-sign-out-alt':'ðŸ”“', 'fa-sign-in-alt':'ðŸ”',
+            'fa-list':'📋', 'fa-arrow-left':'â†', 'fa-check-circle':'✓…', 'fa-save':'ðŸ’¾',
+            'fa-trash-alt':'ðŸ—‘ï¸', 'fa-spinner':'â³', 'fa-check':'✓“', 'fa-chart-bar':'📊',
+            'fa-receipt':'🧾','fa-chart-line':'📈','fa-boxes':'ðŸ“¦','fa-users':'ðŸ‘¥','fa-gem':'💎',
             'fa-book':'ðŸ“–','fa-weight-hanging':'âš–ï¸','fa-coins':'ðŸª™','fa-search':'ðŸ”','fa-plus-circle':'âž•'
         };
 

@@ -160,7 +160,7 @@ if ($is_receipt) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title><?php echo $doc_title; ?> â€” <?php echo htmlspecialchars($invoice_no); ?></title>
+<title><?php echo $doc_title; ?> — <?php echo htmlspecialchars($invoice_no); ?></title>
 <link rel="icon" type="image/png" href="logo.png">
 <link rel="shortcut icon" type="image/png" href="logo.png">
 <style>
@@ -288,7 +288,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
 <div class="print-actions">
     <div style="display:flex;gap:10px;">
         <a href="billing.php" class="btn-back">â† Back to Billing</a>
-        <a href="reports.php" class="btn-back">ðŸ“Š Reports</a>
+        <a href="reports.php" class="btn-back">📊 Reports</a>
     </div>
     <button onclick="window.print()" class="btn-print">ðŸ–¨ï¸ Print / Download PDF (A4)</button>
 </div>
@@ -301,7 +301,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
 
     <div class="invoice-content">
         <?php if($is_receipt): ?>
-            <!-- ==================== ðŸ§¾ DUE PAYMENT RECEIPT TEMPLATE ==================== -->
+            <!-- ==================== 🧾 DUE PAYMENT RECEIPT TEMPLATE ==================== -->
             <div>
                 <!-- Top Header -->
                 <div class="top-header">
@@ -315,7 +315,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                     </div>
                     <div class="header-right">
                         <div class="tax-invoice-tag" style="color:#059669;font-size:17px;">PAYMENT RECEIPT</div>
-                        <span class="payment-status-pill pill-paid">âœ“ PAYMENT RECEIVED</span>
+                        <span class="payment-status-pill pill-paid">✓“ PAYMENT RECEIVED</span>
                     </div>
                 </div>
 
@@ -351,7 +351,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                         <?php endif; ?>
                     </div>
                     <div class="bill-to-right">
-                        ðŸ“ž Ph No: <strong>+91-<?php echo htmlspecialchars($inv['customer_mobile'] ?? 'â€”'); ?></strong><br>
+                        📞 Ph No: <strong>+91-<?php echo htmlspecialchars($inv['customer_mobile'] ?? '—'); ?></strong><br>
                         <?php if(!empty($inv['customer_gstin'])): ?>
                         ðŸ›ï¸ GSTIN: <strong><?php echo htmlspecialchars($inv['customer_gstin']); ?></strong><br>
                         <?php endif; ?>
@@ -363,25 +363,25 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                     <thead>
                         <tr>
                             <th>Payment Particulars / Description</th>
-                            <th class="right" style="width:160px;">Amount (â‚¹)</th>
+                            <th class="right" style="width:160px;">Amount (₹)</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
                             <td>Original <?php echo $is_gst ? 'Invoice' : 'Cash Memo'; ?> Total Amount (Ref: <strong><?php echo htmlspecialchars($invoice_no); ?></strong>)</td>
-                            <td class="right">â‚¹<?php echo number_format($inv['total_amount'], 2); ?></td>
+                            <td class="right">₹<?php echo number_format($inv['total_amount'], 2); ?></td>
                         </tr>
                         <tr>
                             <td>Previous Total Payments Received</td>
-                            <td class="right">â‚¹<?php echo number_format($rec_prev_paid, 2); ?></td>
+                            <td class="right">₹<?php echo number_format($rec_prev_paid, 2); ?></td>
                         </tr>
                         <tr>
                             <td>Outstanding Due Balance Before This Payment</td>
-                            <td class="right" style="color:#b91c1c;font-weight:700;">â‚¹<?php echo number_format($rec_prev_balance, 2); ?></td>
+                            <td class="right" style="color:#b91c1c;font-weight:700;">₹<?php echo number_format($rec_prev_balance, 2); ?></td>
                         </tr>
                         <tr style="background:rgba(209,250,229,0.7) !important;font-weight:bold;">
-                            <td style="color:#065f46;font-size:13px;">âœ” PAYMENT RECEIVED NOW (Date: <?php echo $rec_payment_date; ?>)</td>
-                            <td class="right" style="color:#065f46;font-size:16px;font-weight:800;">â‚¹<?php echo number_format($rec_paid_amount, 2); ?></td>
+                            <td style="color:#065f46;font-size:13px;">✓” PAYMENT RECEIVED NOW (Date: <?php echo $rec_payment_date; ?>)</td>
+                            <td class="right" style="color:#065f46;font-size:16px;font-weight:800;">₹<?php echo number_format($rec_paid_amount, 2); ?></td>
                         </tr>
                         <tr class="subtotal-row">
                             <td style="font-size:12.5px;color:<?php echo $rec_new_balance > 0 ? '#b91c1c' : '#065f46'; ?>;">
@@ -390,7 +390,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                                     <br><span style="font-size:10.5px;font-weight:normal;color:#b91c1c;">ðŸ—“ï¸ Next Payment Due Date: <strong><?php echo $next_due_date_display; ?></strong></span>
                                 <?php endif; ?>
                             </td>
-                            <td class="right" style="font-size:16px;font-weight:800;color:<?php echo $rec_new_balance > 0 ? '#b91c1c' : '#065f46'; ?>;">â‚¹<?php echo number_format($rec_new_balance, 2); ?></td>
+                            <td class="right" style="font-size:16px;font-weight:800;color:<?php echo $rec_new_balance > 0 ? '#b91c1c' : '#065f46'; ?>;">₹<?php echo number_format($rec_new_balance, 2); ?></td>
                         </tr>
                     </tbody>
                 </table>
@@ -441,7 +441,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                         <span class="payment-status-pill <?php echo 'pill-'.$inv['payment_status']; ?>">
                             <?php
                             $ps = $inv['payment_status'];
-                            echo ($ps==='paid') ? 'âœ“ PAID' : (($ps==='part') ? 'PART PAID' : (($ps==='unpaid') ? 'UNPAID' : strtoupper($ps)));
+                            echo ($ps==='paid') ? '✓“ PAID' : (($ps==='part') ? 'PART PAID' : (($ps==='unpaid') ? 'UNPAID' : strtoupper($ps)));
                             ?>
                         </span>
                     </div>
@@ -459,7 +459,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                     </div>
                     <div class="meta-item">
                         <span class="meta-label"><?php echo ($current_balance > 0) ? 'Next Due Date' : 'Due Date'; ?></span>
-                        <span class="meta-value" style="<?php echo ($current_balance > 0) ? 'color:#b91c1c;' : ''; ?>"><?php echo !empty($next_due_date_display) ? $next_due_date_display : ($due_date ?: 'â€”'); ?></span>
+                        <span class="meta-value" style="<?php echo ($current_balance > 0) ? 'color:#b91c1c;' : ''; ?>"><?php echo !empty($next_due_date_display) ? $next_due_date_display : ($due_date ?: '—'); ?></span>
                     </div>
                 </div>
 
@@ -473,7 +473,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                         <?php endif; ?>
                     </div>
                     <div class="bill-to-right">
-                        ðŸ“ž Ph No: <strong>+91-<?php echo htmlspecialchars($inv['customer_mobile'] ?? 'â€”'); ?></strong><br>
+                        📞 Ph No: <strong>+91-<?php echo htmlspecialchars($inv['customer_mobile'] ?? '—'); ?></strong><br>
                         <?php if(!empty($inv['customer_gstin'])): ?>
                         ðŸ›ï¸ GSTIN: <strong><?php echo htmlspecialchars($inv['customer_gstin']); ?></strong><br>
                         <?php endif; ?>
@@ -495,9 +495,9 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                             <th style="width:50px" class="center">Qty</th>
                             <th style="width:75px" class="right">Gross Wt</th>
                             <th style="width:75px" class="right">Net Wt</th>
-                            <th style="width:90px" class="right">Rate (â‚¹/g)</th>
+                            <th style="width:90px" class="right">Rate (₹/g)</th>
                             <th style="width:70px" class="right">Tax</th>
-                            <th style="width:105px" class="right">Total (â‚¹)</th>
+                            <th style="width:105px" class="right">Total (₹)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -549,21 +549,21 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                                 $it_mc_amt = floatval($it['making_charge'] ?? 0);
                                 $it_mc_pct = floatval($it['making_charge_pct'] ?? 0);
                                 if ($it_mc_amt > 0): ?>
-                                <div class="item-sub" style="color:#059669;font-weight:600;">Making Charge: â‚¹<?php echo number_format($it_mc_amt, 2); ?><?php echo $it_mc_pct > 0 ? ' ('.number_format($it_mc_pct, 1).'%)' : ''; ?></div>
+                                <div class="item-sub" style="color:#059669;font-weight:600;">Making Charge: ₹<?php echo number_format($it_mc_amt, 2); ?><?php echo $it_mc_pct > 0 ? ' ('.number_format($it_mc_pct, 1).'%)' : ''; ?></div>
                                 <?php endif; ?>
                             </td>
                             <td class="center"><strong><?php echo $item_pcs; ?> Pcs</strong></td>
-                            <td class="right"><strong><?php echo ($gross_wt > 0) ? number_format($gross_wt, 3).' g' : 'â€”'; ?></strong></td>
-                            <td class="right"><strong><?php echo ($net_wt > 0) ? number_format($net_wt, 3).' g' : 'â€”'; ?></strong></td>
-                            <td class="right">â‚¹<?php echo number_format($rate, 2); ?></td>
+                            <td class="right"><strong><?php echo ($gross_wt > 0) ? number_format($gross_wt, 3).' g' : '—'; ?></strong></td>
+                            <td class="right"><strong><?php echo ($net_wt > 0) ? number_format($net_wt, 3).' g' : '—'; ?></strong></td>
+                            <td class="right">₹<?php echo number_format($rate, 2); ?></td>
                             <td class="right">
                                 <?php if($is_gst && $tax_amt > 0): ?>
-                                â‚¹<?php echo number_format($tax_amt, 2); ?><br><span style="font-size:9px;color:#64748b;">(<?php echo $item_tax_rate; ?>%)</span>
+                                ₹<?php echo number_format($tax_amt, 2); ?><br><span style="font-size:9px;color:#64748b;">(<?php echo $item_tax_rate; ?>%)</span>
                                 <?php else: ?>
                                 <span style="color:#94a3b8;">0%</span>
                                 <?php endif; ?>
                             </td>
-                            <td class="right"><strong>â‚¹<?php echo number_format($amt, 2); ?></strong></td>
+                            <td class="right"><strong>₹<?php echo number_format($amt, 2); ?></strong></td>
                         </tr>
                         <?php endforeach; ?>
                         <?php endif; ?>
@@ -575,8 +575,8 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                             <td class="right"><?php echo number_format($total_gross_wt, 3); ?> g</td>
                             <td class="right"><?php echo number_format($total_net_wt, 3); ?> g</td>
                             <td></td>
-                            <td class="right">â‚¹<?php echo number_format($is_gst ? $gst_total : 0, 2); ?></td>
-                            <td class="right">â‚¹<?php echo number_format($subtotal, 2); ?></td>
+                            <td class="right">₹<?php echo number_format($is_gst ? $gst_total : 0, 2); ?></td>
+                            <td class="right">₹<?php echo number_format($subtotal, 2); ?></td>
                         </tr>
                     </tbody>
                 </table>
@@ -601,53 +601,53 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                         <div class="calc-card">
                             <div class="calc-line">
                                 <span>Taxable Amount</span>
-                                <span>â‚¹<?php echo number_format($subtotal, 2); ?></span>
+                                <span>₹<?php echo number_format($subtotal, 2); ?></span>
                             </div>
 
                             <?php if($is_gst): ?>
                             <div class="calc-line">
                                 <span>CGST (<?php echo $cgst_rate; ?>%)</span>
-                                <span>â‚¹<?php echo number_format($cgst_amount, 2); ?></span>
+                                <span>₹<?php echo number_format($cgst_amount, 2); ?></span>
                             </div>
 
                             <div class="calc-line">
                                 <span>SGST (<?php echo $sgst_rate; ?>%)</span>
-                                <span>â‚¹<?php echo number_format($sgst_amount, 2); ?></span>
+                                <span>₹<?php echo number_format($sgst_amount, 2); ?></span>
                             </div>
                             <?php endif; ?>
 
                             <?php if($discount > 0): ?>
                             <div class="calc-line" style="color:#b91c1c;">
                                 <span>Discount</span>
-                                <span>(-) â‚¹<?php echo number_format($discount, 2); ?></span>
+                                <span>(-) ₹<?php echo number_format($discount, 2); ?></span>
                             </div>
                             <?php endif; ?>
 
                             <?php if($old_gold > 0): ?>
                             <div class="calc-line" style="color:#dc2626;font-weight:600;">
                                 <span>Less: Old Gold Return / Exchange</span>
-                                <span>(-) â‚¹<?php echo number_format($old_gold, 2); ?></span>
+                                <span>(-) ₹<?php echo number_format($old_gold, 2); ?></span>
                             </div>
                             <?php endif; ?>
 
                             <div class="calc-total-box">
                                 <span class="calc-total-label">Grand Total (Net Payable)</span>
-                                <span class="calc-total-val">â‚¹<?php echo number_format($total, 2); ?></span>
+                                <span class="calc-total-val">₹<?php echo number_format($total, 2); ?></span>
                             </div>
 
                             <div class="calc-line" style="margin-top:2px;">
                                 <span>Received Amount</span>
-                                <span style="color:#15803d;font-weight:700;">â‚¹<?php echo number_format($paid, 2); ?></span>
+                                <span style="color:#15803d;font-weight:700;">₹<?php echo number_format($paid, 2); ?></span>
                             </div>
 
                             <div class="calc-line">
                                 <span>Previous Balance</span>
-                                <span style="color:#64748b;font-weight:600;">â‚¹<?php echo number_format($prev_balance, 2); ?></span>
+                                <span style="color:#64748b;font-weight:600;">₹<?php echo number_format($prev_balance, 2); ?></span>
                             </div>
 
                             <div class="calc-line" style="border-top:1px dashed #cbd5e1;padding-top:4px;margin-top:2px;">
                                 <span>Current Balance (Total Due)</span>
-                                <span style="color:<?php echo $current_balance > 0 ? '#b91c1c' : '#15803d'; ?>;font-weight:700;">â‚¹<?php echo number_format($current_balance, 2); ?></span>
+                                <span style="color:<?php echo $current_balance > 0 ? '#b91c1c' : '#15803d'; ?>;font-weight:700;">₹<?php echo number_format($current_balance, 2); ?></span>
                             </div>
 
                             <?php if($current_balance > 0 && !empty($next_due_date_display)): ?>

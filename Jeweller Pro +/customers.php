@@ -72,7 +72,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_customer'])) {
     }
 
     if(mysqli_query($conn, "INSERT INTO customers (name, mobile, email, address, gst_number, created_at) VALUES ('$name', '$mobile', '$email', '$address', '$gst', NOW())")) {
-        echo "<script>alert('âœ… Customer added successfully!'); window.location.href='customers.php';<\/script>";
+        echo "<script>alert('✓… Customer added successfully!'); window.location.href='customers.php';<\/script>";
         exit();
     } else {
         $error_msg = "Error adding customer: " . mysqli_error($conn);
@@ -89,7 +89,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_customer'])) {
     $gst     = mysqli_real_escape_string($conn, strtoupper(trim($_POST['gst'] ?? '')));
 
     if(mysqli_query($conn, "UPDATE customers SET name='$name', mobile='$mobile', email='$email', address='$address', gst_number='$gst' WHERE id=$id")) {
-        echo "<script>alert('âœ… Customer updated successfully!'); window.location.href='customers.php';</script>";
+        echo "<script>alert('✓… Customer updated successfully!'); window.location.href='customers.php';</script>";
         exit();
     } else {
         $error_msg = "Error updating customer: " . mysqli_error($conn);
@@ -467,10 +467,10 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(214,139,22,0.015) 3px,rgba(214,139,22,0.015) 4px);pointer-events:none;z-index:1;"></div>
 
     <!-- Corner ornaments -->
-    <!-- <div style="position:absolute;top:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite;">âœ¦</div>
-    <div style="position:absolute;top:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 1s;">âœ¦</div>
-    <div style="position:absolute;bottom:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 2s;">âœ¦</div>
-    <div style="position:absolute;bottom:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 3s;">âœ¦</div> -->
+    <!-- <div style="position:absolute;top:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite;">✓¦</div>
+    <div style="position:absolute;top:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 1s;">✓¦</div>
+    <div style="position:absolute;bottom:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 2s;">✓¦</div>
+    <div style="position:absolute;bottom:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 3s;">✓¦</div> -->
 
     <!-- Stars / sparkles container -->
     <div id="loaderStars" style="position:absolute;inset:0;pointer-events:none;z-index:2;"></div>
@@ -667,19 +667,19 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             <td class="text-sm font-semibold" style="color:#d68b16;">#<?php echo $customer['id']; ?></td>
                             <td>
                                 <div class="font-semibold" style="color:#800020;cursor:pointer;" onclick="openOrderHistory('<?php echo htmlspecialchars($mob, ENT_QUOTES); ?>', '<?php echo htmlspecialchars($customer['name'], ENT_QUOTES); ?>')">
-                                    ðŸ’Ž <span style="text-decoration:underline dotted;text-underline-offset:3px;"><?php echo htmlspecialchars($customer['name']); ?></span>
+                                    💎 <span style="text-decoration:underline dotted;text-underline-offset:3px;"><?php echo htmlspecialchars($customer['name']); ?></span>
                                     <i class="fas fa-receipt ml-1" style="font-size:10px;color:#d68b16;" title="View Orders"></i>
                                 </div>
                                 <?php if(!empty($customer['gst_number'])): ?>
                                     <div class="text-xs mt-0.5" style="color:#6d28d9;">ðŸ›ï¸ GST: <?php echo htmlspecialchars($customer['gst_number']); ?></div>
                                 <?php endif; ?>
                             </td>
-                            <td class="text-sm" style="color:#374151;">ðŸ“± <?php echo htmlspecialchars($mob); ?></td>
+                            <td class="text-sm" style="color:#374151;">📱 <?php echo htmlspecialchars($mob); ?></td>
                             <td class="text-sm hidden sm:table-cell" style="color:#6b7280;"><?php echo htmlspecialchars($customer['email'] ?? 'N/A'); ?></td>
                             <td class="text-sm" style="color:#374151;">ðŸ“… <?php echo date('d M Y', strtotime($customer['created_at'])); ?></td>
                             <td class="text-center">
                                 <div class="font-bold text-sm" style="color:#800020;"><?php echo $order_count; ?> orders</div>
-                                <div class="text-xs" style="color:#059669;">â‚¹<?php echo number_format($total_amt, 2); ?></div>
+                                <div class="text-xs" style="color:#059669;">₹<?php echo number_format($total_amt, 2); ?></div>
                                 <?php if($last_order): ?>
                                     <div class="text-xs" style="color:#9ca3af;">Last: <?php echo date('d M Y', strtotime($last_order)); ?></div>
                                 <?php endif; ?>
@@ -729,7 +729,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 <input type="text" name="name" required placeholder="Customer nameâ€¦" class="jewel-input">
             </div>
             <div class="mb-3">
-                <label>ðŸ“± Mobile Number <span style="color:#ef4444;">*</span></label>
+                <label>📱 Mobile Number <span style="color:#ef4444;">*</span></label>
                 <input type="tel" name="mobile" required placeholder="10-digit mobileâ€¦" class="jewel-input">
             </div>
             <div class="mb-3">
@@ -768,7 +768,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 <input type="text" name="name" id="editName" required class="jewel-input">
             </div>
             <div class="mb-3">
-                <label>ðŸ“± Mobile Number <span style="color:#ef4444;">*</span></label>
+                <label>📱 Mobile Number <span style="color:#ef4444;">*</span></label>
                 <input type="tel" name="mobile" id="editMobile" required class="jewel-input">
             </div>
             <div class="mb-3">
@@ -882,19 +882,19 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         <div style="display:flex;gap:0;flex-shrink:0;border-bottom:1px solid rgba(181,115,14,0.15);">
             <div style="flex:1;padding:12px 8px;text-align:center;border-right:1px solid rgba(181,115,14,0.15);">
                 <div style="font-size:9px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.8px;">Total Orders</div>
-                <div id="ohTotalOrders" style="font-size:18px;font-weight:800;color:#800020;margin-top:2px;">â€”</div>
+                <div id="ohTotalOrders" style="font-size:18px;font-weight:800;color:#800020;margin-top:2px;">—</div>
             </div>
             <div style="flex:1;padding:12px 8px;text-align:center;border-right:1px solid rgba(181,115,14,0.15);">
                 <div style="font-size:9px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.8px;">Total Spent</div>
-                <div id="ohTotalSpent" style="font-size:18px;font-weight:800;color:#059669;margin-top:2px;">â€”</div>
+                <div id="ohTotalSpent" style="font-size:18px;font-weight:800;color:#059669;margin-top:2px;">—</div>
             </div>
             <div style="flex:1;padding:12px 8px;text-align:center;border-right:1px solid rgba(181,115,14,0.15);">
                 <div style="font-size:9px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.8px;">Paid</div>
-                <div id="ohTotalPaid" style="font-size:18px;font-weight:800;color:#2563eb;margin-top:2px;">â€”</div>
+                <div id="ohTotalPaid" style="font-size:18px;font-weight:800;color:#2563eb;margin-top:2px;">—</div>
             </div>
             <div style="flex:1;padding:12px 8px;text-align:center;">
                 <div style="font-size:9px;color:#9ca3af;text-transform:uppercase;letter-spacing:0.8px;">Balance Due</div>
-                <div id="ohTotalBalance" style="font-size:18px;font-weight:800;color:#dc2626;margin-top:2px;">â€”</div>
+                <div id="ohTotalBalance" style="font-size:18px;font-weight:800;color:#dc2626;margin-top:2px;">—</div>
             </div>
         </div>
         <!-- Orders List -->
@@ -925,15 +925,15 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 <script>
 function openOrderHistory(mobile, name) {
     document.getElementById('orderHistoryModal').style.display = 'block';
-    document.getElementById('ohCustomerName').textContent = 'ðŸ’Ž ' + name;
-    document.getElementById('ohCustomerMobile').textContent = 'ðŸ“± ' + mobile;
+    document.getElementById('ohCustomerName').textContent = '💎 ' + name;
+    document.getElementById('ohCustomerMobile').textContent = '📱 ' + mobile;
     document.getElementById('ohLoading').style.display = 'block';
     document.getElementById('ohOrdersList').style.display = 'none';
     document.getElementById('ohEmpty').style.display = 'none';
-    document.getElementById('ohTotalOrders').textContent = 'â€”';
-    document.getElementById('ohTotalSpent').textContent = 'â€”';
-    document.getElementById('ohTotalPaid').textContent = 'â€”';
-    document.getElementById('ohTotalBalance').textContent = 'â€”';
+    document.getElementById('ohTotalOrders').textContent = '—';
+    document.getElementById('ohTotalSpent').textContent = '—';
+    document.getElementById('ohTotalPaid').textContent = '—';
+    document.getElementById('ohTotalBalance').textContent = '—';
     document.getElementById('ohSummaryBadge').textContent = '';
     document.body.style.overflow = 'hidden';
 
@@ -953,9 +953,9 @@ function openOrderHistory(mobile, name) {
                 totalBal   += parseFloat(o.balance_amount || 0);
             });
             document.getElementById('ohTotalOrders').textContent = data.orders.length;
-            document.getElementById('ohTotalSpent').textContent  = 'â‚¹' + totalSpent.toLocaleString('en-IN', {minimumFractionDigits:2});
-            document.getElementById('ohTotalPaid').textContent   = 'â‚¹' + totalPaid.toLocaleString('en-IN',  {minimumFractionDigits:2});
-            document.getElementById('ohTotalBalance').textContent = totalBal > 0 ? 'â‚¹' + totalBal.toLocaleString('en-IN', {minimumFractionDigits:2}) : 'â‚¹0.00';
+            document.getElementById('ohTotalSpent').textContent  = '₹' + totalSpent.toLocaleString('en-IN', {minimumFractionDigits:2});
+            document.getElementById('ohTotalPaid').textContent   = '₹' + totalPaid.toLocaleString('en-IN',  {minimumFractionDigits:2});
+            document.getElementById('ohTotalBalance').textContent = totalBal > 0 ? '₹' + totalBal.toLocaleString('en-IN', {minimumFractionDigits:2}) : '₹0.00';
             document.getElementById('ohSummaryBadge').textContent = data.orders.length + ' order' + (data.orders.length > 1 ? 's' : '');
             // Store for PDF
             window._ohData = { orders: data.orders, totalSpent, totalPaid, totalBal };
@@ -965,7 +965,7 @@ function openOrderHistory(mobile, name) {
             let html = '';
             data.orders.forEach(o => {
                 const statusClass = o.payment_status === 'paid' ? 'paid' : (o.payment_status === 'part' ? 'part' : 'unpaid');
-                const statusLabel = o.payment_status === 'paid' ? 'âœ… Paid' : (o.payment_status === 'part' ? 'âš ï¸ Part Paid' : 'âŒ Unpaid');
+                const statusLabel = o.payment_status === 'paid' ? '✓… Paid' : (o.payment_status === 'part' ? 'âš ï¸ Part Paid' : 'âŒ Unpaid');
                 const date = new Date(o.created_at).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'});
                 html += `<div class="oh-order-card">
                     <div class="oh-order-head">
@@ -991,8 +991,8 @@ function openOrderHistory(mobile, name) {
                                 ${it.hsn ? '<span style="color:#9ca3af;font-size:10px;margin-left:6px;">HSN: '+it.hsn+'</span>' : ''}
                             </div>
                             <div style="text-align:right;">
-                                <span style="color:#6b7280;font-size:11px;">${it.qty} gm &nbsp;@â‚¹${parseFloat(it.rate).toLocaleString('en-IN')}</span>
-                                <span style="font-weight:700;color:#059669;margin-left:10px;">â‚¹${parseFloat(it.total).toLocaleString('en-IN',{minimumFractionDigits:2})}</span>
+                                <span style="color:#6b7280;font-size:11px;">${it.qty} gm &nbsp;@₹${parseFloat(it.rate).toLocaleString('en-IN')}</span>
+                                <span style="font-weight:700;color:#059669;margin-left:10px;">₹${parseFloat(it.total).toLocaleString('en-IN',{minimumFractionDigits:2})}</span>
                             </div>
                         </div>`;
                     });
@@ -1002,8 +1002,8 @@ function openOrderHistory(mobile, name) {
                 html += `<div style="background:#f9f5eb;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px;font-size:12px;">
                     <span style="color:#6b7280;">ðŸ’³ ${o.payment_method || 'Cash'}</span>
                     <div style="display:flex;gap:16px;">
-                        <span style="color:#059669;font-weight:700;">Total: â‚¹${parseFloat(o.total_amount).toLocaleString('en-IN',{minimumFractionDigits:2})}</span>
-                        ${parseFloat(o.balance_amount) > 0 ? '<span style="color:#dc2626;font-weight:700;">Due: â‚¹'+parseFloat(o.balance_amount).toLocaleString('en-IN',{minimumFractionDigits:2})+'</span>' : ''}
+                        <span style="color:#059669;font-weight:700;">Total: ₹${parseFloat(o.total_amount).toLocaleString('en-IN',{minimumFractionDigits:2})}</span>
+                        ${parseFloat(o.balance_amount) > 0 ? '<span style="color:#dc2626;font-weight:700;">Due: ₹'+parseFloat(o.balance_amount).toLocaleString('en-IN',{minimumFractionDigits:2})+'</span>' : ''}
                     </div>
                 </div>`;
                 html += '</div>';
@@ -1032,8 +1032,8 @@ document.addEventListener('keydown', function(e) {
 function downloadStatementPDF() {
     const d = window._ohData;
     if(!d) return;
-    const name   = document.getElementById('ohCustomerName').textContent.replace('ðŸ’Ž ','').trim();
-    const mobile = document.getElementById('ohCustomerMobile').textContent.replace('ðŸ“± ','').trim();
+    const name   = document.getElementById('ohCustomerName').textContent.replace('💎 ','').trim();
+    const mobile = document.getElementById('ohCustomerMobile').textContent.replace('📱 ','').trim();
 
     // Use jsPDF (loaded below)
     const { jsPDF } = window.jspdf;
@@ -1106,7 +1106,7 @@ function downloadStatementPDF() {
     let rowIdx = 0;
     d.orders.forEach(o => {
         const date = new Date(o.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
-        const itemNames = (o.items||[]).map(it => it.desc).join(', ') || 'â€”';
+        const itemNames = (o.items||[]).map(it => it.desc).join(', ') || '—';
         const totalQty  = (o.items||[]).reduce((s, it) => s + parseFloat(it.qty||0), 0);
         const amt       = 'Rs.' + parseFloat(o.total_amount).toLocaleString('en-IN',{minimumFractionDigits:2});
         const status    = o.payment_status === 'paid' ? 'Paid' : (o.payment_status === 'part' ? 'Part Paid' : 'Unpaid');
@@ -1150,7 +1150,7 @@ function downloadStatementPDF() {
         itemLines.forEach((ln, li) => { doc.text(ln, cx + 1, lineStartY + li*4); });
         cx += colW[2];
         doc.setTextColor(80,80,80);
-        doc.text(totalQty > 0 ? totalQty.toFixed(3) : 'â€”', cx + colW[3]/2, cy, {align:'center'}); cx += colW[3];
+        doc.text(totalQty > 0 ? totalQty.toFixed(3) : '—', cx + colW[3]/2, cy, {align:'center'}); cx += colW[3];
         doc.setFont('helvetica','bold'); doc.setTextColor(5,100,60);
         doc.text(amt, cx + colW[4]/2, cy, {align:'center'}); cx += colW[4];
         doc.setTextColor(...statusColor);
