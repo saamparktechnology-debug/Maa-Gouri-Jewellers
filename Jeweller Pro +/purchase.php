@@ -434,7 +434,7 @@ nav.nav-gold span{color:#fff!important;}
         </div>
         <div>
             <label class="field-label">Invoice No <span class="req">*</span></label>
-            <input name="invoice_no" class="form-input" placeholder="LTC26-27/9" required>
+            <input name="invoice_no" class="form-input" placeholder="Invoice No." required>
         </div>
         <div>
             <label class="field-label">Invoice Date <span class="req">*</span></label>
@@ -442,7 +442,7 @@ nav.nav-gold span{color:#fff!important;}
         </div>
         <div>
             <label class="field-label">Reference No</label>
-            <input name="ref_no" class="form-input" placeholder="Ref. No.">
+            <input name="ref_no" class="form-input" placeholder="Reference No.">
         </div>
         <div>
             <label class="field-label">Reference Date</label>
@@ -467,35 +467,35 @@ nav.nav-gold span{color:#fff!important;}
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
             <label class="field-label">Supplier Name <span class="req">*</span></label>
-            <input name="supplier_name" class="form-input" placeholder="e.g. Laxmi Tonch Centre" required>
+            <input name="supplier_name" class="form-input" placeholder="Supplier Name" required>
         </div>
         <div>
             <label class="field-label">Mobile</label>
-            <input name="supplier_mobile" class="form-input" placeholder="8178973839">
+            <input name="supplier_mobile" class="form-input" placeholder="Mobile Number">
         </div>
         <div class="md:col-span-2">
             <label class="field-label">Address</label>
-            <input name="supplier_addr" class="form-input" placeholder="Vill+P.O., District, State, PIN">
+            <input name="supplier_addr" class="form-input" placeholder="Full Address">
         </div>
         <div>
             <label class="field-label">GSTIN</label>
-            <input name="supplier_gstin" class="form-input" placeholder="19IPSPM8896B1ZT" maxlength="15" style="text-transform:uppercase;">
+            <input name="supplier_gstin" class="form-input" placeholder="GSTIN" maxlength="15" style="text-transform:uppercase;">
         </div>
         <div>
             <label class="field-label">PAN</label>
-            <input name="supplier_pan" class="form-input" placeholder="IPSPM8896B" maxlength="10" style="text-transform:uppercase;">
+            <input name="supplier_pan" class="form-input" placeholder="PAN" maxlength="10" style="text-transform:uppercase;">
         </div>
         <div>
             <label class="field-label">State</label>
-            <input name="supplier_state" class="form-input" placeholder="West Bengal">
+            <input name="supplier_state" class="form-input" placeholder="State">
         </div>
         <div>
             <label class="field-label">State Code</label>
-            <input name="supplier_state_code" class="form-input" placeholder="19" maxlength="3">
+            <input name="supplier_state_code" class="form-input" placeholder="State Code" maxlength="3">
         </div>
         <div>
             <label class="field-label">Email</label>
-            <input type="email" name="supplier_email" class="form-input" placeholder="supplier@email.com">
+            <input type="email" name="supplier_email" class="form-input" placeholder="Email">
         </div>
     </div>
 </div>
@@ -510,7 +510,7 @@ nav.nav-gold span{color:#fff!important;}
         </div>
         <div>
             <label class="field-label">GSTIN</label>
-            <input name="buyer_gstin" class="form-input" placeholder="Our GSTIN" style="text-transform:uppercase;">
+            <input name="buyer_gstin" class="form-input" placeholder="Buyer GSTIN" style="text-transform:uppercase;">
         </div>
         <div class="md:col-span-2">
             <label class="field-label">Address</label>
@@ -518,7 +518,7 @@ nav.nav-gold span{color:#fff!important;}
         </div>
         <div>
             <label class="field-label">PAN</label>
-            <input name="buyer_pan" class="form-input" placeholder="Our PAN" style="text-transform:uppercase;">
+            <input name="buyer_pan" class="form-input" placeholder="Buyer PAN" style="text-transform:uppercase;">
         </div>
     </div>
 </div>
@@ -546,15 +546,15 @@ nav.nav-gold span{color:#fff!important;}
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div class="md:col-span-2">
             <label class="field-label">Description of Goods <span class="req">*</span></label>
-            <input name="description" id="desc_field" class="form-input" placeholder="e.g. Pour Gold / Silver Bar / Diamond">
+            <input name="description" id="desc_field" class="form-input" placeholder="Description of Goods">
         </div>
         <div>
             <label class="field-label">HUID Code <span style="color:#9ca3af;font-weight:400;">(Optional)</span></label>
-            <input type="text" name="huid_code" id="manualhuid" placeholder="e.g. F108D" class="form-input">
+            <input type="text" name="huid_code" id="manualhuid" placeholder="HUID Code" class="form-input">
         </div>
         <div>
             <label class="field-label">HSN / SAC Code</label>
-            <input name="hsn_sac" id="hsn_field" class="form-input" placeholder="71081200">
+            <input name="hsn_sac" id="hsn_field" class="form-input" placeholder="HSN / SAC Code">
         </div>
         <div>
             <label class="field-label">Unit</label>
@@ -567,11 +567,11 @@ nav.nav-gold span{color:#fff!important;}
         </div>
         <div>
             <label class="field-label">Quantity <span class="req">*</span></label>
-            <input type="number" name="qty" id="qty" class="form-input" placeholder="e.g. 30" step="0.0001" min="0">
+            <input type="number" name="qty" id="qty" class="form-input" placeholder="Quantity" step="0.0001" min="0">
         </div>
         <div>
             <label class="field-label">Rate per Unit (₹) <span class="req">*</span></label>
-            <input type="number" name="rate_per_unit" id="rate" class="form-input" placeholder="e.g. 15762.14" step="0.01" min="0">
+            <input type="number" name="rate_per_unit" id="rate" class="form-input" placeholder="Rate per Unit" step="0.01" min="0">
         </div>
         <div class="md:col-span-2">
             <label class="field-label">GST Rate for this Item</label>
