@@ -19,7 +19,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_income'])) {
     $invoice_no     = mysqli_real_escape_string($conn, $_POST['invoice_no'] ?? '');
     $created_by     = $_SESSION['user_id'];
     if(mysqli_query($conn, "INSERT INTO income (income_date, source, category, amount, description, payment_method, invoice_no, created_by) VALUES ('$income_date', '$source', '$category', $amount, '$description', '$payment_method', '$invoice_no', $created_by)")) {
-        $success_income = "✓… Income added successfully!";
+        $success_income = "✅ Income added successfully!";
     } else {
         $error_income = "âŒ Error: " . mysqli_error($conn);
     }
@@ -36,7 +36,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_expense'])) {
     $vendor_name    = mysqli_real_escape_string($conn, $_POST['vendor_name'] ?? '');
     $created_by     = $_SESSION['user_id'];
     if(mysqli_query($conn, "INSERT INTO expenses (expense_date, category, amount, description, payment_method, bill_no, vendor_name, created_by) VALUES ('$expense_date', '$category', $amount, '$description', '$payment_method', '$bill_no', '$vendor_name', $created_by)")) {
-        $success_expense = "✓… Expense added successfully!";
+        $success_expense = "✅ Expense added successfully!";
     } else {
         $error_expense = "âŒ Error: " . mysqli_error($conn);
     }
@@ -531,7 +531,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             <input type="date" name="income_date" value="<?php echo date('Y-m-d'); ?>" required class="jewel-input">
                         </div>
                         <div>
-                            <label class="field-label">ðŸ·ï¸ Source *</label>
+                            <label class="field-label">🏷️ Source *</label>
                             <input type="text" name="source" required placeholder="e.g. Customer Name" class="jewel-input">
                         </div>
                         <div>

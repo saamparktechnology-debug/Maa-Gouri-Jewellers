@@ -1148,7 +1148,7 @@ function submitPayment() {
     btn.textContent = 'Confirm Payment';
     if (data.success) {
       closePaymentModal();
-      showNotif('✓… ' + data.message, 'success');
+      showNotif('✅ ' + data.message, 'success');
       if (data.fully_paid) {
         const card = document.getElementById('duecard-' + currentPaymentData.invoice_no);
         if (card) {
@@ -1286,7 +1286,7 @@ function submitPayment() {
                                         <input type="text" id="gramStockSearch" placeholder="ðŸ” Search stock..." class="jewel-input w-full rounded-lg px-3 py-2 text-sm" oninput="filterGramStock(this.value)" autocomplete="off">
                                         <div id="gramStockSuggestions" class="autocomplete-suggestions hidden"></div>
                                     </div>
-                                    <button type="button" onclick="clearGramStockSearch()" class="px-3 py-2 rounded-lg text-sm bg-white border border-yellow-300 text-yellow-800">✓–</button>
+                                    <button type="button" onclick="clearGramStockSearch()" class="px-3 py-2 rounded-lg text-sm bg-white border border-yellow-300 text-yellow-800">↩</button>
                                 </div>
                                 <div class="mb-3">
                                     <label class="block mb-1 text-xs font-semibold text-yellow-800">Select Product</label>
@@ -2066,7 +2066,7 @@ function onGramItemTypeChange() {
     const stockQty = parseFloat(opt.dataset.stockQty) || 0;
 
     if (inStock && stockQty > 0) {
-        statusDiv.innerHTML = '<span class="px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800 border border-green-300">✓… In Stock (' + stockQty + ' pcs available in inventory)</span>';
+        statusDiv.innerHTML = '<span class="px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800 border border-green-300">✅ In Stock (' + stockQty + ' pcs available in inventory)</span>';
     } else {
         statusDiv.innerHTML = '<span class="px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800 border border-red-300">âŒ Out of Stock (0 items available in inventory)</span>';
     }
@@ -2331,7 +2331,7 @@ function submitGramItem() {
         document.getElementById('gramManualName').value = '';
     }
     document.getElementById('gramTotalPreviewRow').style.display = 'none';
-    showNotif('✓… Added Item: ' + name, 'success');
+    showNotif('✅ Added Item: ' + name, 'success');
 }
 
 // ==================== 📜¦ QTY FORM LOGIC ====================
@@ -2587,7 +2587,7 @@ function submitQtyItem() {
         document.getElementById('qtyManualName').value = '';
     }
     document.getElementById('qtyTotalPreviewRow').style.display = 'none';
-    showNotif('✓… Added Qty Item: ' + name, 'success');
+    showNotif('✅ Added Qty Item: ' + name, 'success');
 }
 
 function populateStockSelects() {

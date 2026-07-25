@@ -1098,13 +1098,13 @@ if($is_logged_in) {
                 </div>
                 <!-- Today's Purchases -->
                 <div class="dark-glass-card glass-purple text-center p-2.5 rounded-xl">
-                    <div class="text-lg mb-0.5">ðŸ·ï¸</div>
+                    <div class="text-lg mb-0.5">🏷️</div>
                     <div class="text-base font-bold" style="color:#c4b5fd;">₹<?php echo number_format($today_purchases, 0); ?></div>
                     <div class="text-[10px] font-semibold mt-0.5" style="color:rgba(255,255,255,0.85);">TODAY'S PURCHASES</div>
                 </div>
                 <!-- Outstanding Due -->
                 <div class="dark-glass-card glass-orange text-center p-2.5 rounded-xl">
-                    <div class="text-lg mb-0.5">â³</div>
+                    <div class="text-lg mb-0.5">⏳</div>
                     <div class="text-base font-bold" style="color:#fb923c;">₹<?php echo number_format($total_due, 0); ?></div>
                     <div class="text-[10px] font-semibold mt-0.5" style="color:rgba(255,255,255,0.85);">OUTSTANDING DUE</div>
                 </div>

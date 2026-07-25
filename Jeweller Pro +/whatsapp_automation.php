@@ -290,7 +290,7 @@ if($_SERVER['REQUEST_METHOD']=='POST' && isset($_POST['save_api_settings'])) {
     $reminder_days = intval($_POST['reminder_days']??3);
     mysqli_query($conn,"UPDATE whatsapp_settings SET status='inactive'");
     if(mysqli_query($conn,"INSERT INTO whatsapp_settings (api_type,api_url,api_token,instance_id,reminder_days,status) VALUES ('$api_type','$api_url','$api_token','$instance_id',$reminder_days,'active')"))
-        $api_success = "✓… API settings saved successfully!";
+        $api_success = "✅ API settings saved successfully!";
     else $api_error = "âŒ Error: ".mysqli_error($conn);
 }
 
@@ -324,14 +324,14 @@ if($_SERVER['REQUEST_METHOD']=='POST' && isset($_POST['send_single'])) {
             $amountFormatted  = number_format((float)$tpl_amount, 2);
             $logMsg = "[Template: payment_reminder_1] Hello $customer_name, Your payment of ₹$amountFormatted is due on $dueDateFormatted.";
             $result = sendWhatsAppTemplate($number, 'payment_reminder_1', 'en_US', [$customer_name, '₹'.$amountFormatted, $dueDateFormatted], $number, $conn);
-            if($result['success']) { logWhatsAppMessage($number,$customer_name,'single_template',$logMsg,'','','sent',json_encode($result),$conn); $single_success="✓… Template message sent to $number!<br><small>Whinta response: ".htmlspecialchars($result['response']??'')."</small>"; }
+            if($result['success']) { logWhatsAppMessage($number,$customer_name,'single_template',$logMsg,'','','sent',json_encode($result),$conn); $single_success="✅ Template message sent to $number!<br><small>Whinta response: ".htmlspecialchars($result['response']??'')."</small>"; }
             else { logWhatsAppMessage($number,$customer_name,'single_template',$logMsg,'','','failed',$result['error'],$conn); $single_error="âŒ Failed: ".$result['error']; }
         }
     }
     elseif(empty($message) && empty($media_file_path)) $single_error = "âŒ Please enter a message or select media!";
     else {
         $result = sendWhatsAppMessage($number, $message, $conn, $media_file_path, $media_type);
-        if($result['success']) { logWhatsAppMessage($number,$customer_name,'single',$message,$media_file_path,$media_file_name,'sent',json_encode($result),$conn); $single_success="✓… Message sent to $number!"; }
+        if($result['success']) { logWhatsAppMessage($number,$customer_name,'single',$message,$media_file_path,$media_file_name,'sent',json_encode($result),$conn); $single_success="✅ Message sent to $number!"; }
         else { logWhatsAppMessage($number,$customer_name,'single',$message,$media_file_path,$media_file_name,'failed',$result['error'],$conn); $single_error="âŒ Failed: ".$result['error']; }
     }
 }
@@ -365,7 +365,7 @@ if($_SERVER['REQUEST_METHOD']=='POST' && isset($_POST['send_bulk'])) {
                 else { $failed_count++; logWhatsAppMessage($c['mobile'],$c['name'],'bulk',$bulk_msg,$media_file_path,$media_file_name,'failed',$r['error'],$conn); }
             }
         }
-        $bulk_result="✓… Sent: $sent_count | âŒ Failed: $failed_count";
+        $bulk_result="✅ Sent: $sent_count | âŒ Failed: $failed_count";
     }
 }
 
@@ -402,7 +402,7 @@ if(isset($_GET['send_advance_reminders'])) {
         if($r['success']) { $sent_count++; logWhatsAppMessage($c['customer_mobile'],$c['customer_name'],'advance_reminder',$msg,'','','sent',json_encode($r),$conn); }
         else { $failed_count++; logWhatsAppMessage($c['customer_mobile'],$c['customer_name'],'advance_reminder',$msg,'','','failed',$r['error'],$conn); }
     }
-    $advance_reminder_result="✓… Reminders Sent: $sent_count | âŒ Failed: $failed_count";
+    $advance_reminder_result="✅ Reminders Sent: $sent_count | âŒ Failed: $failed_count";
 }
 
 $api_settings         = mysqli_fetch_assoc(mysqli_query($conn,"SELECT * FROM whatsapp_settings WHERE status='active' LIMIT 1"));
@@ -943,7 +943,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             <form method="POST" enctype="multipart/form-data">
                 <label class="field-label mb-1">📋 Select Customers</label>
                 <div class="flex gap-3 mb-2">
-                    <button type="button" class="btn-sm-link" style="color:#16a34a;" onclick="selectAll()">✓… Select All</button>
+                    <button type="button" class="btn-sm-link" style="color:#16a34a;" onclick="selectAll()">✅ Select All</button>
                     <button type="button" class="btn-sm-link" style="color:#dc2626;" onclick="deselectAll()">âŒ Deselect All</button>
                 </div>
                 <div class="customer-select-box mb-4">

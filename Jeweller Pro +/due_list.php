@@ -1133,7 +1133,7 @@ function sendWhatsAppReminder(name, mobile, invoiceNo, due, total) {
         msg = 'ðŸ™ Dear ' + name + ',';
         msg += '\n\nThank you for your *complete payment* for Invoice *' + invoiceNo + '*.';
         msg += '\n💰 Total Paid: ₹' + total.toFixed(2);
-        msg += '\n✓… Your account is fully cleared.';
+        msg += '\n✅ Your account is fully cleared.';
         msg += '\n\nThank you for trusting *MAA GOURI JEWELLERS*! 🌟\n📞 +91-8617536679';
     } else {
         // Part paid / still due
@@ -1141,7 +1141,7 @@ function sendWhatsAppReminder(name, mobile, invoiceNo, due, total) {
         msg = 'ðŸ™ Dear ' + name + ',';
         msg += '\n\nThis is a gentle reminder regarding your pending due for Invoice *' + invoiceNo + '*.';
         msg += '\n\n💳 Invoice Total: ₹' + total.toFixed(2);
-        msg += '\n✓… Amount Paid: ₹' + paid.toFixed(2);
+        msg += '\n✅ Amount Paid: ₹' + paid.toFixed(2);
         msg += '\n🔴 *Remaining Due: ₹' + due.toFixed(2) + '*';
         msg += '\n\nKindly clear the pending amount at your earliest convenience.';
         msg += '\n\nThank you,\n*MAA GOURI JEWELLERS*\n📞 +91-8617536679';
@@ -1255,7 +1255,7 @@ function calcReceivePreview() {
     const box  = document.getElementById('rcvPendingBox');
     
     if (rcvAmt >= rawDue && rawDue > 0) {
-        disp.textContent = '₹0.00 (Fully Cleared! ✓…)';
+        disp.textContent = '₹0.00 (Fully Cleared! ✅)';
         disp.style.color = '#15803d';
         box.style.background = '#f0fdf4';
         box.style.borderColor = '#86efac';
@@ -1299,7 +1299,7 @@ function submitReceivePayment() {
     .then(res => {
         if (res.success) {
             closeReceiveModal();
-            showToast('✓… Payment received (₹' + amt.toFixed(2) + ' ' + mode + ')!');
+            showToast('✅ Payment received (₹' + amt.toFixed(2) + ' ' + mode + ')!');
             
             // Open printable invoice / payment receipt PDF (uses invoice_no to avoid "Invoice number missing" error)
             var printUrl = 'view_pdf.php?invoice_no=' + encodeURIComponent(res.invoice_no) + '&receipt=1&history_id=' + res.history_id;
@@ -1441,8 +1441,8 @@ function submitReceivePayment() {
     if (!faLoaded()) {
         var map = {
             'fa-user': '👤', 'fa-user-circle':'👤', 'fa-sign-out-alt':'🔓', 'fa-sign-in-alt':'ðŸ”',
-            'fa-list':'📋', 'fa-arrow-left':'â†', 'fa-check-circle':'✓…', 'fa-save':'💾',
-            'fa-trash-alt':'🗑️ï¸', 'fa-spinner':'â³', 'fa-check':'✓“', 'fa-chart-bar':'📊',
+            'fa-list':'📋', 'fa-arrow-left':'â†', 'fa-check-circle':'✅', 'fa-save':'💾',
+            'fa-trash-alt':'🗑️ï¸', 'fa-spinner':'⏳', 'fa-check':'✓“', 'fa-chart-bar':'📊',
             'fa-receipt':'🧾','fa-chart-line':'📈','fa-boxes':'📜¦','fa-users':'👥','fa-gem':'💎',
             'fa-book':'📜–','fa-weight-hanging':'âš–ï¸','fa-coins':'🪙','fa-search':'ðŸ”','fa-plus-circle':'➕'
         };

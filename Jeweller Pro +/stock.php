@@ -895,7 +895,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         </div>
 
                         <div class="mb-3">
-                            <label>ðŸ·ï¸ Item Type</label>
+                            <label>🏷️ Item Type</label>
                             <select name="item_name" id="addItemSelect" required class="jewel-input" onchange="toggleCustomItem('addCustomItem', this.value)">
                                 <option value="">-- Select Category First --</option>
                             </select>
@@ -910,7 +910,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         </div>
 
                         <div class="mb-3">
-                            <label>ðŸ·ï¸ HUID Code</label>
+                            <label>🏷️ HUID Code</label>
                             <input type="text" name="huid_code" placeholder="Enter HUID code (optional)" class="jewel-input">
                         </div>
 
@@ -1124,7 +1124,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 <input type="text" name="serial_no" id="editProductSerial" required class="jewel-input">
             </div>
             <div class="mb-3">
-                <label>ðŸ·ï¸ HUID Code</label>
+                <label>🏷️ HUID Code</label>
                 <input type="text" name="huid_code" id="editProductHuid" class="jewel-input">
             </div>
             <div class="mb-3">
@@ -1151,7 +1151,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 </select>
             </div>
             <div class="mb-3">
-                <label>ðŸ·ï¸ Item Name</label>
+                <label>🏷️ Item Name</label>
                 <select name="item_name" id="editProductItemName" required class="jewel-input" onchange="toggleCustomItem('editCustomItem', this.value)">
                     <option value="">-- Select Item --</option>
                 </select>

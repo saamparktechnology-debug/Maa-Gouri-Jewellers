@@ -72,7 +72,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_customer'])) {
     }
 
     if(mysqli_query($conn, "INSERT INTO customers (name, mobile, email, address, gst_number, created_at) VALUES ('$name', '$mobile', '$email', '$address', '$gst', NOW())")) {
-        echo "<script>alert('✓… Customer added successfully!'); window.location.href='customers.php';<\/script>";
+        echo "<script>alert('✅ Customer added successfully!'); window.location.href='customers.php';<\/script>";
         exit();
     } else {
         $error_msg = "Error adding customer: " . mysqli_error($conn);
@@ -89,7 +89,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_customer'])) {
     $gst     = mysqli_real_escape_string($conn, strtoupper(trim($_POST['gst'] ?? '')));
 
     if(mysqli_query($conn, "UPDATE customers SET name='$name', mobile='$mobile', email='$email', address='$address', gst_number='$gst' WHERE id=$id")) {
-        echo "<script>alert('✓… Customer updated successfully!'); window.location.href='customers.php';</script>";
+        echo "<script>alert('✅ Customer updated successfully!'); window.location.href='customers.php';</script>";
         exit();
     } else {
         $error_msg = "Error updating customer: " . mysqli_error($conn);
@@ -965,7 +965,7 @@ function openOrderHistory(mobile, name) {
             let html = '';
             data.orders.forEach(o => {
                 const statusClass = o.payment_status === 'paid' ? 'paid' : (o.payment_status === 'part' ? 'part' : 'unpaid');
-                const statusLabel = o.payment_status === 'paid' ? '✓… Paid' : (o.payment_status === 'part' ? 'âš ï¸ Part Paid' : 'âŒ Unpaid');
+                const statusLabel = o.payment_status === 'paid' ? '✅ Paid' : (o.payment_status === 'part' ? 'âš ï¸ Part Paid' : 'âŒ Unpaid');
                 const date = new Date(o.created_at).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'});
                 html += `<div class="oh-order-card">
                     <div class="oh-order-head">
