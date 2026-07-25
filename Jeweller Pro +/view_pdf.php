@@ -290,7 +290,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
         <a href="billing.php" class="btn-back">â† Back to Billing</a>
         <a href="reports.php" class="btn-back">📊 Reports</a>
     </div>
-    <button onclick="window.print()" class="btn-print">ðŸ–¨ï¸ Print / Download PDF (A4)</button>
+    <button onclick="window.print()" class="btn-print">🖨️ Print / Download PDF (A4)</button>
 </div>
 
 <div class="invoice-card">
@@ -353,7 +353,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                     <div class="bill-to-right">
                         📞 Ph No: <strong>+91-<?php echo htmlspecialchars($inv['customer_mobile'] ?? '—'); ?></strong><br>
                         <?php if(!empty($inv['customer_gstin'])): ?>
-                        ðŸ›ï¸ GSTIN: <strong><?php echo htmlspecialchars($inv['customer_gstin']); ?></strong><br>
+                        ðŸ› GSTIN: <strong><?php echo htmlspecialchars($inv['customer_gstin']); ?></strong><br>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -387,7 +387,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                             <td style="font-size:12.5px;color:<?php echo $rec_new_balance > 0 ? '#b91c1c' : '#065f46'; ?>;">
                                 REMAINING OUTSTANDING BALANCE DUE
                                 <?php if($rec_new_balance > 0 && !empty($next_due_date_display)): ?>
-                                    <br><span style="font-size:10.5px;font-weight:normal;color:#b91c1c;">ðŸ—“ï¸ Next Payment Due Date: <strong><?php echo $next_due_date_display; ?></strong></span>
+                                    <br><span style="font-size:10.5px;font-weight:normal;color:#b91c1c;">ðŸ—“ Next Payment Due Date: <strong><?php echo $next_due_date_display; ?></strong></span>
                                 <?php endif; ?>
                             </td>
                             <td class="right" style="font-size:16px;font-weight:800;color:<?php echo $rec_new_balance > 0 ? '#b91c1c' : '#065f46'; ?>;">₹<?php echo number_format($rec_new_balance, 2); ?></td>
@@ -475,7 +475,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                     <div class="bill-to-right">
                         📞 Ph No: <strong>+91-<?php echo htmlspecialchars($inv['customer_mobile'] ?? '—'); ?></strong><br>
                         <?php if(!empty($inv['customer_gstin'])): ?>
-                        ðŸ›ï¸ GSTIN: <strong><?php echo htmlspecialchars($inv['customer_gstin']); ?></strong><br>
+                        ðŸ› GSTIN: <strong><?php echo htmlspecialchars($inv['customer_gstin']); ?></strong><br>
                         <?php endif; ?>
                         📜 <strong>Place of Supply:</strong><br>
                         <div style="margin-top:2px;font-size:11.5px;color:#334155;line-height:1.4;">
@@ -652,7 +652,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
 
                             <?php if($current_balance > 0 && !empty($next_due_date_display)): ?>
                             <div class="calc-line" style="color:#b91c1c;font-size:11px;margin-top:2px;">
-                                <span>ðŸ—“ï¸ Next Due Date</span>
+                                <span>ðŸ—“ Next Due Date</span>
                                 <strong style="color:#b91c1c;"><?php echo $next_due_date_display; ?></strong>
                             </div>
                             <?php endif; ?>

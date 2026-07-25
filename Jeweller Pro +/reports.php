@@ -813,7 +813,10 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
         <a href="purchase.php">
             <i class="fas fa-book"></i>PURCHASE
         </a>
-        <a href="accounts.php">
+                <a href="contacts.php">
+            <i class="fas fa-address-book"></i> CONTACTS
+        </a>
+<a href="accounts.php">
             <i class="fas fa-book"></i> ACCOUNT
         </a>
     </nav>
@@ -920,7 +923,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                     </div>
                     <p class="font-bold text-lg" style="color:#166534;">₹<?php echo number_format($pay_summary['paid_amt'],2); ?></p>
                     <p class="text-xs mt-1" style="color:#15803d;">Total collected (full payment)</p>
-                    <button onclick="toggleDetail('detailPaid')" class="toggle-detail-btn">ðŸ‘ï¸ View Customers</button>
+                    <button onclick="toggleDetail('detailPaid')" class="toggle-detail-btn">ðŸ‘ View Customers</button>
                 </div>
                 <!-- Part -->
                 <div class="stat-card-part p-4">
@@ -929,8 +932,8 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                         <span class="text-2xl font-black" style="color:#9a3412;"><?php echo $pay_summary['part_count']; ?></span>
                     </div>
                     <p class="font-bold text-lg" style="color:#9a3412;">₹<?php echo number_format($pay_summary['part_amt'],2); ?></p>
-                    <p class="text-xs mt-1" style="color:#c2410c;">âš ï¸ Balance: ₹<?php echo number_format($pay_summary['part_balance'],2); ?></p>
-                    <button onclick="toggleDetail('detailPart')" class="toggle-detail-btn">ðŸ‘ï¸ View Customers</button>
+                    <p class="text-xs mt-1" style="color:#c2410c;">âš  Balance: ₹<?php echo number_format($pay_summary['part_balance'],2); ?></p>
+                    <button onclick="toggleDetail('detailPart')" class="toggle-detail-btn">ðŸ‘ View Customers</button>
                 </div>
                 <!-- Unpaid -->
                 <div class="stat-card-unpaid p-4">
@@ -939,8 +942,8 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                         <span class="text-2xl font-black" style="color:#9f1239;"><?php echo $pay_summary['unpaid_count']; ?></span>
                     </div>
                     <p class="font-bold text-lg" style="color:#9f1239;">₹<?php echo number_format($pay_summary['unpaid_amt'],2); ?></p>
-                    <p class="text-xs mt-1" style="color:#be123c;">âš ï¸ Total due: ₹<?php echo number_format($pay_summary['unpaid_balance'],2); ?></p>
-                    <button onclick="toggleDetail('detailUnpaid')" class="toggle-detail-btn">ðŸ‘ï¸ View Customers</button>
+                    <p class="text-xs mt-1" style="color:#be123c;">âš  Total due: ₹<?php echo number_format($pay_summary['unpaid_balance'],2); ?></p>
+                    <button onclick="toggleDetail('detailUnpaid')" class="toggle-detail-btn">ðŸ‘ View Customers</button>
                 </div>
             </div>
 
@@ -980,7 +983,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 <div class="overflow-x-auto">
                     <table class="report-table">
                         <thead><tr>
-                            <th>Customer</th><th>Mobile</th><th class="text-right">Bill Total</th><th class="text-right">Paid</th><th class="text-right">âš ï¸ Balance</th><th class="text-center">Date</th><th class="text-center">Invoice</th><th class="text-center">Action</th>
+                            <th>Customer</th><th>Mobile</th><th class="text-right">Bill Total</th><th class="text-right">Paid</th><th class="text-right">âš  Balance</th><th class="text-center">Date</th><th class="text-center">Invoice</th><th class="text-center">Action</th>
                         </tr></thead>
                         <tbody>
                         <?php foreach($part_rows as $r): ?>
@@ -993,7 +996,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                                 <td class="text-center"><?php echo date('d M Y', strtotime($r['created_at'])); ?></td>
                                 <td class="text-center font-mono text-xs" style="color:#d68b16;"><?php echo htmlspecialchars($r['invoice_no']); ?></td>
                                 <td class="text-center">
-                                    <button onclick='sendReminder(<?php echo json_encode($r['invoice_no']); ?>, <?php echo json_encode($r['customer_name']); ?>, <?php echo json_encode($r['customer_mobile']); ?>, <?php echo floatval($r['balance_amount']); ?>, <?php echo json_encode($r['customer_email'] ?? ''); ?>)' class="btn-jewel" style="padding:5px 8px;font-size:11px;border-radius:16px;margin-right:6px;">ðŸ”” Reminder</button>
+                                    <button onclick='sendReminder(<?php echo json_encode($r['invoice_no']); ?>, <?php echo json_encode($r['customer_name']); ?>, <?php echo json_encode($r['customer_mobile']); ?>, <?php echo floatval($r['balance_amount']); ?>, <?php echo json_encode($r['customer_email'] ?? ''); ?>)' class="btn-jewel" style="padding:5px 8px;font-size:11px;border-radius:16px;margin-right:6px;">🔔 Reminder</button>
                                     <button onclick='markAsPaid(<?php echo json_encode($r['invoice_no']); ?>, <?php echo floatval($r['balance_amount']); ?>)' class="btn-jewel" style="background:linear-gradient(135deg,#16a34a,#15803d);padding:5px 8px;font-size:11px;border-radius:16px;">✅ Mark Paid</button>
                                 </td>
                             </tr>
@@ -1008,12 +1011,12 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
             <div id="detailUnpaid" class="detail-collapse">
                 <h4 class="font-bold text-sm mb-3" style="color:#be123c;">âŒ Unpaid — Full Payment Pending</h4>
                 <?php if(empty($unpaid_rows)): ?>
-                    <p class="text-sm" style="color:#16a34a;">No unpaid customers! ðŸŽ‰</p>
+                    <p class="text-sm" style="color:#16a34a;">No unpaid customers! 🎉</p>
                 <?php else: ?>
                 <div class="overflow-x-auto">
                     <table class="report-table">
                         <thead><tr>
-                            <th>Customer</th><th>Mobile</th><th class="text-right">Bill Total</th><th class="text-right">âš ï¸ Due</th><th class="text-center">Date</th><th class="text-center">Invoice</th>
+                            <th>Customer</th><th>Mobile</th><th class="text-right">Bill Total</th><th class="text-right">âš  Due</th><th class="text-center">Date</th><th class="text-center">Invoice</th>
                         </tr></thead>
                         <tbody>
                         <?php foreach($unpaid_rows as $r): ?>
@@ -1115,7 +1118,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
             <div class="gst-total-box">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                        <p class="font-bold text-sm" style="color:#0d9488;">ðŸ›ï¸ Total GST Payable to Govt — <?php echo $month_label; ?></p>
+                        <p class="font-bold text-sm" style="color:#0d9488;">ðŸ› Total GST Payable to Govt — <?php echo $month_label; ?></p>
                         <p class="text-xs mt-1" style="color:#14b8a6;">CGST ₹<?php echo number_format($cgst,2); ?> + SGST ₹<?php echo number_format($sgst,2); ?></p>
                     </div>
                     <p class="text-2xl font-black" style="color:#0f766e;">₹<?php echo number_format($actual_gst,2); ?></p>
@@ -1143,7 +1146,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                     <input type="date" name="filter_to" value="<?php echo htmlspecialchars($filter_to); ?>" class="jewel-input w-full">
                 </div>
                 <div>
-                    <label class="filter-label">ðŸ” Name / Mobile</label>
+                    <label class="filter-label">🔍 Name / Mobile</label>
                     <input type="text" name="filter_name" value="<?php echo htmlspecialchars($filter_name); ?>" placeholder="Searchâ€¦" class="jewel-input w-full">
                 </div>
                 <div>
@@ -1164,7 +1167,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                     </select>
                 </div>
                 <div class="col-span-2 sm:col-span-3 lg:col-span-5 flex gap-3">
-                    <button type="submit" class="btn-jewel" style="padding:8px 20px;font-size:12px;">ðŸ” Filter</button>
+                    <button type="submit" class="btn-jewel" style="padding:8px 20px;font-size:12px;">🔍 Filter</button>
                     <a href="reports.php" class="btn-jewel" style="padding:8px 16px;font-size:12px;background:linear-gradient(135deg,#6b7280,#4b5563);">↩ Clear</a>
                 </div>
             </form>
@@ -1258,11 +1261,11 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                             <div class="flex justify-center gap-1.5">
                                 <a href="view_pdf.php?invoice_no=<?php echo urlencode($bill['invoice_no']); ?>" target="_blank"
                                    class="btn-jewel" style="padding:3px 10px;font-size:10px;border-radius:20px;white-space:nowrap;">
-                                   ðŸ–¨ï¸ Print
+                                   🖨️ Print
                                 </a>
                                 <button onclick="confirmDeleteInvoice('<?php echo htmlspecialchars($bill['invoice_no']); ?>')"
                                         class="btn-jewel" style="background:linear-gradient(135deg,#7f1d1d,#ef4444);padding:3px 10px;font-size:10px;border-radius:20px;white-space:nowrap;">
-                                   🗑️ï¸ Delete
+                                   🗑️ Delete
                                 </button>
                             </div>
                         </td>
@@ -1483,7 +1486,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
             parseFloat(b.total_amount||0), parseFloat(b.paid_amount||0), parseFloat(b.balance_amount||0),
             b.payment_status==='part'?'Part Payment':'Unpaid', fmtDate(b.created_at)
         ]));
-        if(!pendingData.length) aoa3.push(['','No pending payments! ðŸŽ‰','','','','','','','','']);
+        if(!pendingData.length) aoa3.push(['','No pending payments! 🎉','','','','','','','','']);
         const ws3 = XLSX.utils.aoa_to_sheet(aoa3);
         ws3['!cols'] = [{wch:5},{wch:20},{wch:22},{wch:20},{wch:14},{wch:18},{wch:16},{wch:18},{wch:14},{wch:14}];
         XLSX.utils.book_append_sheet(wb, ws3, 'Pending Payments');
@@ -1587,7 +1590,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
         
         let confirmMsg = '';
         if (currentDeleteMode === 'permanent') {
-            confirmMsg = "âš ï¸ FINAL WARNING: This action is permanent and CANNOT be undone.\nAre you sure you want to delete Invoice #" + currentDeleteInvoiceNo + " permanently (without restoring stock)?";
+            confirmMsg = "âš  FINAL WARNING: This action is permanent and CANNOT be undone.\nAre you sure you want to delete Invoice #" + currentDeleteInvoiceNo + " permanently (without restoring stock)?";
         } else {
             confirmMsg = "Are you sure you want to delete Invoice #" + currentDeleteInvoiceNo + " and move the specified quantities back to stock?";
         }
@@ -1666,7 +1669,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
             
             <div class="flex gap-3">
                 <button type="button" onclick="selectDeleteMode('permanent')" id="btnDeletePerm" class="flex-1 py-3 px-4 rounded-xl border border-red-300 text-red-700 bg-red-50 hover:bg-red-100 font-semibold text-xs transition duration-200 text-center cursor-pointer">
-                    🗑️ï¸ Delete Permanently<br><span class="text-[9px] font-normal text-red-500">(Stock is NOT updated)</span>
+                    🗑️ Delete Permanently<br><span class="text-[9px] font-normal text-red-500">(Stock is NOT updated)</span>
                 </button>
                 <button type="button" onclick="selectDeleteMode('restore_stock')" id="btnDeleteRestore" class="flex-1 py-3 px-4 rounded-xl border border-green-300 text-green-700 bg-green-50 hover:bg-green-100 font-semibold text-xs transition duration-200 text-center cursor-pointer">
                     📜¦ Move to Stock<br><span class="text-[9px] font-normal text-green-500">(Add items to inventory)</span>

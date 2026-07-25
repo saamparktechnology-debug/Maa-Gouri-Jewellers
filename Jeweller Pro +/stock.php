@@ -74,7 +74,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         mysqli_query($conn, "SET FOREIGN_KEY_CHECKS = 0");
         mysqli_query($conn, "DELETE FROM invoice_items WHERE product_id = $id");
         if(mysqli_query($conn, "DELETE FROM products WHERE id = $id")) {
-            $success = "🗑️ï¸ Product deleted successfully!";
+            $success = "🗑️ Product deleted successfully!";
         } else {
             $error = "Error deleting product: " . mysqli_error($conn);
         }
@@ -836,7 +836,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             <div class="flex flex-col sm:flex-row sm:items-center gap-2">
                 <i class="fas fa-exclamation-triangle text-red-500 text-xl flex-shrink-0"></i>
                 <div>
-                    <p class="font-bold text-red-700 text-sm">âš ï¸ Low Stock Alert!</p>
+                    <p class="font-bold text-red-700 text-sm">âš  Low Stock Alert!</p>
                     <p class="text-red-600 text-xs mb-2">Following products have low stock (less than 5 units):</p>
                     <div class="flex flex-wrap gap-2">
                         <?php
@@ -915,7 +915,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         </div>
 
                         <div class="mb-3">
-                            <label>âš–ï¸ Weight (grams)</label>
+                            <label>âš– Weight (grams)</label>
                             <input type="text" name="weight" placeholder="e.g. 12.5" class="jewel-input">
                         </div>
 
@@ -1160,7 +1160,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 </div>
             </div>
             <div class="mb-3">
-                <label>âš–ï¸ Weight (grams)</label>
+                <label>âš– Weight (grams)</label>
                 <input type="text" name="weight" id="editProductWeight" class="jewel-input">
             </div>
             <div class="mb-3">
@@ -1202,13 +1202,13 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 <div id="deleteModal" class="modal-overlay">
     <div class="modal-content text-center">
         <i class="fas fa-exclamation-triangle text-5xl mb-4" style="color:#ef4444;"></i>
-        <h3 class="text-xl font-bold gold-font">âš ï¸ Delete Product</h3>
+        <h3 class="text-xl font-bold gold-font">âš  Delete Product</h3>
         <p class="my-3 text-sm" style="color:#4b5563;">Are you sure you want to delete <strong id="deleteProductName" style="color:#800020;"></strong>?</p>
-        <p class="mb-4 text-xs" style="color:#d97706;">âš ï¸ Related invoice records may also be removed.</p>
+        <p class="mb-4 text-xs" style="color:#d97706;">âš  Related invoice records may also be removed.</p>
         <form method="POST">
             <input type="hidden" name="product_id" id="deleteProductId">
             <div class="flex gap-3">
-                <button type="submit" name="delete_product" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white" style="background:linear-gradient(135deg,#ef4444,#dc2626);">🗑️ï¸ Yes, Delete</button>
+                <button type="submit" name="delete_product" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white" style="background:linear-gradient(135deg,#ef4444,#dc2626);">🗑️ Yes, Delete</button>
                 <button type="button" onclick="closeDeleteModal()" class="flex-1 py-2 rounded-lg text-sm font-semibold" style="background:#e5e7eb;color:#374151;">Cancel</button>
             </div>
         </form>

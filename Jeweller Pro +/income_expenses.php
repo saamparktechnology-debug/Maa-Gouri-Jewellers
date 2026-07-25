@@ -464,7 +464,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             <div class="stat-card stat-expense">
                 <div class="flex justify-between items-start">
                     <div>
-                        <p class="stat-lbl">ðŸ’¸ Total Expenses</p>
+                        <p class="stat-lbl">💸 Total Expenses</p>
                         <p class="stat-val">₹<?php echo number_format($total_expense, 2); ?></p>
                     </div>
                     <i class="fas fa-arrow-down"></i>
@@ -585,7 +585,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             <select name="category" required class="jewel-input">
                                 <option value="">— Select Category —</option>
                                 <?php mysqli_data_seek($expense_categories, 0); while($cat = mysqli_fetch_assoc($expense_categories)): ?>
-                                    <option value="<?php echo htmlspecialchars($cat['category_name']); ?>">ðŸ’¸ <?php echo htmlspecialchars($cat['category_name']); ?></option>
+                                    <option value="<?php echo htmlspecialchars($cat['category_name']); ?>">💸 <?php echo htmlspecialchars($cat['category_name']); ?></option>
                                 <?php endwhile; ?>
                             </select>
                         </div>

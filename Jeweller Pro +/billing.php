@@ -1283,7 +1283,7 @@ function submitPayment() {
                                 <p class="text-xs mb-2 text-gray-400">Search stock by name, SKU, or serial number.</p>
                                 <div class="flex gap-2 mb-2 relative">
                                     <div class="relative flex-1">
-                                        <input type="text" id="gramStockSearch" placeholder="ðŸ” Search stock..." class="jewel-input w-full rounded-lg px-3 py-2 text-sm" oninput="filterGramStock(this.value)" autocomplete="off">
+                                        <input type="text" id="gramStockSearch" placeholder="🔍 Search stock..." class="jewel-input w-full rounded-lg px-3 py-2 text-sm" oninput="filterGramStock(this.value)" autocomplete="off">
                                         <div id="gramStockSuggestions" class="autocomplete-suggestions hidden"></div>
                                     </div>
                                     <button type="button" onclick="clearGramStockSearch()" class="px-3 py-2 rounded-lg text-sm bg-white border border-yellow-300 text-yellow-800">↩</button>
@@ -1863,7 +1863,7 @@ function switchSource(tab, source) {
     resetItemCharges();
 }
 
-// ==================== âš–ï¸ GRAM FORM LOGIC ====================
+// ==================== âš– GRAM FORM LOGIC ====================
 
 // Stock search & filter with floating suggestions
 function filterGramStock(query) {

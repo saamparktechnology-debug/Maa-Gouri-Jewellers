@@ -1440,11 +1440,11 @@ function submitReceivePayment() {
 
     if (!faLoaded()) {
         var map = {
-            'fa-user': '👤', 'fa-user-circle':'👤', 'fa-sign-out-alt':'🔓', 'fa-sign-in-alt':'ðŸ”',
+            'fa-user': '👤', 'fa-user-circle':'👤', 'fa-sign-out-alt':'🔓', 'fa-sign-in-alt':'🔍',
             'fa-list':'📋', 'fa-arrow-left':'â†', 'fa-check-circle':'✅', 'fa-save':'💾',
-            'fa-trash-alt':'🗑️ï¸', 'fa-spinner':'⏳', 'fa-check':'✓“', 'fa-chart-bar':'📊',
+            'fa-trash-alt':'🗑️', 'fa-spinner':'⏳', 'fa-check':'✓“', 'fa-chart-bar':'📊',
             'fa-receipt':'🧾','fa-chart-line':'📈','fa-boxes':'📜¦','fa-users':'👥','fa-gem':'💎',
-            'fa-book':'📜–','fa-weight-hanging':'âš–ï¸','fa-coins':'🪙','fa-search':'ðŸ”','fa-plus-circle':'➕'
+            'fa-book':'📜–','fa-weight-hanging':'âš–','fa-coins':'🪙','fa-search':'🔍','fa-plus-circle':'➕'
         };
 
         document.querySelectorAll('i[class*="fa-"]').forEach(function(i){

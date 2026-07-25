@@ -842,7 +842,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             <form method="POST">
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
-                        <label class="field-label">ðŸŒ API Type</label>
+                        <label class="field-label">🌐 API Type</label>
                         <select name="api_type" class="jewel-input">
                             <option value="greenapi" <?php echo ($api_settings&&$api_settings['api_type']=='greenapi')?'selected':''; ?>> hunk API</option>
                             <option value="whinta"   <?php echo ($api_settings&&$api_settings['api_type']=='whinta')?'selected':''; ?>>📱 Whinta API</option>
@@ -897,7 +897,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         <label class="field-label">📎 Media Type</label>
                         <select name="single_media_type" id="singleMediaType" class="jewel-input" onchange="toggleMedia('single')">
                             <option value="text">📜 Text Only</option>
-                            <option value="image">ðŸ–¼ï¸ Image</option>
+                            <option value="image">ðŸ–¼ Image</option>
                             <option value="video">🎥 Video</option>
                         </select>
                     </div>
@@ -962,7 +962,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         <label class="field-label">📎 Media Type</label>
                         <select name="media_type" id="bulkMediaType" class="jewel-input" onchange="toggleMedia('bulk')">
                             <option value="text">📜 Text Only</option>
-                            <option value="image">ðŸ–¼ï¸ Image</option>
+                            <option value="image">ðŸ–¼ Image</option>
                             <option value="video">🎥 Video</option>
                         </select>
                     </div>
