@@ -207,7 +207,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_purchase'])) {
     }
 
     if ($saved_count > 0) {
-        $success_msg = "Purchase saved successfully! $saved_count item(s) added under Purchase No: $pno";
+        $redirect_url = "purchase_view.php?id=" . $last_id;
+        if(!headers_sent()) {
+            header("Location: " . $redirect_url);
+            exit();
+        }
+        echo "<script>window.location.replace(" . json_encode($redirect_url) . ");</script>";
+        exit();
     } else {
         $error_msg = "Error: " . $conn->error;
     }
@@ -713,7 +719,7 @@ nav.nav-gold span{color:#fff!important;}
 <!--  ACTIONS  -->
 <div class="flex flex-wrap gap-4 justify-center mb-10 no-print">
     <button type="submit" class="btn-save"><i class="fas fa-save mr-2"></i>SAVE PURCHASE</button>
-    <button type="button" class="btn-pdf" onclick="generatePDF()"><i class="fas fa-file-pdf mr-2"></i>DOWNLOAD PDF</button>
+    
     <a href="purchase_history.php" style="background:linear-gradient(135deg,#374151,#6b7280);color:#fff;border:none;border-radius:50px;padding:14px 36px;font-size:15px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:8px;">
         <i class="fas fa-history"></i>HISTORY
     </a>
@@ -1009,217 +1015,7 @@ function numberToWords(num){
     return res+' Only';
 }
 
-//  PDF Generator 
-function generatePDF(){
-    const {jsPDF} = window.jspdf;
-    const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    const pw=210, ph=297, ml=14, mr=14, cw=pw-ml-mr;
 
-    // Colors
-    const gold=[183,115,14], dark=[60,20,10], white=[255,255,255], lgray=[245,240,232];
-
-    //  Header band
-    doc.setFillColor(...gold);
-    doc.rect(0,0,pw,28,'F');
-    doc.setTextColor(...white);
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(18);
-    doc.text('<?= addslashes($COMPANY['name'] ?? "MAA GOURI JEWELLERS") ?>',pw/2,11,{align:'center'});
-    doc.setFontSize(8);
-    doc.setFont('helvetica','normal');
-    doc.text('Purchase Tax Invoice',pw/2,18,{align:'center'});
-    doc.setFontSize(7);
-    doc.text('<?= addslashes(trim(($COMPANY['address_line1'] ?? "").", ".($COMPANY['address_line2'] ?? "").", ".($COMPANY['state'] ?? "")." - ".($COMPANY['state_code'] ?? ""), ", ")) ?>',pw/2,24,{align:'center'});
-
-    let y=34;
-
-    //  Invoice meta box
-    doc.setFillColor(...lgray);
-    doc.roundedRect(ml,y,cw,22,3,3,'F');
-    doc.setTextColor(...dark);
-    doc.setFont('helvetica','bold');doc.setFontSize(8);
-    const pno  = document.getElementById('purchase_no').value;
-    const pdate= document.querySelector('[name=purchase_date]').value;
-    const ino  = document.querySelector('[name=invoice_no]').value;
-    const idate= document.querySelector('[name=invoice_date]').value;
-    const pmode= document.querySelector('[name=payment_mode]').value;
-    doc.text('Purchase No:',ml+4,y+7); doc.setFont('helvetica','normal'); doc.text(pno,ml+32,y+7);
-    doc.setFont('helvetica','bold');
-    doc.text('Invoice No:',ml+4,y+13); doc.setFont('helvetica','normal'); doc.text(ino,ml+32,y+13);
-    doc.setFont('helvetica','bold');
-    doc.text('Invoice Date:',ml+4,y+19); doc.setFont('helvetica','normal'); doc.text(idate,ml+32,y+19);
-    doc.setFont('helvetica','bold');
-    doc.text('Purchase Date:',pw/2+4,y+7); doc.setFont('helvetica','normal'); doc.text(pdate,pw/2+32,y+7);
-    doc.setFont('helvetica','bold');
-    doc.text('Payment Mode:',pw/2+4,y+13); doc.setFont('helvetica','normal'); doc.text(pmode,pw/2+32,y+13);
-
-    y+=27;
-
-    //  Supplier & Buyer side-by-side
-    const sname  = document.querySelector('[name=supplier_name]').value;
-    const saddr  = document.querySelector('[name=supplier_addr]').value;
-    const sgstin = document.querySelector('[name=supplier_gstin]').value;
-    const span_  = document.querySelector('[name=supplier_pan]').value;
-    const sstate = document.querySelector('[name=supplier_state]').value;
-    const scode  = document.querySelector('[name=supplier_state_code]').value;
-    const smob   = document.querySelector('[name=supplier_mobile]').value;
-    const bname  = document.querySelector('[name=buyer_name]').value;
-    const baddr  = document.querySelector('[name=buyer_addr]').value;
-    const bgstin = document.querySelector('[name=buyer_gstin]').value;
-    const bpan   = document.querySelector('[name=buyer_pan]').value;
-
-    const colW = cw/2 - 2;
-    doc.setFillColor(...gold);doc.rect(ml,y,colW,7,'F');
-    doc.setTextColor(...white);doc.setFont('helvetica','bold');doc.setFontSize(8);
-    doc.text('SELLER',ml+colW/2,y+5,{align:'center'});
-    doc.setFillColor(...gold);doc.rect(ml+colW+4,y,colW,7,'F');
-    doc.text('BUYER',ml+colW+4+colW/2,y+5,{align:'center'});
-
-    doc.setFillColor(...lgray);
-    const sboxH=38;
-    doc.rect(ml,y+7,colW,sboxH,'F');
-    doc.rect(ml+colW+4,y+7,colW,sboxH,'F');
-
-    doc.setTextColor(...dark);doc.setFont('helvetica','bold');doc.setFontSize(8);
-    const sx=ml+3, bx=ml+colW+7;
-    let sy=y+13;
-    doc.text(sname||'',sx,sy); sy+=5;
-    doc.setFont('helvetica','normal');doc.setFontSize(7);
-    if(saddr){const ls=doc.splitTextToSize(saddr,colW-6);doc.text(ls,sx,sy);sy+=ls.length*4;}
-    if(sgstin){doc.setFont('helvetica','bold');doc.text('GSTIN: ',sx,sy);doc.setFont('helvetica','normal');doc.text(sgstin,sx+14,sy);sy+=4.5;}
-    if(span_){doc.setFont('helvetica','bold');doc.text('PAN: ',sx,sy);doc.setFont('helvetica','normal');doc.text(span_,sx+10,sy);sy+=4.5;}
-    if(sstate){doc.text('State: '+sstate+(scode?' ('+scode+')':''),sx,sy);}
-    if(smob){sy+=4.5;doc.text('Mob: '+smob,sx,sy);}
-
-    let by=y+13;
-    doc.setFont('helvetica','bold');doc.setFontSize(8);
-    doc.text(bname||'MAA GOURI JEWELLERS',bx,by);by+=5;
-    doc.setFont('helvetica','normal');doc.setFontSize(7);
-    if(baddr){const ls=doc.splitTextToSize(baddr,colW-6);doc.text(ls,bx,by);by+=ls.length*4;}
-    if(bgstin){doc.setFont('helvetica','bold');doc.text('GSTIN: ',bx,by);doc.setFont('helvetica','normal');doc.text(bgstin,bx+14,by);by+=4.5;}
-    if(bpan){doc.setFont('helvetica','bold');doc.text('PAN: ',bx,by);doc.setFont('helvetica','normal');doc.text(bpan,bx+10,by);}
-
-    y += sboxH + 12;
-
-    //  Items table (Supports multiple items)
-    const itemsToPrint = (purchaseItems.length > 0) ? purchaseItems : [{
-        material_type: document.getElementById('material_type').value,
-        description: document.getElementById('desc_field').value,
-        huid_code: document.getElementById('manualhuid').value,
-        hsn_sac: document.getElementById('hsn_field').value,
-        unit: document.getElementById('unit_field').value,
-        qty: parseFloat(document.getElementById('qty').value)||0,
-        rate_per_unit: parseFloat(document.getElementById('rate').value)||0,
-        subtotal: Math.round((parseFloat(document.getElementById('qty').value)||0)*(parseFloat(document.getElementById('rate').value)||0)*100)/100
-    }];
-
-    let sub = itemsToPrint.reduce((sum, it) => sum + it.subtotal, 0);
-    const taxT = document.getElementById('tax_type').value;
-    const cgstP= parseFloat(document.getElementById('cgst_pct').value)||0;
-    const sgstP= parseFloat(document.getElementById('sgst_pct').value)||0;
-    const igstP= parseFloat(document.getElementById('igst_pct').value)||0;
-    let cgstA=0,sgstA=0,igstA=0;
-    if(taxT==='CGST_SGST'){cgstA=Math.round(sub*cgstP/100*100)/100;sgstA=Math.round(sub*sgstP/100*100)/100;}
-    else{igstA=Math.round(sub*igstP/100*100)/100;}
-    const gstTot=cgstA+sgstA+igstA;
-    const total=Math.round((sub+gstTot)*100)/100;
-
-    // Table header
-    const cols=[['Description',65],['HSN/SAC',24],['Qty',20],['Rate',32],['Per',13],['Amount',28]];
-    doc.setFillColor(...dark);
-    doc.rect(ml,y,cw,8,'F');
-    doc.setTextColor(...white);doc.setFont('helvetica','bold');doc.setFontSize(7.5);
-    let cx=ml;
-    cols.forEach(([h,w], i)=>{
-        const align = (i === 3 || i === 5) ? 'right' : (i === 0 ? 'left' : 'center');
-        const pos = align === 'right' ? cx + w - 2 : (align === 'left' ? cx + 2 : cx + w/2);
-        doc.text(h, pos, y+5.5, {align: align});
-        cx+=w;
-    });
-
-    // Table rows for all items
-    y+=8;
-    itemsToPrint.forEach((it) => {
-        doc.setFillColor(255,255,255);doc.rect(ml,y,cw,12,'F');
-        doc.setTextColor(...dark);doc.setFont('helvetica','normal');doc.setFontSize(8);
-        cx=ml;
-        const descText = it.description + ' (' + it.material_type + ')' + (it.huid_code ? ' HUID:' + it.huid_code : '');
-        const vals=[descText, it.hsn_sac||'7108', it.qty.toFixed(4), fmt(it.rate_per_unit), it.unit, fmt(it.subtotal)];
-        cols.forEach(([,w],i)=>{
-            const align = (i === 3 || i === 5) ? 'right' : (i === 0 ? 'left' : 'center');
-            const pos = align === 'right' ? cx + w - 2 : (align === 'left' ? cx + 2 : cx + w/2);
-            doc.text(vals[i], pos, y+7.5, {align: align});
-            cx+=w;
-        });
-        y+=12;
-    });
-
-    // Tax rows
-    y+=14;
-    const taxRows=taxT==='CGST_SGST'
-        ?[['Output CGST @'+cgstP+'%','','','','',fmt(cgstA)],['Output SGST @'+sgstP+'%','','','','',fmt(sgstA)]]
-        :[['Output IGST @'+igstP+'%','','','','',fmt(igstA)]];
-    doc.setFontSize(7.5);
-    taxRows.forEach(row=>{
-        doc.setFillColor(...lgray);doc.rect(ml,y,cw,6,'F');
-        cx=ml;
-        cols.forEach(([,w],i)=>{
-            doc.text(row[i],i===0?cx+2:cx+w/2,y+4.5,{align:i===0?'left':'center'});
-            cx+=w;
-        });
-        y+=6;
-    });
-
-    // Subtotal/Total rows
-    y+=2;
-    const summaryRows=[
-        ['SUBTOTAL','₹ '+fmt(sub)],
-        ['GST TOTAL','₹ '+fmt(gstTot)],
-        ['TOTAL AMOUNT','₹ '+fmt(total)],
-    ];
-    summaryRows.forEach(([label,val],i)=>{
-        if(i===2){doc.setFillColor(...gold);doc.rect(ml,y,cw,9,'F');doc.setTextColor(...white);}
-        else{doc.setFillColor(...lgray);doc.rect(ml,y,cw,7,'F');doc.setTextColor(...dark);}
-        doc.setFont('helvetica','bold');doc.setFontSize(i===2?9:8);
-        doc.text(label,ml+4,y+(i===2?6:5));
-        doc.text(val,ml+cw-4,y+(i===2?6:5),{align:'right'});
-        y+=i===2?9:7;
-    });
-
-    // Amount in words
-    y+=4;
-    doc.setFillColor(253,246,227);doc.rect(ml,y,cw,9,'F');
-    doc.setTextColor(...dark);doc.setFont('helvetica','bold');doc.setFontSize(7.5);
-    doc.text('Amount in Words: ',ml+3,y+6);
-    doc.setFont('helvetica','italic');
-    doc.text(numberToWords(total),ml+38,y+6);
-    y+=13;
-
-    // Declaration
-    doc.setFont('helvetica','normal');doc.setFontSize(7);
-    doc.setTextColor(100,80,60);
-    const decl='We declare that this invoice shows the actual price of goods and all particulars are true and correct.';
-    doc.text(decl,ml,y);
-    y+=10;
-
-    // Signature
-    doc.setFillColor(...lgray);doc.rect(pw-ml-55,y,55,20,'F');
-    doc.setTextColor(...dark);doc.setFont('helvetica','bold');doc.setFontSize(8);
-    doc.text('For MAA GOURI JEWELLERS',pw-ml-52,y+7);
-    doc.setFont('helvetica','normal');doc.setFontSize(7);
-    doc.text('Authorised Signatory',pw-ml-48,y+17);
-
-    // Footer
-    doc.setFillColor(...gold);doc.rect(0,ph-12,pw,12,'F');
-    doc.setTextColor(...white);doc.setFont('helvetica','bold');doc.setFontSize(7.5);
-    doc.text('( This is a Computer Generated Purchase Invoice )',pw/2,ph-5,{align:'center'});
-
-    // Download
-    const fname=`Purchase_${document.getElementById('purchase_no').value}_${pdate}.pdf`;
-    doc.save(fname);
-}
-
-function triggerPDF(){ generatePDF(); }
 </script>
 </body>
 </html>
