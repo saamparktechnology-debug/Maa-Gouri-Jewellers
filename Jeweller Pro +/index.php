@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 // Trigger Vercel rebuild with correct author email
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -1055,40 +1055,40 @@ if($is_logged_in) {
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 <!-- Total Sales -->
                 <div class="dark-glass-card glass-gold text-center p-2.5 rounded-xl">
-                    <div class="text-lg mb-0.5">💰</div>
-                    <div class="text-base font-bold" style="color:#f5c842;">₹<?php echo number_format($total_sales, 0); ?></div>
+                    <div class="text-lg mb-0.5">ðŸ’°</div>
+                    <div class="text-base font-bold" style="color:#f5c842;">â‚¹<?php echo number_format($total_sales, 0); ?></div>
                     <div class="text-[10px] font-semibold mt-0.5" style="color:rgba(255,255,255,0.85);">TOTAL SALES</div>
                 </div>
                 <!-- Today's Sales -->
                 <div class="dark-glass-card glass-emerald text-center p-2.5 rounded-xl">
-                    <div class="text-lg mb-0.5">📊</div>
-                    <div class="text-base font-bold" style="color:#86efac;">₹<?php echo number_format($today_sales_amt, 0); ?></div>
+                    <div class="text-lg mb-0.5">ðŸ“Š</div>
+                    <div class="text-base font-bold" style="color:#86efac;">â‚¹<?php echo number_format($today_sales_amt, 0); ?></div>
                     <div class="text-[10px] font-semibold mt-0.5" style="color:rgba(255,255,255,0.85);">TODAY'S SALES</div>
                     <div class="text-[9px]" style="color:rgba(255,255,255,0.6);"><?php echo $today_invoice_count; ?> invoice<?php echo $today_invoice_count != 1 ? 's' : ''; ?></div>
                 </div>
                 <!-- Total Purchases -->
                 <div class="dark-glass-card glass-rose text-center p-2.5 rounded-xl">
-                    <div class="text-lg mb-0.5">🛒</div>
-                    <div class="text-base font-bold" style="color:#fda4af;">₹<?php echo number_format($total_purchases, 0); ?></div>
+                    <div class="text-lg mb-0.5">ðŸ›’</div>
+                    <div class="text-base font-bold" style="color:#fda4af;">â‚¹<?php echo number_format($total_purchases, 0); ?></div>
                     <div class="text-[10px] font-semibold mt-0.5" style="color:rgba(255,255,255,0.85);">TOTAL PURCHASES</div>
                 </div>
                 <!-- Today's Purchases -->
                 <div class="dark-glass-card glass-purple text-center p-2.5 rounded-xl">
-                    <div class="text-lg mb-0.5">🏷️</div>
-                    <div class="text-base font-bold" style="color:#c4b5fd;">₹<?php echo number_format($today_purchases, 0); ?></div>
+                    <div class="text-lg mb-0.5">ðŸ·ï¸</div>
+                    <div class="text-base font-bold" style="color:#c4b5fd;">â‚¹<?php echo number_format($today_purchases, 0); ?></div>
                     <div class="text-[10px] font-semibold mt-0.5" style="color:rgba(255,255,255,0.85);">TODAY'S PURCHASES</div>
                 </div>
                 <!-- Outstanding Due -->
                 <div class="dark-glass-card glass-orange text-center p-2.5 rounded-xl">
-                    <div class="text-lg mb-0.5">⏳</div>
-                    <div class="text-base font-bold" style="color:#fb923c;">₹<?php echo number_format($total_due, 0); ?></div>
+                    <div class="text-lg mb-0.5">â³</div>
+                    <div class="text-base font-bold" style="color:#fb923c;">â‚¹<?php echo number_format($total_due, 0); ?></div>
                     <div class="text-[10px] font-semibold mt-0.5" style="color:rgba(255,255,255,0.85);">OUTSTANDING DUE</div>
                 </div>
                 <!-- Net Profit -->
                 <?php $net_profit = $total_sales - $total_purchases - $total_expense; ?>
                 <div class="dark-glass-card glass-teal text-center p-2.5 rounded-xl">
-                    <div class="text-lg mb-0.5"><?php echo $net_profit >= 0 ? '📈' : '📉'; ?></div>
-                    <div class="text-base font-bold" style="color:<?php echo $net_profit >= 0 ? '#86efac' : '#fca5a5'; ?>;">₹<?php echo number_format(abs($net_profit), 0); ?></div>
+                    <div class="text-lg mb-0.5"><?php echo $net_profit >= 0 ? 'ðŸ“ˆ' : 'ðŸ“‰'; ?></div>
+                    <div class="text-base font-bold" style="color:<?php echo $net_profit >= 0 ? '#86efac' : '#fca5a5'; ?>;">â‚¹<?php echo number_format(abs($net_profit), 0); ?></div>
                     <div class="text-[10px] font-semibold mt-0.5" style="color:rgba(255,255,255,0.85);"><?php echo $net_profit >= 0 ? 'NET PROFIT' : 'NET LOSS'; ?></div>
                 </div>
             </div>
@@ -1108,7 +1108,7 @@ if($is_logged_in) {
             </a>
             <a href="stock.php" class="stat-gem p-3 block cursor-pointer text-center">
                 <div class="text-xl mb-1" style="color:#a16207;"><i class="fas fa-coins"></i></div>
-                <h3 class="text-lg font-bold text-gray-800">₹<?php echo number_format($stock_value, 0); ?></h3>
+                <h3 class="text-lg font-bold text-gray-800">â‚¹<?php echo number_format($stock_value, 0); ?></h3>
                 <p class="uppercase text-[10px] tracking-wider mt-0.5" style="color:#7a4e0a; font-weight:600;">Stock Value</p>
             </a>
             <a href="customers.php" class="stat-gem p-3 block cursor-pointer text-center">
@@ -1118,17 +1118,17 @@ if($is_logged_in) {
             </a>
             <a href="income_expenses.php" class="stat-gem p-3 block cursor-pointer text-center">
                 <div class="text-xl mb-1" style="color:#15803d;"><i class="fas fa-arrow-up-right-from-square"></i></div>
-                <h3 class="text-lg font-bold text-gray-800">₹<?php echo number_format($total_income, 0); ?></h3>
+                <h3 class="text-lg font-bold text-gray-800">â‚¹<?php echo number_format($total_income, 0); ?></h3>
                 <p class="uppercase text-[10px] tracking-wider mt-0.5" style="color:#166534; font-weight:600;">Total Income</p>
             </a>
             <a href="income_expenses.php" class="stat-gem p-3 block cursor-pointer text-center">
                 <div class="text-xl mb-1" style="color:#b91c1c;"><i class="fas fa-wallet"></i></div>
-                <h3 class="text-lg font-bold text-gray-800">₹<?php echo number_format($total_expense, 0); ?></h3>
+                <h3 class="text-lg font-bold text-gray-800">â‚¹<?php echo number_format($total_expense, 0); ?></h3>
                 <p class="uppercase text-[10px] tracking-wider mt-0.5" style="color:#9f1239; font-weight:600;">Expenses</p>
             </a>
             <a href="due_list.php" class="stat-gem p-3 block cursor-pointer text-center">
                 <div class="text-xl mb-1" style="color:#c2410c;"><i class="fas fa-calendar-check"></i></div>
-                <h3 class="text-lg font-bold text-gray-800">₹<?php echo number_format($total_due, 0); ?></h3>
+                <h3 class="text-lg font-bold text-gray-800">â‚¹<?php echo number_format($total_due, 0); ?></h3>
                 <p class="uppercase text-[10px] tracking-wider mt-0.5" style="color:#9a3412; font-weight:600;">Due Balance</p>
             </a>
             <a href="due_list.php" class="stat-gem p-3 block cursor-pointer text-center">
@@ -1138,7 +1138,7 @@ if($is_logged_in) {
             </a>
             <a href="income_expenses.php" class="stat-gem p-3 block cursor-pointer text-center col-span-2 sm:col-span-1">
                 <div class="text-xl mb-1" style="color:#0891b2;"><i class="fas fa-calendar-alt"></i></div>
-                <h3 class="text-lg font-bold text-gray-800">₹<?php echo number_format($monthly_income, 0); ?></h3>
+                <h3 class="text-lg font-bold text-gray-800">â‚¹<?php echo number_format($monthly_income, 0); ?></h3>
                 <p class="uppercase text-[10px] tracking-wider mt-0.5" style="color:#0e7490; font-weight:600;">Monthly Income</p>
             </a>
         </div>
@@ -1176,8 +1176,8 @@ if($is_logged_in) {
                 <canvas id="incomeExpenseChart" height="250"></canvas>
             </div>
             <div class="mt-4 flex flex-wrap justify-center gap-3 text-sm text-gray-600">
-                <span class="px-3 py-2 rounded-full bg-green-50 text-green-700">Income: ₹<?php echo number_format($monthly_income, 2); ?></span>
-                <span class="px-3 py-2 rounded-full bg-red-50 text-red-700">Expenses: ₹<?php echo number_format($monthly_expense, 2); ?></span>
+                <span class="px-3 py-2 rounded-full bg-green-50 text-green-700">Income: â‚¹<?php echo number_format($monthly_income, 2); ?></span>
+                <span class="px-3 py-2 rounded-full bg-red-50 text-red-700">Expenses: â‚¹<?php echo number_format($monthly_expense, 2); ?></span>
             </div>
         </div>
 
@@ -1256,7 +1256,7 @@ if($is_logged_in) {
                                         <p class="font-semibold text-sm text-gray-800"><?php echo htmlspecialchars($invoice['invoice_no']); ?></p>
                                         <p class="text-xs text-gray-500 mt-0.5"><?php echo htmlspecialchars($invoice['customer_name']); ?></p>
                                     </div>
-                                    <span class="text-xs text-orange-700 font-semibold bg-orange-50/50 px-2.5 py-1 rounded-full border border-orange-200">₹<?php echo number_format($invoice['balance_amount'], 2); ?></span>
+                                    <span class="text-xs text-orange-700 font-semibold bg-orange-50/50 px-2.5 py-1 rounded-full border border-orange-200">â‚¹<?php echo number_format($invoice['balance_amount'], 2); ?></span>
                                 </div>
                             </li>
                         <?php endforeach; ?>
@@ -1291,12 +1291,12 @@ if($is_logged_in) {
         </div>
         <div class="stat-gem p-5">
             <i class="fas fa-rupee-sign mb-3 block"></i>
-            <h3>₹<?php echo number_format($stock_value['total'] ?? 0, 0); ?></h3>
+            <h3>â‚¹<?php echo number_format($stock_value['total'] ?? 0, 0); ?></h3>
             <p class="uppercase tracking-wider mt-1">Stock Value</p>
         </div>
         <div class="stat-gem p-5">
             <i class="fas fa-chart-line mb-3 block"></i>
-            <h3>₹<?php echo number_format($today_sales['total'] ?? 0, 0); ?></h3>
+            <h3>â‚¹<?php echo number_format($today_sales['total'] ?? 0, 0); ?></h3>
             <p class="uppercase tracking-wider mt-1">Today's Sales</p>
         </div>
         <div class="stat-gem p-5">
@@ -1311,7 +1311,7 @@ if($is_logged_in) {
 <section class="py-12 md:py-20" style="background:#fdf6e3;">
     <div class="container mx-auto px-4 sm:px-6">
         <h2 class="text-3xl sm:text-4xl font-bold text-center mb-12" style="color:#800020;">
-            ✦ EXCLUSIVE FEATURES ✦
+            âœ¦ EXCLUSIVE FEATURES âœ¦
         </h2>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div class="gem-card p-8 text-center">
@@ -1376,7 +1376,7 @@ if($is_logged_in) {
         </div>
         <div class="mt-8 pt-6 text-center" style="border-top:1px solid rgba(181,115,14,0.25);">
             <p class="text-xs" style="color:#7a4e0a;">
-                &copy; <?php echo date('Y'); ?> MAA GOURI JEWELLERS &nbsp;|&nbsp; Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology</a>
+                &copy; <?php echo date('Y'); ?> MAA GOURI JEWELLERS &nbsp;|&nbsp; Design & Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology & Research Private Limited</a>
             </p>
         </div>
     </div>
@@ -1422,7 +1422,7 @@ if($is_logged_in) {
                         beginAtZero: true,
                         grid: { color: 'rgba(181, 115, 14, 0.08)' },
                         ticks: {
-                            callback: function(value) { return '₹' + value.toLocaleString(); },
+                            callback: function(value) { return 'â‚¹' + value.toLocaleString(); },
                             color: '#7a4e0a',
                             font: { size: 10 }
                         }
@@ -1494,7 +1494,7 @@ if($is_logged_in) {
                         y: { 
                             beginAtZero: true, 
                             grid: { color: 'rgba(181, 115, 14, 0.08)' },
-                            ticks: { callback: function(value) { return '₹' + value.toLocaleString(); }, color: '#7a4e0a', font: { size: 10 } } 
+                            ticks: { callback: function(value) { return 'â‚¹' + value.toLocaleString(); }, color: '#7a4e0a', font: { size: 10 } } 
                         },
                         x: { grid: { display: false }, ticks: { color: '#7a4e0a', font: { size: 10 } } }
                     }
@@ -1680,6 +1680,7 @@ if($is_logged_in) {
     </script>
     <?php endif; ?>
 </html>
+
 
 
 

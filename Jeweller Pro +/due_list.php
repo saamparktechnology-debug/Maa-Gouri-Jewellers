@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once 'config/database.php';
 require_once 'config/company_config.php';
@@ -25,7 +25,7 @@ if ($chkModeCol && mysqli_num_rows($chkModeCol) == 0) {
     @mysqli_query($conn, "ALTER TABLE due_update_history ADD COLUMN payment_mode VARCHAR(50) DEFAULT 'Cash'");
 }
 
-// ── AJAX: Receive Due Payment ───────────────────────────────────────────────
+// â”€â”€ AJAX: Receive Due Payment â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'receive_due_payment') {
     header('Content-Type: application/json');
     $id          = intval($_POST['id'] ?? 0);
@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'recei
 
     echo json_encode([
         'success'          => (bool)$upd,
-        'message'          => 'Payment of ₹' . number_format($amount_paid, 2) . ' received (' . $mode . ') successfully!',
+        'message'          => 'Payment of â‚¹' . number_format($amount_paid, 2) . ' received (' . $mode . ') successfully!',
         'id'               => $id,
         'invoice_no'       => $invoice_no_val,
         'previous_balance' => $previous_balance,
@@ -82,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'recei
     exit();
 }
 
-// ── AJAX: send reminder ───────────────────────────────────────────────────────
+// â”€â”€ AJAX: send reminder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'ajax_send_reminder') {
     header('Content-Type: application/json');
     $customer_email  = trim($_POST['customer_email']  ?? '');
@@ -133,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'ajax_
     exit();
 }
 
-// ── POST: clear due for an invoice ───────────────────────────────────────────
+// â”€â”€ POST: clear due for an invoice â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_due') {
     $id = intval($_POST['id'] ?? 0);
     if ($id > 0) {
@@ -142,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
     }
 }
 
-// ── AJAX: fetch due update history for modal ─────────────────────────────────
+// â”€â”€ AJAX: fetch due update history for modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'ajax_history') {
     header('Content-Type: application/json');
     $id = intval($_POST['id'] ?? 0);
@@ -174,7 +174,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'ajax_
     exit();
 }
 
-// ── Export all due customers history as CSV ─────────────────────────────────
+// â”€â”€ Export all due customers history as CSV â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 if (($_GET['action'] ?? '') === 'export_due_history') {
     $hasPaidAmountCol = false;
     $colRes = mysqli_query($conn, "SHOW COLUMNS FROM invoices LIKE 'paid_amount'");
@@ -246,7 +246,7 @@ if (($_GET['action'] ?? '') === 'export_due_history') {
     exit();
 }
 
-// ── Helper: build & send account statement email after a due update ────────────
+// â”€â”€ Helper: build & send account statement email after a due update â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function sendDueStatementEmail($conn, $id, $new_balance, $due_date) {
     $result = ['attempted' => false, 'sent' => false, 'message' => ''];
 
@@ -260,13 +260,13 @@ function sendDueStatementEmail($conn, $id, $new_balance, $due_date) {
                                      LIMIT 1");
     $inv = $invRes ? mysqli_fetch_assoc($invRes) : null;
     if (!$inv) {
-        $result['message'] = 'Invoice not found — statement not sent.';
+        $result['message'] = 'Invoice not found â€” statement not sent.';
         return $result;
     }
 
     $email = trim($inv['customer_email']);
     if (empty($email)) {
-        $result['message'] = 'No email on file — statement not sent.';
+        $result['message'] = 'No email on file â€” statement not sent.';
         return $result;
     }
 
@@ -339,7 +339,7 @@ function sendDueStatementEmail($conn, $id, $new_balance, $due_date) {
     return $result;
 }
 
-// ── POST: update due amount / due date ────────────────────────────────────────
+// â”€â”€ POST: update due amount / due date â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update') {
     $id       = intval($_POST['id'] ?? 0);
     $balance  = floatval($_POST['balance_amount'] ?? 0);
@@ -392,7 +392,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
     }
 }
 
-// ── Fetch all invoices with a due balance (with search support) ───────────────
+// â”€â”€ Fetch all invoices with a due balance (with search support) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 $search_query = mysqli_real_escape_string($conn, trim($_GET['search'] ?? ''));
 $search_where = "";
 if (!empty($search_query)) {
@@ -424,7 +424,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-<title>Due List – MAA GOURI JEWELLERS</title>
+<title>Due List â€“ MAA GOURI JEWELLERS</title>
 <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <!-- Fallback CDN for Font Awesome in case the primary is blocked -->
@@ -531,19 +531,19 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
 }
 @media (min-width: 769px) { .mobile-burger { display: none !important; } }
 
-/* ── Layout ───────────────────────────────────── */
+/* â”€â”€ Layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .page-heading { margin-bottom: 24px; }
 .page-heading h1, .page-heading h2 { margin: 0; }
 .page-heading p { margin: 0.5rem 0 0 0; color: #7a4e0a; font-size: 14px; }
 
-/* ── Alert ────────────────────────────────────── */
+/* â”€â”€ Alert â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .alert-success { background: #ecfdf5; border: 1px solid #6ee7b7; color: #065f46; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; font-size: 14px; }
 
-/* ── Table shell ──────────────────────────────── */
+/* â”€â”€ Table shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .due-table-wrap { overflow-x: auto; border-radius: 14px; }
 .due-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; min-width: 860px; }
 
-/* ── Header ───────────────────────────────────── */
+/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .due-table thead th {
     text-align: left;
     font-size: 11px;
@@ -555,7 +555,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
     background: transparent;
 }
 
-/* ── Rows ─────────────────────────────────────── */
+/* â”€â”€ Rows â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .due-table tbody tr {
     background: #ffffff;
     border-radius: 12px;
@@ -574,14 +574,14 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
 .due-table tbody td:first-child { border-radius: 12px 0 0 12px; }
 .due-table tbody td:last-child  { border-radius: 0 12px 12px 0; }
 
-/* ── Cell helpers ─────────────────────────────── */
+/* â”€â”€ Cell helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .items-cell { max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #6b7280; }
 .customer-name { font-weight: 600; color: #111827; }
 .inv-badge { display: inline-block; margin-top: 5px; padding: 2px 9px; border-radius: 999px; font-size: 11px; background: #fef3c7; color: #92400e; font-weight: 600; }
 .mobile-text { font-weight: 600; color: #374151; }
 .email-text  { color: #6b7280; font-size: 12px; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* ── Inline form inputs ───────────────────────── */
+/* â”€â”€ Inline form inputs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .field-label { font-size: 10px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
 .inline-input {
     width: 100%; border: 1.5px solid #e5e7eb; border-radius: 8px;
@@ -591,7 +591,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
 }
 .inline-input:focus { outline: none; border-color: #f59e0b; background: #fff; }
 
-/* ── Buttons ──────────────────────────────────── */
+/* â”€â”€ Buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .btn { display: inline-flex; align-items: center; gap: 5px; padding: 7px 13px; border-radius: 8px; border: 0; cursor: pointer; font-weight: 600; font-size: 12px; transition: opacity 0.15s, transform 0.1s; white-space: nowrap; }
 .btn:active { transform: scale(0.97); }
 .btn:disabled { opacity: 0.55; cursor: not-allowed; }
@@ -606,7 +606,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
     .btn-export { background: #111827; color: #fff; padding: 10px 18px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.15); }
     .btn-export:hover { background: #1f2937; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
 
-/* ── Action Grid Buttons ──────────────────────── */
+/* â”€â”€ Action Grid Buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 100%; min-width: 220px; }
 .action-btn {
     display: inline-flex;
@@ -654,7 +654,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
     margin-bottom: 2px;
     display: block;
 }
-/* ── Toast ────────────────────────────────────── */
+/* â”€â”€ Toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 #toast {
     position: fixed; bottom: 28px; right: 28px; z-index: 9999;
     padding: 14px 22px; border-radius: 12px; font-size: 13px;
@@ -672,7 +672,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
     .due-table td, .due-table thead th { padding: 10px 10px; }
 }
 
-/* ── Loading Overlay ──────────────────────────── */
+/* â”€â”€ Loading Overlay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 #loadingOverlay {
     position: fixed;
     top: 0;
@@ -958,7 +958,7 @@ function filterDueTable(query) {
         <h2 class="text-2xl sm:text-3xl font-bold" style="color:#800020;font-family:'Poppins',serif;">
             <i class="fas fa-list mr-2" style="color:#d68b16;"></i> Customers with Due Amounts
         </h2>
-        <p>Pending invoices — update amount or due date, then save. Send email reminders directly.</p>
+        <p>Pending invoices â€” update amount or due date, then save. Send email reminders directly.</p>
     </div>
 
     <!-- Navigation & Search Bar -->
@@ -1006,7 +1006,7 @@ function filterDueTable(query) {
                 <th style="width:115px">Phone</th>
                 <th style="width:155px">Email</th>
                 <th>Items</th>
-                <th style="width:130px">Due Amount (₹)</th>
+                <th style="width:130px">Due Amount (â‚¹)</th>
                 <th style="width:135px">Due Date</th>
                 <th style="width:280px;text-align:center;">Actions</th>
             </tr>
@@ -1031,24 +1031,24 @@ function filterDueTable(query) {
             <!-- Email -->
             <td>
                 <span class="email-text" title="<?php echo htmlspecialchars($r['customer_email']); ?>">
-                    <?php echo $r['customer_email'] ? htmlspecialchars($r['customer_email']) : '<span style="color:#d1d5db">—</span>'; ?>
+                    <?php echo $r['customer_email'] ? htmlspecialchars($r['customer_email']) : '<span style="color:#d1d5db">â€”</span>'; ?>
                 </span>
             </td>
 
             <!-- Items -->
             <td>
                 <div class="items-cell" title="<?php echo htmlspecialchars($r['items']); ?>">
-                    <?php echo htmlspecialchars($r['items'] ?: '—'); ?>
+                    <?php echo htmlspecialchars($r['items'] ?: 'â€”'); ?>
                 </div>
             </td>
 
             <!-- Due Amount (READ-ONLY, red display) -->
             <td>
-                <span class="due-amount-label">Due (₹)</span>
+                <span class="due-amount-label">Due (â‚¹)</span>
                 <span class="due-amount-display due-amount-input"
                       data-id="<?php echo intval($r['id']); ?>"
                       data-balance="<?php echo floatval($r['balance_amount']); ?>">
-                    ₹<?php echo number_format((float)$r['balance_amount'], 2); ?>
+                    â‚¹<?php echo number_format((float)$r['balance_amount'], 2); ?>
                 </span>
             </td>
 
@@ -1102,7 +1102,7 @@ function filterDueTable(query) {
     <footer style="background:linear-gradient(0deg,#f5e6c8,#fdf6e3);border-top:2px solid #d68b16;padding:20px;margin-top:40px;text-align:center;">
         <p class="text-xs" style="color:#7a4e0a;">
             &copy; 2026 MAA GOURI JEWELLERS &nbsp;|&nbsp; CRAFTED WITH ELEGANCE &nbsp;|&nbsp;
-            Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology</a>
+            Design & Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology & Research Private Limited</a>
         </p>
     </footer>
 </div><!-- /page-wrapper -->
@@ -1111,7 +1111,7 @@ function filterDueTable(query) {
 <div id="toast"></div>
 
 <script>
-/* ── Toast helper ─────────────────────────────────── */
+/* â”€â”€ Toast helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function showToast(msg, type) {
     var t = document.getElementById('toast');
     t.textContent = msg;
@@ -1120,7 +1120,7 @@ function showToast(msg, type) {
     t._timer = setTimeout(function() { t.className = ''; }, 3200);
 }
 
-/* ── WhatsApp Reminder ────────────────────────────── */
+/* â”€â”€ WhatsApp Reminder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function sendWhatsAppReminder(name, mobile, invoiceNo, due, total) {
     // Clean mobile: remove spaces, dashes, leading 0; add 91 country code
     var cleaned = mobile.replace(/[\s\-\(\)]/g, '');
@@ -1130,21 +1130,21 @@ function sendWhatsAppReminder(name, mobile, invoiceNo, due, total) {
     var msg = '';
     if (due <= 0) {
         // Fully paid
-        msg = '🙏 Dear ' + name + ',';
+        msg = 'ðŸ™ Dear ' + name + ',';
         msg += '\n\nThank you for your *complete payment* for Invoice *' + invoiceNo + '*.';
-        msg += '\n💰 Total Paid: ₹' + total.toFixed(2);
-        msg += '\n✅ Your account is fully cleared.';
-        msg += '\n\nThank you for trusting *MAA GOURI JEWELLERS*! 🌟\n📞 +91-8617536679';
+        msg += '\nðŸ’° Total Paid: â‚¹' + total.toFixed(2);
+        msg += '\nâœ… Your account is fully cleared.';
+        msg += '\n\nThank you for trusting *MAA GOURI JEWELLERS*! ðŸŒŸ\nðŸ“ž +91-8617536679';
     } else {
         // Part paid / still due
         var paid = total - due;
-        msg = '🙏 Dear ' + name + ',';
+        msg = 'ðŸ™ Dear ' + name + ',';
         msg += '\n\nThis is a gentle reminder regarding your pending due for Invoice *' + invoiceNo + '*.';
-        msg += '\n\n💳 Invoice Total: ₹' + total.toFixed(2);
-        msg += '\n✅ Amount Paid: ₹' + paid.toFixed(2);
-        msg += '\n🔴 *Remaining Due: ₹' + due.toFixed(2) + '*';
+        msg += '\n\nðŸ’³ Invoice Total: â‚¹' + total.toFixed(2);
+        msg += '\nâœ… Amount Paid: â‚¹' + paid.toFixed(2);
+        msg += '\nðŸ”´ *Remaining Due: â‚¹' + due.toFixed(2) + '*';
         msg += '\n\nKindly clear the pending amount at your earliest convenience.';
-        msg += '\n\nThank you,\n*MAA GOURI JEWELLERS*\n📞 +91-8617536679';
+        msg += '\n\nThank you,\n*MAA GOURI JEWELLERS*\nðŸ“ž +91-8617536679';
     }
 
     var url = 'https://wa.me/' + cleaned + '?text=' + encodeURIComponent(msg);
@@ -1156,7 +1156,7 @@ function openHistoryModal(invoiceId, customerName) {
     var title = document.getElementById('historyModalTitle');
     var body  = document.getElementById('historyModalBody');
     title.textContent = 'Due Update History for ' + customerName;
-    body.innerHTML = '<div style="text-align:center;padding:24px;">Loading history…</div>';
+    body.innerHTML = '<div style="text-align:center;padding:24px;">Loading historyâ€¦</div>';
     modal.style.display = 'flex';
 
     var params = new URLSearchParams();
@@ -1190,12 +1190,12 @@ function openHistoryModal(invoiceId, customerName) {
             var receiptUrl = 'view_pdf.php?invoice_no=' + encodeURIComponent(row.invoice_no) + '&receipt=1' + (row.history_id ? '&history_id=' + row.history_id : '');
             html += '<tr>' +
                 '<td style="padding:10px;border-bottom:1px solid #e5e7eb;">' + row.payment_date + '</td>' +
-                '<td style="padding:10px;border-bottom:1px solid #e5e7eb;color:#059669;font-weight:700;">₹' + parseFloat(row.amount_paid).toFixed(2) + '</td>' +
-                '<td style="padding:10px;border-bottom:1px solid #e5e7eb;">₹' + parseFloat(row.total_amount_paid || 0).toFixed(2) + '</td>' +
-                '<td style="padding:10px;border-bottom:1px solid #e5e7eb;color:#b91c1c;">₹' + parseFloat(row.previous_balance).toFixed(2) + '</td>' +
-                '<td style="padding:10px;border-bottom:1px solid #e5e7eb;font-weight:700;">₹' + parseFloat(row.new_balance).toFixed(2) + '</td>' +
+                '<td style="padding:10px;border-bottom:1px solid #e5e7eb;color:#059669;font-weight:700;">â‚¹' + parseFloat(row.amount_paid).toFixed(2) + '</td>' +
+                '<td style="padding:10px;border-bottom:1px solid #e5e7eb;">â‚¹' + parseFloat(row.total_amount_paid || 0).toFixed(2) + '</td>' +
+                '<td style="padding:10px;border-bottom:1px solid #e5e7eb;color:#b91c1c;">â‚¹' + parseFloat(row.previous_balance).toFixed(2) + '</td>' +
+                '<td style="padding:10px;border-bottom:1px solid #e5e7eb;font-weight:700;">â‚¹' + parseFloat(row.new_balance).toFixed(2) + '</td>' +
                 '<td style="padding:10px;border-bottom:1px solid #e5e7eb;text-align:center;">' +
-                '<a href="' + receiptUrl + '" target="_blank" style="background:linear-gradient(135deg,#059669,#047857);color:#fff;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:bold;text-decoration:none;display:inline-block;box-shadow:0 2px 6px rgba(5,150,105,0.3);">🧾 Print Receipt</a>' +
+                '<a href="' + receiptUrl + '" target="_blank" style="background:linear-gradient(135deg,#059669,#047857);color:#fff;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:bold;text-decoration:none;display:inline-block;box-shadow:0 2px 6px rgba(5,150,105,0.3);">ðŸ§¾ Print Receipt</a>' +
                 '</td>' +
                 '</tr>';
         });
@@ -1212,14 +1212,14 @@ function closeHistoryModal() {
     modal.style.display = 'none';
 }
 
-/* ── Receive Modal JS ── */
+/* â”€â”€ Receive Modal JS â”€â”€ */
 function openReceiveModal(id, invoiceNo, customerName, totalAmt, currentDue, currentDueDate) {
     document.getElementById('rcvInvoiceId').value = id;
     document.getElementById('rcvRawDue').value = currentDue;
     document.getElementById('rcvCustomerName').textContent = customerName;
     document.getElementById('rcvInvoiceNo').textContent = 'Inv: ' + invoiceNo;
-    document.getElementById('rcvTotalAmt').textContent = '₹' + parseFloat(totalAmt).toFixed(2);
-    document.getElementById('rcvCurrentDue').textContent = '₹' + parseFloat(currentDue).toFixed(2);
+    document.getElementById('rcvTotalAmt').textContent = 'â‚¹' + parseFloat(totalAmt).toFixed(2);
+    document.getElementById('rcvCurrentDue').textContent = 'â‚¹' + parseFloat(currentDue).toFixed(2);
     
     const input = document.getElementById('rcvAmountInput');
     input.value = currentDue;
@@ -1255,12 +1255,12 @@ function calcReceivePreview() {
     const box  = document.getElementById('rcvPendingBox');
     
     if (rcvAmt >= rawDue && rawDue > 0) {
-        disp.textContent = '₹0.00 (Fully Cleared! ✅)';
+        disp.textContent = 'â‚¹0.00 (Fully Cleared! âœ…)';
         disp.style.color = '#15803d';
         box.style.background = '#f0fdf4';
         box.style.borderColor = '#86efac';
     } else {
-        disp.textContent = '₹' + pending.toFixed(2);
+        disp.textContent = 'â‚¹' + pending.toFixed(2);
         disp.style.color = '#b91c1c';
         box.style.background = '#f8fafc';
         box.style.borderColor = '#94a3b8';
@@ -1299,7 +1299,7 @@ function submitReceivePayment() {
     .then(res => {
         if (res.success) {
             closeReceiveModal();
-            showToast('✅ Payment received (₹' + amt.toFixed(2) + ' ' + mode + ')!');
+            showToast('âœ… Payment received (â‚¹' + amt.toFixed(2) + ' ' + mode + ')!');
             
             // Open printable invoice / payment receipt PDF (uses invoice_no to avoid "Invoice number missing" error)
             var printUrl = 'view_pdf.php?invoice_no=' + encodeURIComponent(res.invoice_no) + '&receipt=1&history_id=' + res.history_id;
@@ -1316,7 +1316,7 @@ function submitReceivePayment() {
                         setTimeout(function() { row.remove(); }, 600);
                     }
                 } else {
-                    rowDisplay.textContent = '₹' + parseFloat(res.new_balance).toFixed(2);
+                    rowDisplay.textContent = 'â‚¹' + parseFloat(res.new_balance).toFixed(2);
                     rowDisplay.dataset.balance = res.new_balance;
                     
                     // Update due date input in table row
@@ -1346,9 +1346,9 @@ function submitReceivePayment() {
     <div style="background:#fff;border-radius:12px;max-width:720px;width:100%;max-height:calc(100vh - 48px);box-shadow:0 18px 50px rgba(0,0,0,0.18);overflow:hidden;">
         <div style="padding:18px 22px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;">
             <h2 id="historyModalTitle" style="font-size:18px;margin:0;color:#111827;">History</h2>
-            <button type="button" onclick="closeHistoryModal()" style="border:none;background:none;font-size:18px;color:#6b7280;cursor:pointer;">✕</button>
+            <button type="button" onclick="closeHistoryModal()" style="border:none;background:none;font-size:18px;color:#6b7280;cursor:pointer;">âœ•</button>
         </div>
-        <div id="historyModalBody" style="max-height:70vh;overflow:auto;padding:18px 22px;">Loading history…</div>
+        <div id="historyModalBody" style="max-height:70vh;overflow:auto;padding:18px 22px;">Loading historyâ€¦</div>
     </div>
 </div>
 
@@ -1359,7 +1359,7 @@ function submitReceivePayment() {
             <div style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;">
                 <i class="fas fa-hand-holding-usd"></i> Receive Due Payment
             </div>
-            <button onclick="closeReceiveModal()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;">✕</button>
+            <button onclick="closeReceiveModal()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;">âœ•</button>
         </div>
         <div style="padding:20px;display:flex;flex-direction:column;gap:14px;">
             <!-- Customer & Inv Card -->
@@ -1369,8 +1369,8 @@ function submitReceivePayment() {
                     <span style="font-weight:700;color:#111;" id="rcvInvoiceNo">INV-1001</span>
                 </div>
                 <div style="display:flex;justify-content:space-between;color:#64748b;font-size:11px;">
-                    <span>Total Invoice: <strong id="rcvTotalAmt">₹0.00</strong></span>
-                    <span>Current Due: <strong style="color:#b91c1c;" id="rcvCurrentDue">₹0.00</strong></span>
+                    <span>Total Invoice: <strong id="rcvTotalAmt">â‚¹0.00</strong></span>
+                    <span>Current Due: <strong style="color:#b91c1c;" id="rcvCurrentDue">â‚¹0.00</strong></span>
                 </div>
             </div>
 
@@ -1379,7 +1379,7 @@ function submitReceivePayment() {
 
             <!-- Amount Receiving Now -->
             <div>
-                <label style="font-size:11px;font-weight:700;color:#7a4e0a;display:block;margin-bottom:4px;">Amount Receiving Now (₹) *</label>
+                <label style="font-size:11px;font-weight:700;color:#7a4e0a;display:block;margin-bottom:4px;">Amount Receiving Now (â‚¹) *</label>
                 <input type="number" step="0.01" min="1" id="rcvAmountInput" class="inline-input" placeholder="Enter amount to receive..." oninput="calcReceivePreview()" style="font-size:15px;font-weight:700;padding:10px;border-color:#d68b16;">
             </div>
 
@@ -1389,11 +1389,11 @@ function submitReceivePayment() {
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                     <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #d68b16;border-radius:10px;cursor:pointer;background:#fff9ee;" id="lblModeCash">
                         <input type="radio" name="rcv_mode" value="Cash" checked onclick="selectRcvMode('Cash')">
-                        <span style="font-size:12px;font-weight:700;color:#7a4e0a;">💵 Cash</span>
+                        <span style="font-size:12px;font-weight:700;color:#7a4e0a;">ðŸ’µ Cash</span>
                     </label>
                     <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;cursor:pointer;background:#fff;" id="lblModeUpi">
                         <input type="radio" name="rcv_mode" value="UPI" onclick="selectRcvMode('UPI')">
-                        <span style="font-size:12px;font-weight:700;color:#800020;">📲 UPI / Digital</span>
+                        <span style="font-size:12px;font-weight:700;color:#800020;">ðŸ“² UPI / Digital</span>
                     </label>
                 </div>
             </div>
@@ -1407,14 +1407,14 @@ function submitReceivePayment() {
             <!-- Remaining Pending Due Preview -->
             <div id="rcvPendingBox" style="background:#f8fafc;border:1px dashed #94a3b8;border-radius:10px;padding:10px 14px;font-size:12px;display:flex;justify-content:space-between;align-items:center;">
                 <span style="color:#475569;font-weight:600;">Remaining Pending Due:</span>
-                <span style="font-size:14px;font-weight:800;color:#b91c1c;" id="rcvPendingDisplay">₹0.00</span>
+                <span style="font-size:14px;font-weight:800;color:#b91c1c;" id="rcvPendingDisplay">â‚¹0.00</span>
             </div>
 
             <!-- Submit Action -->
             <div style="display:flex;gap:10px;margin-top:6px;">
                 <button type="button" onclick="closeReceiveModal()" style="flex:1;padding:10px;border-radius:10px;border:1px solid #cbd5e1;background:#f1f5f9;color:#475569;font-size:12px;font-weight:600;cursor:pointer;">Cancel</button>
                 <button type="button" onclick="submitReceivePayment()" style="flex:1.5;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg, #7a4e0a, #d68b16);color:#fff;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(214,139,22,0.3);">
-                    💾 Save &amp; Print Invoice
+                    ðŸ’¾ Save &amp; Print Invoice
                 </button>
             </div>
         </div>
@@ -1440,11 +1440,11 @@ function submitReceivePayment() {
 
     if (!faLoaded()) {
         var map = {
-            'fa-user': '👤', 'fa-user-circle':'👤', 'fa-sign-out-alt':'🔓', 'fa-sign-in-alt':'🔐',
-            'fa-list':'📋', 'fa-arrow-left':'←', 'fa-check-circle':'✅', 'fa-save':'💾',
-            'fa-trash-alt':'🗑️', 'fa-spinner':'⏳', 'fa-check':'✓', 'fa-chart-bar':'📊',
-            'fa-receipt':'🧾','fa-chart-line':'📈','fa-boxes':'📦','fa-users':'👥','fa-gem':'💎',
-            'fa-book':'📖','fa-weight-hanging':'⚖️','fa-coins':'🪙','fa-search':'🔍','fa-plus-circle':'➕'
+            'fa-user': 'ðŸ‘¤', 'fa-user-circle':'ðŸ‘¤', 'fa-sign-out-alt':'ðŸ”“', 'fa-sign-in-alt':'ðŸ”',
+            'fa-list':'ðŸ“‹', 'fa-arrow-left':'â†', 'fa-check-circle':'âœ…', 'fa-save':'ðŸ’¾',
+            'fa-trash-alt':'ðŸ—‘ï¸', 'fa-spinner':'â³', 'fa-check':'âœ“', 'fa-chart-bar':'ðŸ“Š',
+            'fa-receipt':'ðŸ§¾','fa-chart-line':'ðŸ“ˆ','fa-boxes':'ðŸ“¦','fa-users':'ðŸ‘¥','fa-gem':'ðŸ’Ž',
+            'fa-book':'ðŸ“–','fa-weight-hanging':'âš–ï¸','fa-coins':'ðŸª™','fa-search':'ðŸ”','fa-plus-circle':'âž•'
         };
 
         document.querySelectorAll('i[class*="fa-"]').forEach(function(i){
@@ -1471,6 +1471,7 @@ function submitReceivePayment() {
     }
 })();
 </script>
+
 
 
 

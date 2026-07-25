@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once 'config/database.php';
 require_once 'config/company_config.php';
@@ -10,7 +10,7 @@ if(!isset($_SESSION['user_id'])) {
 
 $is_logged_in = true;
 
-// ── Handle Add/Edit/Delete ───────────────────────────────────────────────────
+// â”€â”€ Handle Add/Edit/Delete â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 $msg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $name    = trim($_POST['name'] ?? '');
@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 }
 $msg = $_GET['msg'] ?? '';
 
-// ── Search ───────────────────────────────────────────────────────────────
+// â”€â”€ Search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 $search = trim($_GET['search'] ?? '');
 if ($search !== '') {
     $s = mysqli_real_escape_string($conn, $search);
@@ -66,7 +66,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-<title>Contacts — MAA GOURI JEWELLERS</title>
+<title>Contacts â€” MAA GOURI JEWELLERS</title>
 <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
@@ -353,10 +353,10 @@ h1, h2, h3, .gold-font { font-family: 'Poppins', sans-serif; font-weight: 700; }
                             </a>
                         </td>
                         <td class="px-5 py-3.5 text-xs text-gray-600">
-                            <?= $c['email'] ? '<a href="mailto:'.htmlspecialchars($c['email']).'" class="text-blue-600 hover:underline flex items-center gap-1.5"><i class="fas fa-envelope text-blue-500"></i> '.htmlspecialchars($c['email']).'</a>' : '<span class="text-gray-300">—</span>' ?>
+                            <?= $c['email'] ? '<a href="mailto:'.htmlspecialchars($c['email']).'" class="text-blue-600 hover:underline flex items-center gap-1.5"><i class="fas fa-envelope text-blue-500"></i> '.htmlspecialchars($c['email']).'</a>' : '<span class="text-gray-300">â€”</span>' ?>
                         </td>
                         <td class="px-5 py-3.5 text-xs text-gray-600 max-w-xs">
-                            <?= $c['address'] ? htmlspecialchars($c['address']) : '<span class="text-gray-300">—</span>' ?>
+                            <?= $c['address'] ? htmlspecialchars($c['address']) : '<span class="text-gray-300">â€”</span>' ?>
                         </td>
                         <td class="px-5 py-3.5 text-center whitespace-nowrap">
                             <button onclick='editModal(<?= json_encode($c) ?>)' class="px-3 py-1 text-xs font-bold text-blue-900 bg-blue-100 rounded-lg hover:bg-blue-200 transition mr-1">
@@ -379,7 +379,7 @@ h1, h2, h3, .gold-font { font-family: 'Poppins', sans-serif; font-weight: 700; }
     <footer style="background:linear-gradient(0deg,#f5e6c8,#fdf6e3);border-top:2px solid #d68b16;padding:20px;margin-top:40px;text-align:center;">
         <p class="text-xs" style="color:#7a4e0a;">
             &copy; 2026 MAA GOURI JEWELLERS &nbsp;|&nbsp; CRAFTED WITH ELEGANCE &nbsp;|&nbsp;
-            Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology</a>
+            Design & Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology & Research Private Limited</a>
         </p>
     </footer>
 </div>
@@ -391,7 +391,7 @@ h1, h2, h3, .gold-font { font-family: 'Poppins', sans-serif; font-weight: 700; }
             <h3 class="text-lg font-bold text-white flex items-center gap-2" id="modalTitle">
                 <i class="fas fa-user-plus"></i> Add Contact
             </h3>
-            <button onclick="closeModal()" class="text-white hover:text-amber-200 text-lg font-bold">✕</button>
+            <button onclick="closeModal()" class="text-white hover:text-amber-200 text-lg font-bold">âœ•</button>
         </div>
         <form method="POST" class="p-6 space-y-4">
             <input type="hidden" name="action" value="save">
@@ -417,7 +417,7 @@ h1, h2, h3, .gold-font { font-family: 'Poppins', sans-serif; font-weight: 700; }
                     Cancel
                 </button>
                 <button type="submit" class="flex-1 py-2.5 text-xs font-bold text-white rounded-xl shadow-md" style="background:linear-gradient(135deg, #7a4e0a 0%, #d68b16 100%);">
-                    💾 Save Contact
+                    ðŸ’¾ Save Contact
                 </button>
             </div>
         </form>
@@ -472,5 +472,6 @@ document.getElementById('modalOverlay').addEventListener('click', e => {
 </script>
 </body>
 </html>
+
 
 

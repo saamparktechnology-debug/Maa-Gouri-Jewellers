@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once 'config/database.php';
 require_once 'config/company_config.php';
@@ -10,7 +10,7 @@ if(!isset($_SESSION['user_id'])) {
 
 $is_logged_in = true;
 
-// ── Ensure required columns & due_update_history table exist ────────────────
+// â”€â”€ Ensure required columns & due_update_history table exist â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 $cols = ['cash_paid', 'upi_paid', 'account_paid', 'cheque_paid', 'old_gold_value'];
 foreach ($cols as $c) {
     $chk = mysqli_query($conn, "SHOW COLUMNS FROM invoices LIKE '$c'");
@@ -27,7 +27,7 @@ if ($chkHistoryTable && mysqli_num_rows($chkHistoryTable) > 0) {
     }
 }
 
-// ── Month filter ─────────────────────────────────────────────────────────
+// â”€â”€ Month filter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 $month = isset($_GET['month']) ? $_GET['month'] : date('Y-m');
 if (!preg_match('/^\d{4}-\d{2}$/', $month)) $month = date('Y-m');
 $monthStart = $month . '-01';
@@ -37,7 +37,7 @@ $monthLabel = date('F Y', strtotime($monthStart));
 $monthStartEsc = mysqli_real_escape_string($conn, $monthStart);
 $monthEndEsc   = mysqli_real_escape_string($conn, $monthEnd);
 
-// ── 1. Fetch all paid/part invoices for the month ────────────────────────────
+// â”€â”€ 1. Fetch all paid/part invoices for the month â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 $sql = "
     SELECT
         DATE(created_at)               AS day,
@@ -90,7 +90,7 @@ while ($row = mysqli_fetch_assoc($res)) {
     $days[$d]['bills']   += 1;
 }
 
-// ── 2. Fetch Due Payments Cleared Today / In Month (from due_update_history) ─
+// â”€â”€ 2. Fetch Due Payments Cleared Today / In Month (from due_update_history) â”€
 if ($chkHistoryTable && mysqli_num_rows($chkHistoryTable) > 0) {
     $dueSql = "
         SELECT 
@@ -128,7 +128,7 @@ if ($chkHistoryTable && mysqli_num_rows($chkHistoryTable) > 0) {
 ksort($days);
 $days = array_reverse($days, true);
 
-// ── Month totals ──────────────────────────────────────────────────────────
+// â”€â”€ Month totals â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 $monthCash     = array_sum(array_column($days, 'cash'));
 $monthUpi      = array_sum(array_column($days, 'upi'));
 $monthCheque   = array_sum(array_column($days, 'cheque'));
@@ -137,7 +137,7 @@ $monthTotal    = array_sum(array_column($days, 'total'));
 $monthBills    = array_sum(array_column($days, 'bills'));
 $monthDueRec   = array_sum(array_column($days, 'due_collections'));
 
-// ── Today highlight ───────────────────────────────────────────────────────
+// â”€â”€ Today highlight â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 $today = date('Y-m-d');
 $todayCash      = $days[$today]['cash']      ?? 0;
 $todayUpi       = $days[$today]['upi']       ?? 0;
@@ -146,7 +146,7 @@ $todayBills     = $days[$today]['bills']     ?? 0;
 $todayDueRec    = $days[$today]['due_collections'] ?? 0;
 
 function fmt($v) {
-    return '₹' . number_format($v, 2, '.', ',');
+    return 'â‚¹' . number_format($v, 2, '.', ',');
 }
 function pct($part, $total) {
     return $total > 0 ? round(($part / $total) * 100) : 0;
@@ -159,7 +159,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-<title>Accounts — MAA GOURI JEWELLERS</title>
+<title>Accounts â€” MAA GOURI JEWELLERS</title>
 <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
@@ -360,12 +360,12 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
                 <h1 class="text-2xl font-bold text-amber-950 flex items-center gap-2">
                     <i class="fas fa-book text-amber-600"></i> Cash &amp; Accounts Ledger
                 </h1>
-                <p class="text-xs text-gray-500 mt-1">Cash, UPI &amp; Due Payment Collection History — <strong class="text-amber-800"><?= htmlspecialchars($monthLabel) ?></strong></p>
+                <p class="text-xs text-gray-500 mt-1">Cash, UPI &amp; Due Payment Collection History â€” <strong class="text-amber-800"><?= htmlspecialchars($monthLabel) ?></strong></p>
             </div>
 
             <div class="flex items-center gap-3 flex-wrap no-print">
                 <form method="GET" class="flex gap-2 items-center">
-                    <label class="text-xs font-bold text-amber-900">📅 Month:</label>
+                    <label class="text-xs font-bold text-amber-900">ðŸ“… Month:</label>
                     <input type="month" name="month" value="<?= htmlspecialchars($month) ?>" onchange="this.form.submit()" class="px-3 py-1.5 text-xs rounded-xl border border-amber-300 bg-amber-50 text-amber-900 font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500">
                 </form>
                 <button onclick="window.print()" class="px-4 py-2 text-xs font-bold text-white rounded-xl shadow-md flex items-center gap-2" style="background:linear-gradient(135deg, #7a4e0a 0%, #d68b16 100%);">
@@ -378,12 +378,12 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
         <?php if ($month === date('Y-m')): ?>
         <div>
             <div class="text-xs font-bold uppercase tracking-wider text-amber-800 mb-3 flex items-center gap-2">
-                <i class="fas fa-bolt text-amber-500"></i> Today's Live Collections — <?= date('d M Y') ?>
+                <i class="fas fa-bolt text-amber-500"></i> Today's Live Collections â€” <?= date('d M Y') ?>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div class="card-gold p-4 flex items-center gap-4">
                     <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-bold text-amber-900" style="background:linear-gradient(135deg, #ffd700 0%, #b5730e 100%);">
-                        💵
+                        ðŸ’µ
                     </div>
                     <div>
                         <div class="text-xs font-semibold text-gray-500 uppercase">Today Cash Collection</div>
@@ -394,7 +394,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
 
                 <div class="card-gold p-4 flex items-center gap-4">
                     <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-bold text-white" style="background:linear-gradient(135deg, #800020 0%, #c0002e 100%);">
-                        📲
+                        ðŸ“²
                     </div>
                     <div>
                         <div class="text-xs font-semibold text-gray-500 uppercase">Today Digital / UPI</div>
@@ -405,7 +405,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
 
                 <div class="card-gold p-4 flex items-center gap-4">
                     <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-bold text-green-950" style="background:linear-gradient(135deg, #a7f3d0 0%, #059669 100%);">
-                        💰
+                        ðŸ’°
                     </div>
                     <div>
                         <div class="text-xs font-semibold text-gray-500 uppercase">Today Net Total Received</div>
@@ -430,7 +430,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
             </div>
 
             <div class="card-gold p-5">
-                <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">💵 Cash Received</div>
+                <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">ðŸ’µ Cash Received</div>
                 <div class="text-2xl font-bold text-amber-800 mt-1"><?= fmt($monthCash) ?></div>
                 <div class="mt-2">
                     <div class="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
@@ -441,7 +441,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
             </div>
 
             <div class="card-gold p-5">
-                <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">📲 UPI / Bank</div>
+                <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">ðŸ“² UPI / Bank</div>
                 <div class="text-2xl font-bold text-rose-900 mt-1"><?= fmt($monthUpi) ?></div>
                 <div class="mt-2">
                     <div class="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
@@ -452,7 +452,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
             </div>
 
             <div class="card-gold p-5">
-                <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">💳 Due Payment Received</div>
+                <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">ðŸ’³ Due Payment Received</div>
                 <div class="text-2xl font-bold text-emerald-800 mt-1"><?= fmt($monthDueRec) ?></div>
                 <div class="text-xs text-emerald-600 font-semibold mt-1">Cleared from past dues</div>
             </div>
@@ -462,7 +462,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
         <div class="card-gold overflow-hidden">
             <div class="px-6 py-4 flex items-center justify-between border-b border-amber-200/60" style="background:linear-gradient(135deg, #7a4e0a 0%, #d68b16 100%);">
                 <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                    <i class="fas fa-list-alt"></i> Daily Collection Ledger — <?= htmlspecialchars($monthLabel) ?>
+                    <i class="fas fa-list-alt"></i> Daily Collection Ledger â€” <?= htmlspecialchars($monthLabel) ?>
                 </h3>
                 <span class="text-xs font-bold px-3 py-1 rounded-full bg-white/20 text-white"><?= count($days) ?> Active Days</span>
             </div>
@@ -480,9 +480,9 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
                         <tr class="bg-amber-100/50 text-amber-900 text-xs uppercase font-bold border-b border-amber-200/70">
                             <th class="px-5 py-3">Date</th>
                             <th class="px-5 py-3 text-center">New Bills</th>
-                            <th class="px-5 py-3 text-right">💵 Cash</th>
-                            <th class="px-5 py-3 text-right">📲 UPI / Digital</th>
-                            <th class="px-5 py-3 text-right">💳 Due Cleared</th>
+                            <th class="px-5 py-3 text-right">ðŸ’µ Cash</th>
+                            <th class="px-5 py-3 text-right">ðŸ“² UPI / Digital</th>
+                            <th class="px-5 py-3 text-right">ðŸ’³ Due Cleared</th>
                             <th class="px-5 py-3 text-right">Total Collection</th>
                         </tr>
                     </thead>
@@ -506,13 +506,13 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
                             <span class="px-2.5 py-1 text-xs font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200"><?= $v['bills'] ?></span>
                         </td>
                         <td class="px-5 py-3.5 text-right font-bold text-amber-800 text-xs">
-                            <?= $v['cash'] > 0 ? fmt($v['cash']) : '<span class="text-gray-300 font-normal">—</span>' ?>
+                            <?= $v['cash'] > 0 ? fmt($v['cash']) : '<span class="text-gray-300 font-normal">â€”</span>' ?>
                         </td>
                         <td class="px-5 py-3.5 text-right font-bold text-rose-900 text-xs">
-                            <?= $v['upi'] > 0 ? fmt($v['upi']) : '<span class="text-gray-300 font-normal">—</span>' ?>
+                            <?= $v['upi'] > 0 ? fmt($v['upi']) : '<span class="text-gray-300 font-normal">â€”</span>' ?>
                         </td>
                         <td class="px-5 py-3.5 text-right font-bold text-emerald-700 text-xs">
-                            <?= ($v['due_collections'] ?? 0) > 0 ? ('+' . fmt($v['due_collections'])) : '<span class="text-gray-300 font-normal">—</span>' ?>
+                            <?= ($v['due_collections'] ?? 0) > 0 ? ('+' . fmt($v['due_collections'])) : '<span class="text-gray-300 font-normal">â€”</span>' ?>
                         </td>
                         <td class="px-5 py-3.5 text-right font-extrabold text-gray-900 text-sm">
                             <?= fmt($v['total']) ?>
@@ -522,7 +522,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
                     </tbody>
                     <tfoot>
                         <tr class="bg-amber-100/70 border-t-2 border-amber-300 text-amber-950 font-bold">
-                            <td class="px-5 py-3.5 text-xs uppercase">📊 Month Total</td>
+                            <td class="px-5 py-3.5 text-xs uppercase">ðŸ“Š Month Total</td>
                             <td class="px-5 py-3.5 text-center text-xs"><?= $monthBills ?></td>
                             <td class="px-5 py-3.5 text-right text-xs text-amber-900"><?= fmt($monthCash) ?></td>
                             <td class="px-5 py-3.5 text-right text-xs text-rose-900"><?= fmt($monthUpi) ?></td>
@@ -540,7 +540,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
     <footer style="background:linear-gradient(0deg,#f5e6c8,#fdf6e3);border-top:2px solid #d68b16;padding:20px;margin-top:40px;text-align:center;">
         <p class="text-xs" style="color:#7a4e0a;">
             &copy; 2026 MAA GOURI JEWELLERS &nbsp;|&nbsp; CRAFTED WITH ELEGANCE &nbsp;|&nbsp;
-            Design &amp; Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology &amp; Research Private Limited</a>
+            Design & Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology & Research Private Limited</a>
         </p>
     </footer>
 </div>
@@ -559,5 +559,7 @@ function closeSidebar() {
 </script>
 </body>
 </html>
+
+
 
 

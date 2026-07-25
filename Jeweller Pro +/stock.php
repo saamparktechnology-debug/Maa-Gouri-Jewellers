@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once 'config/database.php';
 require_once 'config/company_config.php';
@@ -35,7 +35,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         $query = "INSERT INTO products (serial_no, name, item_name, category, weight, price, quantity, huid_code, created_at) VALUES ('$serial_no', '$name', '$item_name', '$category', '$weight', '$price', '$quantity', '$huid_code', NOW())";
         if(mysqli_query($conn, $query)) {
-            $success = "✨ Product added successfully! ✨";
+            $success = "âœ¨ Product added successfully! âœ¨";
         } else {
             $error = "Error adding product: " . mysqli_error($conn);
         }
@@ -44,7 +44,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         $id = $_POST['product_id'];
         $quantity = $_POST['quantity'];
         if(mysqli_query($conn, "UPDATE products SET quantity = quantity + $quantity WHERE id = $id")) {
-            $success = "📦 Stock updated successfully!";
+            $success = "ðŸ“¦ Stock updated successfully!";
         } else {
             $error = "Error updating stock: " . mysqli_error($conn);
         }
@@ -64,7 +64,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         $query = "UPDATE products SET serial_no='$serial_no', name='$name', item_name='$item_name', category='$category', weight='$weight', price='$price', quantity='$quantity', huid_code='$huid_code' WHERE id=$id";
         if(mysqli_query($conn, $query)) {
-            $success = "💎 Product updated successfully! 💎";
+            $success = "ðŸ’Ž Product updated successfully! ðŸ’Ž";
         } else {
             $error = "Error updating product: " . mysqli_error($conn);
         }
@@ -74,7 +74,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         mysqli_query($conn, "SET FOREIGN_KEY_CHECKS = 0");
         mysqli_query($conn, "DELETE FROM invoice_items WHERE product_id = $id");
         if(mysqli_query($conn, "DELETE FROM products WHERE id = $id")) {
-            $success = "🗑️ Product deleted successfully!";
+            $success = "ðŸ—‘ï¸ Product deleted successfully!";
         } else {
             $error = "Error deleting product: " . mysqli_error($conn);
         }
@@ -679,10 +679,10 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 <!-- Loading Overlay -->
 <div id="loadingOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;display:flex;justify-content:center;align-items:center;overflow:hidden;transition:opacity 0.6s ease,visibility 0.6s ease;background:radial-gradient(ellipse at 50% 60%, #1a0a00 0%, #0d0500 100%);">
     <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(214,139,22,0.015) 3px,rgba(214,139,22,0.015) 4px);pointer-events:none;z-index:1;"></div>
-    <!-- <div style="position:absolute;top:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite;">✦</div>
-    <div style="position:absolute;top:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 1s;">✦</div>
-    <div style="position:absolute;bottom:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 2s;">✦</div>
-    <div style="position:absolute;bottom:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 3s;">✦</div> -->
+    <!-- <div style="position:absolute;top:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite;">âœ¦</div>
+    <div style="position:absolute;top:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 1s;">âœ¦</div>
+    <div style="position:absolute;bottom:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 2s;">âœ¦</div>
+    <div style="position:absolute;bottom:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 3s;">âœ¦</div> -->
     <div id="loaderStars" style="position:absolute;inset:0;pointer-events:none;z-index:2;"></div>
     <div id="loaderRings" style="position:absolute;inset:0;pointer-events:none;z-index:2;display:flex;align-items:center;justify-content:center;"></div>
     <div style="position:relative;z-index:10;text-align:center;">
@@ -836,14 +836,14 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             <div class="flex flex-col sm:flex-row sm:items-center gap-2">
                 <i class="fas fa-exclamation-triangle text-red-500 text-xl flex-shrink-0"></i>
                 <div>
-                    <p class="font-bold text-red-700 text-sm">⚠️ Low Stock Alert!</p>
+                    <p class="font-bold text-red-700 text-sm">âš ï¸ Low Stock Alert!</p>
                     <p class="text-red-600 text-xs mb-2">Following products have low stock (less than 5 units):</p>
                     <div class="flex flex-wrap gap-2">
                         <?php
                         mysqli_data_seek($low_stock, 0);
                         while($item = mysqli_fetch_assoc($low_stock)): ?>
                             <span class="inline-block px-3 py-1 rounded-full text-xs font-semibold" style="background:#FEE2E2;color:#991B1B;">
-                                💎 <?php echo htmlspecialchars($item['name']); ?>: <?php echo $item['quantity']; ?> left
+                                ðŸ’Ž <?php echo htmlspecialchars($item['name']); ?>: <?php echo $item['quantity']; ?> left
                             </span>
                         <?php endwhile; ?>
                     </div>
@@ -864,7 +864,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                     <form method="POST">
 
                         <div class="mb-3">
-                            <label>💎 Product Name</label>
+                            <label>ðŸ’Ž Product Name</label>
                             <input list="productNameList" type="text" id="addProductName" name="name" placeholder="Enter product name or choose Others" required class="jewel-input" onchange="onAddProductNameChange()">
                             <datalist id="productNameList">
                                 <option value="Others"></option>
@@ -872,30 +872,30 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         </div>
 
                         <div class="mb-3">
-                            <label>✨ Category</label>
+                            <label>âœ¨ Category</label>
                             <select name="category" id="addCategorySelect" required class="jewel-input" onchange="updateItemTypes('addCategorySelect','addItemSelect','addCustomItem')">
                                 <option value="">-- Select Category --</option>
-                                <optgroup label="🥇 Gold">
+                                <optgroup label="ðŸ¥‡ Gold">
                                     <option value="Gold 22K">Gold 22K</option>
                                     <option value="Gold 18K">Gold 18K</option>
                                 </optgroup>
-                                <optgroup label="🥈 Silver">
+                                <optgroup label="ðŸ¥ˆ Silver">
                                     <option value="Silver">Silver</option>
                                 </optgroup>
-                                <optgroup label="💎 Stone">
+                                <optgroup label="ðŸ’Ž Stone">
                                     <option value="Stone">Stone</option>
                                 </optgroup>
-                                <optgroup label="💎 Diamond">
+                                <optgroup label="ðŸ’Ž Diamond">
                                     <option value="Diamond">Diamond</option>
                                 </optgroup>
-                                <optgroup label="🟤 Other">
+                                <optgroup label="ðŸŸ¤ Other">
                                     <option value="Other">Other</option>
                                 </optgroup>
                             </select>
                         </div>
 
                         <div class="mb-3">
-                            <label>🏷️ Item Type</label>
+                            <label>ðŸ·ï¸ Item Type</label>
                             <select name="item_name" id="addItemSelect" required class="jewel-input" onchange="toggleCustomItem('addCustomItem', this.value)">
                                 <option value="">-- Select Category First --</option>
                             </select>
@@ -905,24 +905,24 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         </div>
 
                         <div class="mb-3">
-                            <label>🔢 Serial Number</label>
+                            <label>ðŸ”¢ Serial Number</label>
                             <input type="text" name="serial_no" placeholder="Enter serial number" required class="jewel-input">
                         </div>
 
                         <div class="mb-3">
-                            <label>🏷️ HUID Code</label>
+                            <label>ðŸ·ï¸ HUID Code</label>
                             <input type="text" name="huid_code" placeholder="Enter HUID code (optional)" class="jewel-input">
                         </div>
 
                         <div class="mb-3">
-                            <label>⚖️ Weight (grams)</label>
+                            <label>âš–ï¸ Weight (grams)</label>
                             <input type="text" name="weight" placeholder="e.g. 12.5" class="jewel-input">
                         </div>
 
                         <input type="hidden" name="price" value="0">
 
                         <div class="mb-4">
-                            <label>📦 Quantity</label>
+                            <label>ðŸ“¦ Quantity</label>
                             <input type="number" name="quantity" placeholder="Enter quantity" required class="jewel-input">
                         </div>
 
@@ -1006,13 +1006,13 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                         <div class="text-xs" style="color:#7a4e0a;"><?php echo htmlspecialchars($product['category'] ?? ''); ?></div>
                                     </td>
                                     <td>
-                                        <div class="font-medium text-sm" style="color:#b5730e;"><?php echo htmlspecialchars($product['item_name'] ?? '—'); ?></div>
+                                        <div class="font-medium text-sm" style="color:#b5730e;"><?php echo htmlspecialchars($product['item_name'] ?? 'â€”'); ?></div>
                                     </td>
                                     <td>
-                                        <div class="text-sm font-semibold" style="color:#4b5563;"><?php echo htmlspecialchars($product['serial_no'] ?? '—'); ?></div>
+                                        <div class="text-sm font-semibold" style="color:#4b5563;"><?php echo htmlspecialchars($product['serial_no'] ?? 'â€”'); ?></div>
                                     </td>
                                     <td>
-                                        <div class="text-sm font-semibold" style="color:#4b5563;"><?php echo htmlspecialchars($product['huid_code'] ?: '—'); ?></div>
+                                        <div class="text-sm font-semibold" style="color:#4b5563;"><?php echo htmlspecialchars($product['huid_code'] ?: 'â€”'); ?></div>
                                     </td>
                                     <td class="text-sm">
                                         <?php echo htmlspecialchars($product['weight'] ?? 'N/A'); ?>
@@ -1022,7 +1022,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                         <?php if(!empty($product['created_at'])): ?>
                                             <span class="font-medium"><?php echo date('d M Y', strtotime($product['created_at'])); ?></span>
                                         <?php else: ?>
-                                            <span style="color:#d1d5db;">—</span>
+                                            <span style="color:#d1d5db;">â€”</span>
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-center font-bold text-sm" style="color:#800020;"><?php echo $qty; ?></td>
@@ -1093,7 +1093,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         </div>
                         <div class="summary-item">
                             <i class="fas fa-coins"></i>
-                            <span>Est. Value: <strong>₹<?php echo number_format($total_price, 2); ?></strong></span>
+                            <span>Est. Value: <strong>â‚¹<?php echo number_format($total_price, 2); ?></strong></span>
                         </div>
                     </div>
                 </div>
@@ -1105,7 +1105,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     <footer style="background:linear-gradient(0deg,#f5e6c8,#fdf6e3);border-top:2px solid #d68b16;padding:20px;margin-top:40px;text-align:center;">
         <p class="text-xs" style="color:#7a4e0a;">
             &copy; 2026 MAA GOURI JEWELLERS &nbsp;|&nbsp; CRAFTED WITH ELEGANCE &nbsp;|&nbsp;
-            Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology</a>
+            Design & Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology & Research Private Limited</a>
         </p>
     </footer>
 </div><!-- end .page-wrapper -->
@@ -1120,38 +1120,38 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             <input type="hidden" name="product_id" id="editProductId">
 
             <div class="mb-3">
-                <label>🔢 Serial Number</label>
+                <label>ðŸ”¢ Serial Number</label>
                 <input type="text" name="serial_no" id="editProductSerial" required class="jewel-input">
             </div>
             <div class="mb-3">
-                <label>🏷️ HUID Code</label>
+                <label>ðŸ·ï¸ HUID Code</label>
                 <input type="text" name="huid_code" id="editProductHuid" class="jewel-input">
             </div>
             <div class="mb-3">
-                <label>💎 Product Name</label>
+                <label>ðŸ’Ž Product Name</label>
                 <input type="text" name="name" id="editProductName" required class="jewel-input">
             </div>
             <div class="mb-3">
-                <label>✨ Category</label>
+                <label>âœ¨ Category</label>
                 <select name="category" id="editProductCategory" required class="jewel-input" onchange="updateItemTypes('editProductCategory','editProductItemName','editCustomItem')">
                     <option value="">-- Select Category --</option>
-                    <optgroup label="🥇 Gold">
+                    <optgroup label="ðŸ¥‡ Gold">
                         <option value="Gold 22K">Gold 22K</option>
                         <option value="Gold 18K">Gold 18K</option>
                     </optgroup>
-                    <optgroup label="🥈 Silver">
+                    <optgroup label="ðŸ¥ˆ Silver">
                         <option value="Silver">Silver</option>
                     </optgroup>
-                    <optgroup label="💎 Stone">
+                    <optgroup label="ðŸ’Ž Stone">
                         <option value="Stone">Stone</option>
                     </optgroup>
-                    <optgroup label="💎 Diamond">
+                    <optgroup label="ðŸ’Ž Diamond">
                         <option value="Diamond">Diamond</option>
                     </optgroup>
                 </select>
             </div>
             <div class="mb-3">
-                <label>🏷️ Item Name</label>
+                <label>ðŸ·ï¸ Item Name</label>
                 <select name="item_name" id="editProductItemName" required class="jewel-input" onchange="toggleCustomItem('editCustomItem', this.value)">
                     <option value="">-- Select Item --</option>
                 </select>
@@ -1160,19 +1160,19 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 </div>
             </div>
             <div class="mb-3">
-                <label>⚖️ Weight (grams)</label>
+                <label>âš–ï¸ Weight (grams)</label>
                 <input type="text" name="weight" id="editProductWeight" class="jewel-input">
             </div>
             <div class="mb-3">
-                <label>💰 Price (₹)</label>
+                <label>ðŸ’° Price (â‚¹)</label>
                 <input type="number" step="0.01" name="price" id="editProductPrice" required class="jewel-input">
             </div>
             <div class="mb-4">
-                <label>📦 Quantity</label>
+                <label>ðŸ“¦ Quantity</label>
                 <input type="number" name="quantity" id="editProductQuantity" required class="jewel-input">
             </div>
             <div class="flex gap-3">
-                <button type="submit" name="update_product" class="btn-jewel flex-1 text-center">💾 Update</button>
+                <button type="submit" name="update_product" class="btn-jewel flex-1 text-center">ðŸ’¾ Update</button>
                 <button type="button" onclick="closeEditModal()" class="flex-1 py-2 rounded-lg text-sm font-semibold" style="background:#e5e7eb;color:#374151;">Cancel</button>
             </div>
         </form>
@@ -1187,11 +1187,11 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             <input type="hidden" name="product_id" id="updateProductId">
             <p class="mb-3 text-sm" style="color:#7a4e0a;">Product: <strong id="updateProductName" style="color:#800020;"></strong></p>
             <div class="mb-4">
-                <label>➕ Add Quantity</label>
+                <label>âž• Add Quantity</label>
                 <input type="number" name="quantity" required class="jewel-input" placeholder="Enter quantity to add">
             </div>
             <div class="flex gap-3">
-                <button type="submit" name="update_quantity" class="btn-jewel flex-1 text-center">➕ Add Stock</button>
+                <button type="submit" name="update_quantity" class="btn-jewel flex-1 text-center">âž• Add Stock</button>
                 <button type="button" onclick="closeUpdateModal()" class="flex-1 py-2 rounded-lg text-sm font-semibold" style="background:#e5e7eb;color:#374151;">Cancel</button>
             </div>
         </form>
@@ -1202,13 +1202,13 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 <div id="deleteModal" class="modal-overlay">
     <div class="modal-content text-center">
         <i class="fas fa-exclamation-triangle text-5xl mb-4" style="color:#ef4444;"></i>
-        <h3 class="text-xl font-bold gold-font">⚠️ Delete Product</h3>
+        <h3 class="text-xl font-bold gold-font">âš ï¸ Delete Product</h3>
         <p class="my-3 text-sm" style="color:#4b5563;">Are you sure you want to delete <strong id="deleteProductName" style="color:#800020;"></strong>?</p>
-        <p class="mb-4 text-xs" style="color:#d97706;">⚠️ Related invoice records may also be removed.</p>
+        <p class="mb-4 text-xs" style="color:#d97706;">âš ï¸ Related invoice records may also be removed.</p>
         <form method="POST">
             <input type="hidden" name="product_id" id="deleteProductId">
             <div class="flex gap-3">
-                <button type="submit" name="delete_product" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white" style="background:linear-gradient(135deg,#ef4444,#dc2626);">🗑️ Yes, Delete</button>
+                <button type="submit" name="delete_product" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white" style="background:linear-gradient(135deg,#ef4444,#dc2626);">ðŸ—‘ï¸ Yes, Delete</button>
                 <button type="button" onclick="closeDeleteModal()" class="flex-1 py-2 rounded-lg text-sm font-semibold" style="background:#e5e7eb;color:#374151;">Cancel</button>
             </div>
         </form>
@@ -1265,12 +1265,12 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
         itemSel.innerHTML = '<option value="">-- Select Item Type --</option>';
 
-        // Do NOT auto-fill product name — admin must type it manually
+        // Do NOT auto-fill product name â€” admin must type it manually
 
         itemsByCategory[cat].forEach(function(item) {
             const opt = document.createElement('option');
             opt.value = item;
-            opt.textContent = item === 'Other' ? '➕ Other (Custom)' : item;
+            opt.textContent = item === 'Other' ? 'âž• Other (Custom)' : item;
             itemSel.appendChild(opt);
         });
     }
@@ -1355,6 +1355,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
 </body>
 </html>
+
 
 
 

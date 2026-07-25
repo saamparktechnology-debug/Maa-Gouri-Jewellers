@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once 'config/database.php';
 require_once 'config/company_config.php';
@@ -6,7 +6,7 @@ require_once 'config/company_config.php';
 $is_logged_in = isset($_SESSION['user_id']);
 $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
 
-// ── DB: create tables if not exist ────────────────────────────────────────────
+// â”€â”€ DB: create tables if not exist â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 $conn->query("
 CREATE TABLE IF NOT EXISTS purchase_entries (
     id              INT AUTO_INCREMENT PRIMARY KEY,
@@ -85,7 +85,7 @@ if ($result && $result->num_rows === 0) {
     $conn->query("ALTER TABLE purchase_entries ADD COLUMN huid_code VARCHAR(100) NULL AFTER description");
 }
 
-// ── Auto purchase_no ──────────────────────────────────────────────────────────
+// â”€â”€ Auto purchase_no â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 $today   = date('Y-m-d');
 $yy      = date('y');
 $mm      = date('m');
@@ -93,7 +93,7 @@ $res     = $conn->query("SELECT COUNT(*) AS cnt FROM purchase_entries WHERE YEAR
 $cnt     = $res ? ($res->fetch_assoc()['cnt'] + 1) : 1;
 $auto_no = "PUR{$yy}{$mm}" . str_pad($cnt, 4, '0', STR_PAD_LEFT);
 
-// ── POST handler ──────────────────────────────────────────────────────────────
+// â”€â”€ POST handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 $success_msg = $error_msg = '';
 $last_id = null;
 
@@ -213,7 +213,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_purchase'])) {
     }
 }
 
-// ── Helper: number to words ───────────────────────────────────────────────────
+// â”€â”€ Helper: number to words â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function numberToWords($num) {
     $num = round($num, 2);
     $parts = explode('.', (string)$num);
@@ -242,7 +242,7 @@ function numberToWords($num) {
     return $result . ' Only';
 }
 
-// ── HSN defaults ──────────────────────────────────────────────────────────────
+// â”€â”€ HSN defaults â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 $hsn_defaults = ['Gold'=>'71081200','Silver'=>'71069100','Diamond'=>'71023100','Platinum'=>'71101100'];
 $unit_defaults = ['Gold'=>'gm','Silver'=>'gm','Diamond'=>'ct','Platinum'=>'gm'];
 ?>
@@ -261,7 +261,7 @@ $unit_defaults = ['Gold'=>'gm','Silver'=>'gm','Diamond'=>'ct','Platinum'=>'gm'];
 *{font-family:'Poppins',sans-serif;box-sizing:border-box;}
 h1,h2,h3,.gold-font{font-family:'Poppins',sans-serif;font-weight:700;}
 
-/* ── Sidebar (same as all pages) ── */
+/* â”€â”€ Sidebar (same as all pages) â”€â”€ */
 .sidebar{position:fixed;top:0;left:0;width:240px;height:100vh;background:linear-gradient(180deg, #011921 0%, #03373b 50%, #044e54 80%, #011921 100%);z-index:1000;display:flex;flex-direction:column;box-shadow:4px 0 24px rgba(0,0,0,0.25);transition:transform .35s cubic-bezier(.4,0,.2,1);overflow:hidden;}
 .sidebar-nav::-webkit-scrollbar{width:4px;}.sidebar-nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.2);border-radius:4px;}
 .sidebar-logo{padding:22px 18px 16px;border-bottom:1px solid rgba(255,255,255,0.18);display:flex;align-items:center;gap:12px;flex-shrink:0;}
@@ -297,7 +297,7 @@ nav.nav-gold span{color:#fff!important;}
 @media(max-width:768px){.sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.page-wrapper{margin-left:0!important}.mobile-burger{display:block!important}}
 @media(min-width:769px){.mobile-burger{display:none!important}}
 
-/* ── Form styles ── */
+/* â”€â”€ Form styles â”€â”€ */
 .form-card{background:#fff;border-radius:20px;box-shadow:0 8px 40px rgba(0,0,0,0.08);border:1px solid rgba(214,139,22,0.12);padding:28px;}
 .section-heading{font-family:'Poppins',serif;color:#800020;font-size:15px;font-weight:700;border-bottom:2px solid rgba(214,139,22,0.25);padding-bottom:8px;margin-bottom:18px;letter-spacing:.3px;}
 .field-label{display:block;color:#7a4e0a;font-size:12px;font-weight:600;margin-bottom:5px;letter-spacing:.3px;}
@@ -326,7 +326,7 @@ nav.nav-gold span{color:#fff!important;}
 .mat-btn.sel-Platinum{background:#f0fdf4;border-color:#16a34a;color:#14532d;}
 .mat-btn.inactive-mat{background:#f8f8f8;border-color:#e2e8f0;color:#94a3b8;}
 
-/* ── Print/PDF hidden ── */
+/* â”€â”€ Print/PDF hidden â”€â”€ */
 @media print{.sidebar,.nav-gold,.no-print{display:none!important}.page-wrapper{margin-left:0!important}}
 </style>
 </head>
@@ -416,7 +416,7 @@ nav.nav-gold span{color:#fff!important;}
 <form method="POST" id="purchaseForm" onsubmit="return preparePurchaseSubmit()">
 <input type="hidden" name="save_purchase" value="1">
 
-<!-- ── PURCHASE META ─────────────────────────────────────────────────────── -->
+<!-- â”€â”€ PURCHASE META â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
 <div class="form-card mb-6">
     <div class="section-heading"><i class="fas fa-file-invoice mr-2"></i>Purchase / Invoice Details</div>
     <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
@@ -457,7 +457,7 @@ nav.nav-gold span{color:#fff!important;}
     </div>
 </div>
 
-<!-- ── SUPPLIER ──────────────────────────────────────────────────────────── -->
+<!-- â”€â”€ SUPPLIER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
 <div class="form-card mb-6">
     <div class="section-heading"><i class="fas fa-store mr-2"></i>Supplier (Seller) Details</div>
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -496,7 +496,7 @@ nav.nav-gold span{color:#fff!important;}
     </div>
 </div>
 
-<!-- ── BUYER ─────────────────────────────────────────────────────────────── -->
+<!-- â”€â”€ BUYER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
 <div class="form-card mb-6">
     <div class="section-heading"><i class="fas fa-building mr-2"></i>Buyer Details (Our Shop)</div>
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -519,7 +519,7 @@ nav.nav-gold span{color:#fff!important;}
     </div>
 </div>
 
-<!-- ── MATERIAL ───────────────────────────────────────────────────────────── -->
+<!-- â”€â”€ MATERIAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
 <div class="form-card mb-6">
     <div class="section-heading"><i class="fas fa-gem mr-2"></i>Material & Item Details</div>
 
@@ -530,7 +530,7 @@ nav.nav-gold span{color:#fff!important;}
             <?php foreach(['Gold','Silver','Diamond','Platinum'] as $m): ?>
             <button type="button" class="mat-btn inactive-mat" onclick="selectMat('<?=$m?>')" id="matBtn_<?=$m?>">
                 <?php
-                $icons=['Gold'=>'⭐','Silver'=>'🥈','Diamond'=>'💎','Platinum'=>'⚪'];
+                $icons=['Gold'=>'â­','Silver'=>'ðŸ¥ˆ','Diamond'=>'ðŸ’Ž','Platinum'=>'âšª'];
                 echo $icons[$m].' '.$m;
                 ?>
             </button>
@@ -566,7 +566,7 @@ nav.nav-gold span{color:#fff!important;}
             <input type="number" name="qty" id="qty" class="form-input" placeholder="e.g. 30" step="0.0001" min="0">
         </div>
         <div>
-            <label class="field-label">Rate per Unit (₹) <span class="req">*</span></label>
+            <label class="field-label">Rate per Unit (â‚¹) <span class="req">*</span></label>
             <input type="number" name="rate_per_unit" id="rate" class="form-input" placeholder="e.g. 15762.14" step="0.01" min="0">
         </div>
         <div class="md:col-span-2">
@@ -610,7 +610,7 @@ nav.nav-gold span{color:#fff!important;}
             <tbody id="purchaseItemsList">
                 <tr id="emptyPurchaseRow">
                     <td colspan="8" class="text-center py-4 text-gray-400 text-xs">
-                        No items added to purchase list yet — fill details above and click "Add Item to Purchase List"
+                        No items added to purchase list yet â€” fill details above and click "Add Item to Purchase List"
                     </td>
                 </tr>
             </tbody>
@@ -636,16 +636,16 @@ nav.nav-gold span{color:#fff!important;}
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
             <div>Items Count: <strong id="confirmItemCount">0</strong></div>
-            <div>Subtotal: <strong id="confirmSubtotal">₹0.00</strong></div>
-            <div>Total GST: <strong id="confirmTotalGst">₹0.00</strong></div>
-            <div>Grand Total: <strong id="confirmGrandTotal" class="text-sm text-green-900 font-extrabold">₹0.00</strong></div>
+            <div>Subtotal: <strong id="confirmSubtotal">â‚¹0.00</strong></div>
+            <div>Total GST: <strong id="confirmTotalGst">â‚¹0.00</strong></div>
+            <div>Grand Total: <strong id="confirmGrandTotal" class="text-sm text-green-900 font-extrabold">â‚¹0.00</strong></div>
         </div>
     </div>
 
     <input type="hidden" name="purchase_items" id="hiddenPurchaseItems" value="[]">
 </div>
 
-<!-- ── TAX ───────────────────────────────────────────────────────────────── -->
+<!-- â”€â”€ TAX â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
 <div class="form-card mb-6">
     <div class="section-heading"><i class="fas fa-percent mr-2"></i>GST / Tax Details</div>
 
@@ -689,16 +689,16 @@ nav.nav-gold span{color:#fff!important;}
     </div>
 </div>
 
-<!-- ── AMOUNT SUMMARY ─────────────────────────────────────────────────────── -->
+<!-- â”€â”€ AMOUNT SUMMARY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
 <div class="form-card mb-6">
     <div class="section-heading"><i class="fas fa-rupee-sign mr-2"></i>Amount Summary</div>
     <div class="amount-box">
-        <div class="amount-row"><span style="color:#555;">Subtotal (Qty × Rate)</span><span id="disp_subtotal" style="font-weight:600;">₹ 0.00</span></div>
-        <div class="amount-row" id="disp_cgst_row"><span style="color:#555;">CGST</span><span id="disp_cgst">₹ 0.00</span></div>
-        <div class="amount-row" id="disp_sgst_row"><span style="color:#555;">SGST</span><span id="disp_sgst">₹ 0.00</span></div>
-        <div class="amount-row hidden" id="disp_igst_row"><span style="color:#555;">IGST</span><span id="disp_igst">₹ 0.00</span></div>
-        <div class="amount-row"><span style="color:#555;">GST Total</span><span id="disp_gst_total" style="font-weight:600;">₹ 0.00</span></div>
-        <div class="amount-row total"><span>TOTAL AMOUNT</span><span id="disp_total">₹ 0.00</span></div>
+        <div class="amount-row"><span style="color:#555;">Subtotal (Qty Ã— Rate)</span><span id="disp_subtotal" style="font-weight:600;">â‚¹ 0.00</span></div>
+        <div class="amount-row" id="disp_cgst_row"><span style="color:#555;">CGST</span><span id="disp_cgst">â‚¹ 0.00</span></div>
+        <div class="amount-row" id="disp_sgst_row"><span style="color:#555;">SGST</span><span id="disp_sgst">â‚¹ 0.00</span></div>
+        <div class="amount-row hidden" id="disp_igst_row"><span style="color:#555;">IGST</span><span id="disp_igst">â‚¹ 0.00</span></div>
+        <div class="amount-row"><span style="color:#555;">GST Total</span><span id="disp_gst_total" style="font-weight:600;">â‚¹ 0.00</span></div>
+        <div class="amount-row total"><span>TOTAL AMOUNT</span><span id="disp_total">â‚¹ 0.00</span></div>
         <div class="mt-3 pt-3 border-t" style="border-color:rgba(214,139,22,0.2);">
             <span style="color:#7a4e0a;font-size:12px;font-weight:600;">In Words: </span>
             <span id="disp_words" style="color:#334155;font-size:12px;font-style:italic;">Zero Rupees Only</span>
@@ -706,13 +706,13 @@ nav.nav-gold span{color:#fff!important;}
     </div>
 </div>
 
-<!-- ── NOTES ─────────────────────────────────────────────────────────────── -->
+<!-- â”€â”€ NOTES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
 <div class="form-card mb-8">
     <div class="section-heading"><i class="fas fa-sticky-note mr-2"></i>Notes / Remarks</div>
     <textarea name="notes" class="form-input" rows="3" placeholder="Any additional notes..."></textarea>
 </div>
 
-<!-- ── ACTIONS ───────────────────────────────────────────────────────────── -->
+<!-- â”€â”€ ACTIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
 <div class="flex flex-wrap gap-4 justify-center mb-10 no-print">
     <button type="submit" class="btn-save"><i class="fas fa-save mr-2"></i>SAVE PURCHASE</button>
     <button type="button" class="btn-pdf" onclick="generatePDF()"><i class="fas fa-file-pdf mr-2"></i>DOWNLOAD PDF</button>
@@ -726,13 +726,13 @@ nav.nav-gold span{color:#fff!important;}
 <footer style="background:linear-gradient(0deg,#f5e6c8,#fdf6e3);border-top:2px solid #d68b16;padding:20px;margin-top:40px;text-align:center;">
     <p class="text-xs" style="color:#7a4e0a;">
         &copy; 2026 MOTI JEWELLERS &nbsp;|&nbsp; CRAFTED WITH ELEGANCE &nbsp;|&nbsp;
-        Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology</a>
+        Design & Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology & Research Private Limited</a>
     </p>
 </footer>
 </div><!-- /page-wrapper -->
 
 <script>
-// ── Sidebar ───────────────────────────────────────────────────────────────────
+// â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function toggleSidebar(){
     document.getElementById('mainSidebar').classList.toggle('open');
     document.getElementById('sidebarOverlay').classList.toggle('active');
@@ -742,10 +742,10 @@ function closeSidebar(){
     document.getElementById('sidebarOverlay').classList.remove('active');
 }
 
-// ── Multi-Item Purchase Cart Global State ──────────────────────────────────────
+// â”€â”€ Multi-Item Purchase Cart Global State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 var purchaseItems = [];
 
-// ── Material selector ─────────────────────────────────────────────────────────
+// â”€â”€ Material selector â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const hsnMap  = {Gold:'71081200',Silver:'71069100',Diamond:'71023100',Platinum:'71101100'};
 const unitMap = {Gold:'gm',Silver:'gm',Diamond:'ct',Platinum:'gm'};
 const descMap = {Gold:'Pour Gold',Silver:'Silver Bar',Diamond:'Diamond (Natural)',Platinum:'Platinum Bar'};
@@ -763,7 +763,7 @@ function selectMat(mat) {
 // default Gold selected
 selectMat('Gold');
 
-// ── Tax toggle ────────────────────────────────────────────────────────────────
+// â”€â”€ Tax toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function setTax(type) {
     document.getElementById('tax_type').value = type;
     if(type === 'CGST_SGST'){
@@ -844,7 +844,7 @@ function addPurchaseItem() {
 
         const notif = document.getElementById('purchaseNotifMsg');
         if (notif) {
-            notif.innerHTML = '✅ Added <strong>' + htmlEsc(desc) + '</strong> (' + qty + ' ' + htmlEsc(unit) + ' @ \u20B9' + fmt(rate) + ' | GST: ' + gstPct + '%) to purchase list!';
+            notif.innerHTML = 'âœ… Added <strong>' + htmlEsc(desc) + '</strong> (' + qty + ' ' + htmlEsc(unit) + ' @ \u20B9' + fmt(rate) + ' | GST: ' + gstPct + '%) to purchase list!';
             notif.classList.remove('hidden');
             setTimeout(() => notif.classList.add('hidden'), 3500);
         }
@@ -865,7 +865,7 @@ function renderPurchaseItems() {
     if (!tbody) return;
 
     if (purchaseItems.length === 0) {
-        tbody.innerHTML = '<tr id="emptyPurchaseRow"><td colspan="8" class="text-center py-4 text-gray-400 text-xs">No items added to purchase list yet — fill details above and click "Add Item to Purchase List"</td></tr>';
+        tbody.innerHTML = '<tr id="emptyPurchaseRow"><td colspan="8" class="text-center py-4 text-gray-400 text-xs">No items added to purchase list yet â€” fill details above and click "Add Item to Purchase List"</td></tr>';
         document.getElementById('hiddenPurchaseItems').value = '[]';
         return;
     }
@@ -918,9 +918,9 @@ function confirmAllPurchaseItems() {
 
     if(countEl) countEl.textContent = purchaseItems.length;
     if(badgeEl) badgeEl.textContent = purchaseItems.length + ' Items Confirmed';
-    if(subEl)   subEl.textContent   = '₹ ' + fmt(sub);
-    if(gstEl)   gstEl.textContent   = '₹ ' + fmt(gst);
-    if(grandEl) grandEl.textContent = '₹ ' + fmt(grand);
+    if(subEl)   subEl.textContent   = 'â‚¹ ' + fmt(sub);
+    if(gstEl)   gstEl.textContent   = 'â‚¹ ' + fmt(gst);
+    if(grandEl) grandEl.textContent = 'â‚¹ ' + fmt(grand);
 
     const box = document.getElementById('confirmSummaryBox');
     if (box) {
@@ -945,7 +945,7 @@ function preparePurchaseSubmit() {
     return true;
 }
 
-// ── Amount calculations ────────────────────────────────────────────────────────
+// â”€â”€ Amount calculations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function calcAmounts(){
     let sub = 0;
     let totalItemGst = 0;
@@ -972,12 +972,12 @@ function calcAmounts(){
     const gstTotal = cgst + sgst + igst;
     const total    = Math.round((sub + gstTotal) * 100) / 100;
 
-    document.getElementById('disp_subtotal').textContent = '₹ ' + fmt(sub);
-    document.getElementById('disp_cgst').textContent     = '₹ ' + fmt(cgst);
-    document.getElementById('disp_sgst').textContent     = '₹ ' + fmt(sgst);
-    document.getElementById('disp_igst').textContent     = '₹ ' + fmt(igst);
-    document.getElementById('disp_gst_total').textContent= '₹ ' + fmt(gstTotal);
-    document.getElementById('disp_total').textContent    = '₹ ' + fmt(total);
+    document.getElementById('disp_subtotal').textContent = 'â‚¹ ' + fmt(sub);
+    document.getElementById('disp_cgst').textContent     = 'â‚¹ ' + fmt(cgst);
+    document.getElementById('disp_sgst').textContent     = 'â‚¹ ' + fmt(sgst);
+    document.getElementById('disp_igst').textContent     = 'â‚¹ ' + fmt(igst);
+    document.getElementById('disp_gst_total').textContent= 'â‚¹ ' + fmt(gstTotal);
+    document.getElementById('disp_total').textContent    = 'â‚¹ ' + fmt(total);
     document.getElementById('cgst_amt_display').value    = fmt(cgst);
     document.getElementById('sgst_amt_display').value    = fmt(sgst);
     document.getElementById('igst_amt_display').value    = fmt(igst);
@@ -986,7 +986,7 @@ function calcAmounts(){
 
 function fmt(n){ return n.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 
-// ── Number to Words (JS) ──────────────────────────────────────────────────────
+// â”€â”€ Number to Words (JS) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function numberToWords(num){
     if(num===0) return 'Zero Rupees Only';
     num=Math.round(num*100)/100;
@@ -1011,7 +1011,7 @@ function numberToWords(num){
     return res+' Only';
 }
 
-// ── PDF Generator ─────────────────────────────────────────────────────────────
+// â”€â”€ PDF Generator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function generatePDF(){
     const {jsPDF} = window.jspdf;
     const doc = new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
@@ -1020,7 +1020,7 @@ function generatePDF(){
     // Colors
     const gold=[183,115,14], dark=[60,20,10], white=[255,255,255], lgray=[245,240,232];
 
-    // ── Header band
+    // â”€â”€ Header band
     doc.setFillColor(...gold);
     doc.rect(0,0,pw,28,'F');
     doc.setTextColor(...white);
@@ -1035,7 +1035,7 @@ function generatePDF(){
 
     let y=34;
 
-    // ── Invoice meta box
+    // â”€â”€ Invoice meta box
     doc.setFillColor(...lgray);
     doc.roundedRect(ml,y,cw,22,3,3,'F');
     doc.setTextColor(...dark);
@@ -1057,7 +1057,7 @@ function generatePDF(){
 
     y+=27;
 
-    // ── Supplier & Buyer side-by-side
+    // â”€â”€ Supplier & Buyer side-by-side
     const sname  = document.querySelector('[name=supplier_name]').value;
     const saddr  = document.querySelector('[name=supplier_addr]').value;
     const sgstin = document.querySelector('[name=supplier_gstin]').value;
@@ -1085,7 +1085,7 @@ function generatePDF(){
     doc.setTextColor(...dark);doc.setFont('helvetica','bold');doc.setFontSize(8);
     const sx=ml+3, bx=ml+colW+7;
     let sy=y+13;
-    doc.text(sname||'—',sx,sy); sy+=5;
+    doc.text(sname||'â€”',sx,sy); sy+=5;
     doc.setFont('helvetica','normal');doc.setFontSize(7);
     if(saddr){const ls=doc.splitTextToSize(saddr,colW-6);doc.text(ls,sx,sy);sy+=ls.length*4;}
     if(sgstin){doc.setFont('helvetica','bold');doc.text('GSTIN: ',sx,sy);doc.setFont('helvetica','normal');doc.text(sgstin,sx+14,sy);sy+=4.5;}
@@ -1103,7 +1103,7 @@ function generatePDF(){
 
     y += sboxH + 12;
 
-    // ── Items table (Supports multiple items)
+    // â”€â”€ Items table (Supports multiple items)
     const itemsToPrint = (purchaseItems.length > 0) ? purchaseItems : [{
         material_type: document.getElementById('material_type').value,
         description: document.getElementById('desc_field').value,
@@ -1175,9 +1175,9 @@ function generatePDF(){
     // Subtotal/Total rows
     y+=2;
     const summaryRows=[
-        ['SUBTOTAL','₹ '+fmt(sub)],
-        ['GST TOTAL','₹ '+fmt(gstTot)],
-        ['TOTAL AMOUNT','₹ '+fmt(total)],
+        ['SUBTOTAL','â‚¹ '+fmt(sub)],
+        ['GST TOTAL','â‚¹ '+fmt(gstTot)],
+        ['TOTAL AMOUNT','â‚¹ '+fmt(total)],
     ];
     summaryRows.forEach(([label,val],i)=>{
         if(i===2){doc.setFillColor(...gold);doc.rect(ml,y,cw,9,'F');doc.setTextColor(...white);}
@@ -1225,6 +1225,7 @@ function triggerPDF(){ generatePDF(); }
 </script>
 </body>
 </html>
+
 
 
 

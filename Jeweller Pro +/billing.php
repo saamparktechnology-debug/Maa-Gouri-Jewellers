@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
@@ -104,7 +104,7 @@ if($chk_reminder && mysqli_num_rows($chk_reminder) == 0) {
     mysqli_query($conn, "ALTER TABLE invoices ADD COLUMN reminder_sent TINYINT(1) DEFAULT 0");
 }
 
-// ── NEW: AJAX: Mark invoice as paid (partial or full custom amount) ───────
+// â”€â”€ NEW: AJAX: Mark invoice as paid (partial or full custom amount) â”€â”€â”€â”€â”€â”€â”€
 if(isset($_GET['action']) && $_GET['action'] === 'mark_paid') {
     header('Content-Type: application/json');
     if($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -138,7 +138,7 @@ if(isset($_GET['action']) && $_GET['action'] === 'mark_paid') {
         $amount = $currentBalance;
     }
     if($amount > $currentBalance + 0.01) {
-        echo json_encode(['success' => false, 'message' => 'Amount exceeds balance due (₹' . number_format($currentBalance, 2) . ')']);
+        echo json_encode(['success' => false, 'message' => 'Amount exceeds balance due (â‚¹' . number_format($currentBalance, 2) . ')']);
         exit();
     }
     $newPaid = $alreadyPaid + $amount;
@@ -154,7 +154,7 @@ if(isset($_GET['action']) && $_GET['action'] === 'mark_paid') {
         _mp_log(['updated','invoice'=>$invoice_no,'new_paid'=>$newPaid,'new_balance'=>$newBalance,'anonymize'=>$_POST['anonymize'] ?? null]);
         echo json_encode([
             'success' => true,
-            'message' => $newStatus === 'paid' ? ('Invoice ' . $invoice_no . ' fully paid!') : ('Payment of ₹' . number_format($amount, 2) . ' recorded for ' . $invoice_no),
+            'message' => $newStatus === 'paid' ? ('Invoice ' . $invoice_no . ' fully paid!') : ('Payment of â‚¹' . number_format($amount, 2) . ' recorded for ' . $invoice_no),
             'fully_paid' => $newStatus === 'paid',
             'new_paid' => $newPaid,
             'new_balance' => $newBalance
@@ -277,7 +277,7 @@ foreach ($categories as $cat) {
     }
 }
 
-// Gold 22K & 18K items — as specified by shop owner
+// Gold 22K & 18K items â€” as specified by shop owner
 $goldItems = ['Necklace','Chur','Bala','Chain','Tops','Single Loket','Double Loket','Churi','Jhuladul','Jhumka','Ladies Ring','Gold Choker','Gents Ring','Gents Breslet','Ladies Breslet','Tika','Takti','Mantasa','Pearl Choker','Bauti Chur','Soket Bauti','Breslet Noya','Stell Noya','Baby Ring','Bali','Pitaring','Baby Breslet','Pearl Sitahar','Nose Pin','Other'];
 $itemTypeOptions['Gold 22K'] = array_unique(array_merge($itemTypeOptions['Gold 22K'], $goldItems));
 $itemTypeOptions['Gold 18K'] = array_unique(array_merge($itemTypeOptions['Gold 18K'], $goldItems));
@@ -291,7 +291,7 @@ $itemTypeOptions['Diamond']  = array_unique(array_merge($itemTypeOptions['Diamon
 $itemTypeOptions['Others']   = array_unique(array_merge($itemTypeOptions['Others'],
   ['Shankha','Pala','Mala','Moti Mala','Trasel','Branch Fram','Braslate Pala',
   'Parl Mala','Gala','Reparing','Stamp Charg','Other']));
-// ── NEW: Fetch due-today payments ─────────────────────────────────────────
+// â”€â”€ NEW: Fetch due-today payments â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 $today = date('Y-m-d');
 $due_today_result = mysqli_query($conn, "
     SELECT invoice_no, customer_name, customer_mobile, customer_address,
@@ -440,7 +440,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
         }
     }
 
-    // ── STOCK VALIDATION: Pre-check available stock pieces before creating invoice ──
+    // â”€â”€ STOCK VALIDATION: Pre-check available stock pieces before creating invoice â”€â”€
     $raw_items = json_decode($_POST['items'] ?? '[]', true);
     if (is_array($raw_items)) {
         $req_pcs_map = [];
@@ -478,9 +478,9 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
     $inv_exec = mysqli_query($conn, $invoice_query);
     if(!$inv_exec) {
         die("<div style='padding:30px;font-family:sans-serif;background:#fff1f2;color:#991b1b;border:2px solid #f87171;border-radius:12px;margin:40px auto;max-width:650px;'>
-            <h3 style='margin-top:0;'>❌ Invoice Creation Failed</h3>
+            <h3 style='margin-top:0;'>âŒ Invoice Creation Failed</h3>
             <p><strong>MySQL Error:</strong> " . htmlspecialchars(mysqli_error($conn)) . "</p>
-            <p><a href='billing.php' style='color:#991b1b;font-weight:bold;text-decoration:underline;'>← Back to Billing</a></p>
+            <p><a href='billing.php' style='color:#991b1b;font-weight:bold;text-decoration:underline;'>â† Back to Billing</a></p>
         </div>");
     }
     if($inv_exec) {
@@ -926,7 +926,7 @@ window.addEventListener('load', function() {
         <p class="text-sm mt-1" style="color:#7a4e0a;">Create invoices and manage customer transactions</p>
     </div>
 
-    <!-- ══ PAYMENT DUE TODAY SECTION ══ -->
+    <!-- â•â• PAYMENT DUE TODAY SECTION â•â• -->
 
 <?php if(!empty($due_today_bills)): ?>
     <div class="due-today-section">
@@ -1031,7 +1031,7 @@ window.addEventListener('load', function() {
 
 <!-- ============================================================ -->
 <!-- NEW: Payment Modal (paste once, anywhere after the section    -->
-<!-- above — e.g. right before </body>)                            -->
+<!-- above â€” e.g. right before </body>)                            -->
 <!-- ============================================================ -->
 
 <div id="paymentModalOverlay" class="payment-modal-overlay" onclick="if(event.target===this) closePaymentModal()">
@@ -1064,7 +1064,7 @@ window.addEventListener('load', function() {
 
 
 <!-- ============================================================ -->
-<!-- NEW: CSS — paste inside your existing <style> tag              -->
+<!-- NEW: CSS â€” paste inside your existing <style> tag              -->
 <!-- ============================================================ -->
 <style>
 .payment-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;}
@@ -1082,7 +1082,7 @@ window.addEventListener('load', function() {
 
 
 <!-- ============================================================ -->
-<!-- NEW: JS — paste inside your existing <script> tag              -->
+<!-- NEW: JS â€” paste inside your existing <script> tag              -->
 <!-- ============================================================ -->
 <script>
 let currentPaymentData = {};
@@ -1097,9 +1097,9 @@ function markDueAsPaid(invoiceNo, customerName, mobile, totalAmount, paidAmount,
 
   document.getElementById('pmCustomerName').textContent = customerName;
   document.getElementById('pmCustomerMob').textContent = mobile;
-  document.getElementById('pmTotal').textContent = '₹' + currentPaymentData.total.toFixed(2);
-  document.getElementById('pmAlreadyPaid').textContent = '₹' + currentPaymentData.paid.toFixed(2);
-  document.getElementById('pmBalance').textContent = '₹' + currentPaymentData.balance.toFixed(2);
+  document.getElementById('pmTotal').textContent = 'â‚¹' + currentPaymentData.total.toFixed(2);
+  document.getElementById('pmAlreadyPaid').textContent = 'â‚¹' + currentPaymentData.paid.toFixed(2);
+  document.getElementById('pmBalance').textContent = 'â‚¹' + currentPaymentData.balance.toFixed(2);
 
   const input = document.getElementById('pmAmountInput');
   input.value = currentPaymentData.balance.toFixed(2);
@@ -1117,7 +1117,7 @@ function closePaymentModal() {
 function updateRemainingPreview() {
   const amount = parseFloat(document.getElementById('pmAmountInput').value) || 0;
   const remaining = Math.max(currentPaymentData.balance - amount, 0);
-  document.getElementById('pmRemainingPreview').textContent = '₹' + remaining.toFixed(2);
+  document.getElementById('pmRemainingPreview').textContent = 'â‚¹' + remaining.toFixed(2);
 }
 
 function submitPayment() {
@@ -1150,7 +1150,7 @@ function submitPayment() {
     btn.textContent = 'Confirm Payment';
     if (data.success) {
       closePaymentModal();
-      showNotif('✅ ' + data.message, 'success');
+      showNotif('âœ… ' + data.message, 'success');
       if (data.fully_paid) {
         const card = document.getElementById('duecard-' + currentPaymentData.invoice_no);
         if (card) {
@@ -1175,7 +1175,7 @@ function submitPayment() {
   });
 }
 </script>
-    <!-- ══ END PAYMENT DUE TODAY SECTION ══ -->
+    <!-- â•â• END PAYMENT DUE TODAY SECTION â•â• -->
 
     <!-- Search Bill by Mobile -->
     <div class="jewel-card p-4 sm:p-5 mb-6">
@@ -1285,10 +1285,10 @@ function submitPayment() {
                                 <p class="text-xs mb-2 text-gray-400">Search stock by name, SKU, or serial number.</p>
                                 <div class="flex gap-2 mb-2 relative">
                                     <div class="relative flex-1">
-                                        <input type="text" id="gramStockSearch" placeholder="🔍 Search stock..." class="jewel-input w-full rounded-lg px-3 py-2 text-sm" oninput="filterGramStock(this.value)" autocomplete="off">
+                                        <input type="text" id="gramStockSearch" placeholder="ðŸ” Search stock..." class="jewel-input w-full rounded-lg px-3 py-2 text-sm" oninput="filterGramStock(this.value)" autocomplete="off">
                                         <div id="gramStockSuggestions" class="autocomplete-suggestions hidden"></div>
                                     </div>
-                                    <button type="button" onclick="clearGramStockSearch()" class="px-3 py-2 rounded-lg text-sm bg-white border border-yellow-300 text-yellow-800">✖</button>
+                                    <button type="button" onclick="clearGramStockSearch()" class="px-3 py-2 rounded-lg text-sm bg-white border border-yellow-300 text-yellow-800">âœ–</button>
                                 </div>
                                 <div class="mb-3">
                                     <label class="block mb-1 text-xs font-semibold text-yellow-800">Select Product</label>
@@ -1344,7 +1344,7 @@ function submitPayment() {
                             <!-- Rate, HUID, Weight, Qty & Live preview -->
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                                 <div>
-                                    <label class="block mb-1 text-xs font-semibold text-yellow-800">Rate / Price (₹) *</label>
+                                    <label class="block mb-1 text-xs font-semibold text-yellow-800">Rate / Price (â‚¹) *</label>
                                     <input type="number" id="gramRate" placeholder="Rate per 10g or Piece" step="0.01" min="0" class="jewel-input w-full rounded-lg px-3 py-2 text-sm" oninput="autoGramTotal()">
                                     <div class="text-xs mt-1" style="color:#059669;" id="gramRatePerGramHint"></div>
                                 </div>
@@ -1370,7 +1370,7 @@ function submitPayment() {
                             <div class="grid grid-cols-1 gap-3 mb-3">
                                 <div id="gramTotalPreviewRow" style="display:none;">
                                     <label class="block mb-1 text-xs font-semibold text-green-700">Calculated Base Amount</label>
-                                    <div class="text-lg font-bold text-green-800 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg" id="gramTotalPreview">₹0.00</div>
+                                    <div class="text-lg font-bold text-green-800 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg" id="gramTotalPreview">â‚¹0.00</div>
                                 </div>
                             </div>
                         </div>
@@ -1387,7 +1387,7 @@ function submitPayment() {
                                                  % Pct
                                              </button>
                                              <button type="button" id="btnMcDirect" onclick="setMcMode('direct')" class="mc-tab-btn px-2 py-0.5 text-xs font-bold rounded transition-all cursor-pointer bg-white/80 text-amber-900 hover:bg-white border border-amber-200">
-                                                 ₹ Direct
+                                                 â‚¹ Direct
                                              </button>
                                          </div>
                                      </div>
@@ -1398,11 +1398,11 @@ function submitPayment() {
                                      <div id="itemMakingChargeHint" class="text-xs mt-1 font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200" style="display:none;"></div>
                                  </div>
                                 <div>
-                                    <label class="block mb-1 text-xs font-semibold" style="color:#7a4e0a;">Hallmark (₹)</label>
+                                    <label class="block mb-1 text-xs font-semibold" style="color:#7a4e0a;">Hallmark (â‚¹)</label>
                                     <input type="number" id="itemHallmark" value="" step="1" min="0" placeholder="0" class="jewel-input w-full rounded-lg px-2 py-1 text-sm">
                                 </div>
                                 <div>
-                                    <label class="block mb-1 text-xs font-semibold" style="color:#7a4e0a;">Discount (₹)</label>
+                                    <label class="block mb-1 text-xs font-semibold" style="color:#7a4e0a;">Discount (â‚¹)</label>
                                     <input type="number" id="itemDiscount" value="" step="1" min="0" placeholder="0" class="jewel-input w-full rounded-lg px-2 py-1 text-sm">
                                 </div>
                                 <div>
@@ -1446,7 +1446,7 @@ function submitPayment() {
                             <tbody id="itemsList">
                                 <tr id="emptyRow">
                                     <td colspan="11" style="text-align:center;padding:20px;color:#9ca3af;font-size:12px;">
-                                        No items added yet — enter details above to add products
+                                        No items added yet â€” enter details above to add products
                                     </td>
                                 </tr>
                             </tbody>
@@ -1470,7 +1470,7 @@ function submitPayment() {
                                     <span>Discount</span><span id="discountAmount">- &#8377;0.00</span>
                                 </div>
                                 <div class="flex justify-between items-center text-sm pt-1 pb-1" style="color:#b91c1c;border-top:1px dashed rgba(185,28,28,0.2);border-bottom:1px dashed rgba(185,28,28,0.2);">
-                                    <span class="font-semibold">Old Gold Exchange / Return (₹)</span>
+                                    <span class="font-semibold">Old Gold Exchange / Return (â‚¹)</span>
                                     <input type="number" id="oldGoldAmountInput" value="" step="1" min="0" placeholder="0" class="jewel-input rounded-lg px-2 py-1 text-sm text-right w-32 border-red-300 font-bold" oninput="calculateTotal()">
                                 </div>
                                 <div class="flex justify-between text-sm" style="color:#b91c1c;display:none;" id="oldGoldRow">
@@ -1635,7 +1635,7 @@ function submitPayment() {
                 <p class="text-xs mb-3" style="color:#9ca3af;">Enter price <strong>per 10 grams</strong> (as shown in market). Billing auto-converts to per gram.</p>
                 <button onclick="autoFillShopFromLive()" class="w-full py-2 rounded-lg text-xs font-bold mb-3"
                     style="background:linear-gradient(135deg,#059669,#34d399);color:#fff;border:none;cursor:pointer;">
-                    ⚡ Auto-fill from Live Market Rates
+                    âš¡ Auto-fill from Live Market Rates
                 </button>
                 <?php
                 $shopFields = [
@@ -1786,7 +1786,7 @@ function submitPayment() {
     <footer style="background:linear-gradient(0deg,#f5e6c8,#fdf6e3);border-top:2px solid #d68b16;padding:20px;margin-top:40px;text-align:center;">
         <p class="text-xs" style="color:#7a4e0a;">
             &copy; 2026 MOTI JEWELLERS &nbsp;|&nbsp; CRAFTED WITH ELEGANCE &nbsp;|&nbsp;
-            Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology</a>
+            Design & Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology & Research Private Limited</a>
         </p>
     </footer>
 </div><!-- /page-wrapper -->
@@ -1865,7 +1865,7 @@ function switchSource(tab, source) {
     resetItemCharges();
 }
 
-// ==================== ⚖️ GRAM FORM LOGIC ====================
+// ==================== âš–ï¸ GRAM FORM LOGIC ====================
 
 // Stock search & filter with floating suggestions
 function filterGramStock(query) {
@@ -1888,7 +1888,7 @@ function filterGramStock(query) {
     filtered.forEach(p => {
         const isOutOfStock = (parseFloat(p.quantity) <= 0);
         const stockText = isOutOfStock ? 'OUT OF STOCK' : (p.quantity + ' pcs');
-        const display = (p.item_name || p.name) + ' | SN:' + (p.serial_no || '—') + ' | Stock: ' + stockText;
+        const display = (p.item_name || p.name) + ' | SN:' + (p.serial_no || 'â€”') + ' | Stock: ' + stockText;
         const opt = document.createElement('option');
         opt.value = p.id;
         opt.textContent = display;
@@ -1911,7 +1911,7 @@ function filterGramStock(query) {
                 const item = document.createElement('div');
                 item.className = 'autocomplete-suggestion-item';
                 item.style.cssText = 'padding:8px 12px;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;background:#fff;';
-                item.innerHTML = '<div><strong style="color:#022c22;">' + (p.item_name || p.name) + '</strong> <span style="font-size:11px;color:#059669;">(' + p.category + ')</span></div><div style="font-size:11px;color:' + (isOut?'#dc2626':'#7a4e0a') + ';">SN: ' + (p.serial_no || '—') + ' | ' + (isOut ? 'OUT OF STOCK' : (p.quantity + ' pcs')) + '</div>';
+                item.innerHTML = '<div><strong style="color:#022c22;">' + (p.item_name || p.name) + '</strong> <span style="font-size:11px;color:#059669;">(' + p.category + ')</span></div><div style="font-size:11px;color:' + (isOut?'#dc2626':'#7a4e0a') + ';">SN: ' + (p.serial_no || 'â€”') + ' | ' + (isOut ? 'OUT OF STOCK' : (p.quantity + ' pcs')) + '</div>';
                 item.onmouseover = function() { this.style.background = '#f5ead0'; };
                 item.onmouseout = function() { this.style.background = '#fff'; };
                 item.onclick = function() {
@@ -1959,14 +1959,14 @@ function onGramStockChange() {
         document.getElementById('manualHuid').value = huid;
     }
 
-    // Use shop rate (per 10g) for this category — the correct billing rate
+    // Use shop rate (per 10g) for this category â€” the correct billing rate
     const shopRatePerGram = getShopRateForCategory(category); // returns per-gram from shop rates
     const shopRate10g     = shopRatePerGram * 10;             // convert back to per-10g for the field
 
     if (qty <= 0) {
         rateInput.value = '';
         weightInput.value = '';
-        infoDiv.innerHTML = '<strong style="color:#dc2626;">' + name + '</strong> | <strong style="color:#dc2626;">❌ OUT OF STOCK (0 pcs available)</strong>';
+        infoDiv.innerHTML = '<strong style="color:#dc2626;">' + name + '</strong> | <strong style="color:#dc2626;">âŒ OUT OF STOCK (0 pcs available)</strong>';
     } else if (shopRate10g > 0) {
         rateInput.value = shopRate10g.toFixed(0);
         const hint = document.getElementById('gramRatePerGramHint');
@@ -2068,9 +2068,9 @@ function onGramItemTypeChange() {
     const stockQty = parseFloat(opt.dataset.stockQty) || 0;
 
     if (inStock && stockQty > 0) {
-        statusDiv.innerHTML = '<span class="px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800 border border-green-300">✅ In Stock (' + stockQty + ' pcs available in inventory)</span>';
+        statusDiv.innerHTML = '<span class="px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800 border border-green-300">âœ… In Stock (' + stockQty + ' pcs available in inventory)</span>';
     } else {
-        statusDiv.innerHTML = '<span class="px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800 border border-red-300">❌ Out of Stock (0 items available in inventory)</span>';
+        statusDiv.innerHTML = '<span class="px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800 border border-red-300">âŒ Out of Stock (0 items available in inventory)</span>';
     }
     statusDiv.classList.remove('hidden');
 }
@@ -2091,7 +2091,7 @@ function setMcMode(mode) {
         if (btnDirect) {
             btnDirect.className = 'mc-tab-btn active px-2 py-0.5 text-xs font-bold rounded transition-all cursor-pointer bg-emerald-600 text-white shadow-sm border border-emerald-500';
         }
-        if (suffix) suffix.textContent = '₹';
+        if (suffix) suffix.textContent = 'â‚¹';
         if (input) { input.step = '1'; input.placeholder = 'e.g. 500'; }
     } else {
         if (btnPct) {
@@ -2217,11 +2217,11 @@ function submitGramItem() {
         });
         const totalReqPcs = existingPcs + qty;
         if (stockQty <= 0) {
-            alert('❌ Out of Stock!\n"' + name + '" is currently out of stock (0 pcs available).');
+            alert('âŒ Out of Stock!\n"' + name + '" is currently out of stock (0 pcs available).');
             return;
         }
         if (totalReqPcs > stockQty) {
-            alert('❌ Exceeds Available Stock!\nOnly ' + stockQty + ' pcs available in stock for "' + name + '", but ' + totalReqPcs + ' pcs requested.');
+            alert('âŒ Exceeds Available Stock!\nOnly ' + stockQty + ' pcs available in stock for "' + name + '", but ' + totalReqPcs + ' pcs requested.');
             return;
         }
     } else if (source === 'category') {
@@ -2236,7 +2236,7 @@ function submitGramItem() {
         const stockQty = opt ? (parseFloat(opt.dataset.stockQty) || 0) : 0;
 
         if (!inStock || stockQty <= 0) {
-            alert('❌ Item Out of Stock!\n"' + type + '" is currently not available in your stock inventory.');
+            alert('âŒ Item Out of Stock!\n"' + type + '" is currently not available in your stock inventory.');
             return;
         }
 
@@ -2333,10 +2333,10 @@ function submitGramItem() {
         document.getElementById('gramManualName').value = '';
     }
     document.getElementById('gramTotalPreviewRow').style.display = 'none';
-    showNotif('✅ Added Item: ' + name, 'success');
+    showNotif('âœ… Added Item: ' + name, 'success');
 }
 
-// ==================== 📦 QTY FORM LOGIC ====================
+// ==================== ðŸ“¦ QTY FORM LOGIC ====================
 
 // Stock search & filter with floating suggestions
 function filterQtyStock(query) {
@@ -2359,7 +2359,7 @@ function filterQtyStock(query) {
     filtered.forEach(p => {
         const isOutOfStock = (parseFloat(p.quantity) <= 0);
         const stockText = isOutOfStock ? 'OUT OF STOCK' : (p.quantity + ' pcs');
-        const display = (p.item_name || p.name) + ' | SN:' + (p.serial_no || '—') + ' | Stock: ' + stockText;
+        const display = (p.item_name || p.name) + ' | SN:' + (p.serial_no || 'â€”') + ' | Stock: ' + stockText;
         const opt = document.createElement('option');
         opt.value = p.id;
         opt.textContent = display;
@@ -2381,7 +2381,7 @@ function filterQtyStock(query) {
                 const item = document.createElement('div');
                 item.className = 'autocomplete-suggestion-item';
                 item.style.cssText = 'padding:8px 12px;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;background:#fff;';
-                item.innerHTML = '<div><strong style="color:#022c22;">' + (p.item_name || p.name) + '</strong> <span style="font-size:11px;color:#059669;">(' + p.category + ')</span></div><div style="font-size:11px;color:' + (isOut?'#dc2626':'#7a4e0a') + ';">SN: ' + (p.serial_no || '—') + ' | ' + (isOut ? 'OUT OF STOCK' : (p.quantity + ' pcs')) + '</div>';
+                item.innerHTML = '<div><strong style="color:#022c22;">' + (p.item_name || p.name) + '</strong> <span style="font-size:11px;color:#059669;">(' + p.category + ')</span></div><div style="font-size:11px;color:' + (isOut?'#dc2626':'#7a4e0a') + ';">SN: ' + (p.serial_no || 'â€”') + ' | ' + (isOut ? 'OUT OF STOCK' : (p.quantity + ' pcs')) + '</div>';
                 item.onmouseover = function() { this.style.background = '#f5ead0'; };
                 item.onmouseout = function() { this.style.background = '#fff'; };
                 item.onclick = function() {
@@ -2426,9 +2426,9 @@ function onQtyStockChange() {
     qtyInput.value = 1;
     
     if (qty <= 0) {
-        infoDiv.innerHTML = '<strong style="color:#dc2626;">' + name + '</strong> | <strong style="color:#dc2626;">❌ OUT OF STOCK (0 pcs available)</strong>';
+        infoDiv.innerHTML = '<strong style="color:#dc2626;">' + name + '</strong> | <strong style="color:#dc2626;">âŒ OUT OF STOCK (0 pcs available)</strong>';
     } else {
-        infoDiv.innerHTML = '<strong>' + name + '</strong> Selected. Price per Piece: ₹' + price.toFixed(2) + ' | Available Stock: <strong style="color:#059669;">' + qty + ' pcs</strong>';
+        infoDiv.innerHTML = '<strong>' + name + '</strong> Selected. Price per Piece: â‚¹' + price.toFixed(2) + ' | Available Stock: <strong style="color:#059669;">' + qty + ' pcs</strong>';
     }
     infoDiv.classList.remove('hidden');
     
@@ -2472,7 +2472,7 @@ function autoQtyTotal() {
     const previewEl = document.getElementById('qtyTotalPreview');
     
     if (total > 0) {
-        previewEl.textContent = '₹' + total.toLocaleString('en-IN', {minimumFractionDigits: 2});
+        previewEl.textContent = 'â‚¹' + total.toLocaleString('en-IN', {minimumFractionDigits: 2});
         previewRow.style.display = '';
     } else {
         previewRow.style.display = 'none';
@@ -2511,11 +2511,11 @@ function submitQtyItem() {
         });
         const totalReqPcs = existingPcs + qty;
         if (stockQty <= 0) {
-            alert('❌ Out of Stock!\n"' + name + '" is currently out of stock (0 pcs available).');
+            alert('âŒ Out of Stock!\n"' + name + '" is currently out of stock (0 pcs available).');
             return;
         }
         if (totalReqPcs > stockQty) {
-            alert('❌ Exceeds Available Stock!\nOnly ' + stockQty + ' pcs available in stock for "' + name + '", but ' + totalReqPcs + ' pcs requested.');
+            alert('âŒ Exceeds Available Stock!\nOnly ' + stockQty + ' pcs available in stock for "' + name + '", but ' + totalReqPcs + ' pcs requested.');
             return;
         }
     } else if (source === 'category') {
@@ -2589,7 +2589,7 @@ function submitQtyItem() {
         document.getElementById('qtyManualName').value = '';
     }
     document.getElementById('qtyTotalPreviewRow').style.display = 'none';
-    showNotif('✅ Added Qty Item: ' + name, 'success');
+    showNotif('âœ… Added Qty Item: ' + name, 'success');
 }
 
 function populateStockSelects() {
@@ -2784,7 +2784,7 @@ function calculateTotal() {
     }
     const submitBtn = document.getElementById('submitBtn');
     if (submitBtn) {
-        submitBtn.innerHTML = (cgst + sgst > 0) ? '✨ Generate Tax Invoice ✨' : '✨ Generate Cash Memo ✨';
+        submitBtn.innerHTML = (cgst + sgst > 0) ? 'âœ¨ Generate Tax Invoice âœ¨' : 'âœ¨ Generate Cash Memo âœ¨';
     }
     updateBalanceFromPart();
 }
@@ -2853,7 +2853,7 @@ function previewShopRate(key) {
 function autoFillShopFromLive() {
     const liveMap = {
         gold22: document.getElementById('shopGold22Input'),
-        gold18: null,  // no direct live 18K — compute as 22K * 18/22
+        gold18: null,  // no direct live 18K â€” compute as 22K * 18/22
         silver: document.getElementById('shopSilverInput'),
     };
     // Gold 22K
@@ -2899,7 +2899,7 @@ function saveShopRate(key) {
     if (inputEl && inputEl.nextElementSibling) {
         const saveBtn = inputEl.nextElementSibling;
         const origText = saveBtn.textContent;
-        saveBtn.textContent = '✓ Saved';
+        saveBtn.textContent = 'âœ“ Saved';
         saveBtn.style.background = '#059669';
         saveBtn.style.color = '#ffffff';
         setTimeout(() => {
@@ -2909,7 +2909,7 @@ function saveShopRate(key) {
         }, 2000);
     }
     
-    showNotif('✔ ' + label + ' shop rate saved: \u20B9' + val.toLocaleString('en-IN') + ' / 10g', 'success');
+    showNotif('âœ” ' + label + ' shop rate saved: \u20B9' + val.toLocaleString('en-IN') + ' / 10g', 'success');
     calcShopValue();
     refreshActiveBillingRate();
 }
@@ -2931,7 +2931,7 @@ function saveAllShopRates() {
     localStorage.setItem('shopRateSavedAt', now);
     document.getElementById('shopRateSaveStatus').textContent = '\u2714 All Saved';
     document.getElementById('shopRateLastSaved').textContent  = 'Last saved: ' + now;
-    showNotif('✔ All Shop Rates Saved Successfully!', 'success');
+    showNotif('âœ” All Shop Rates Saved Successfully!', 'success');
     calcShopValue();
     refreshActiveBillingRate();
 }
@@ -3280,7 +3280,7 @@ function sendPaymentReminder() {
     .catch(error => { showNotif('\u26A0\uFE0F ' + (error?.message || 'Reminder email could not be sent.'), 'error'); });
 }
 
-// ── NEW: Due Today — Send Reminder ────────────────────────────────────────
+// â”€â”€ NEW: Due Today â€” Send Reminder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function sendDueReminder(invoiceNo, customerName, customerMobile, balanceAmount) {
     const btn = document.getElementById('remind-btn-' + invoiceNo);
     if(!btn) return;
@@ -3493,6 +3493,7 @@ function convertNumberToWords($number) {
     return trim($result).' Rupees Only';
 }
 ?>
+
 
 
 

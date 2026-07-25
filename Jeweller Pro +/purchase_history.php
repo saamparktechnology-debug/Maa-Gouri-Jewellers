@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once 'config/database.php';
 if(file_exists('config/company_config.php')) {
@@ -26,7 +26,7 @@ $logo_paths = [
     'logo.png',
 ];
 
-// ── Filters ────────────────────────────────────────────────────────────────
+// â”€â”€ Filters â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 $search      = isset($_GET['search']) ? trim($_GET['search']) : '';
 $material    = isset($_GET['material']) ? trim($_GET['material']) : '';
 $date_from   = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
@@ -51,7 +51,7 @@ if ($date_to !== '') {
 }
 $where_sql = count($where) ? ('WHERE ' . implode(' AND ', $where)) : '';
 
-// ── Handle delete ─────────────────────────────────────────────────────────
+// â”€â”€ Handle delete â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 $delete_msg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
     $del_id = intval($_POST['delete_id']);
@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
     $delete_msg = 'Purchase entry deleted successfully.';
 }
 
-// ── Fetch list ────────────────────────────────────────────────────────────
+// â”€â”€ Fetch list â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 $list_sql = "SELECT id, purchase_no, purchase_date, invoice_no, invoice_date, supplier_name,
                     material_type, qty, unit, total_amount, payment_mode
              FROM purchase_entries
@@ -74,7 +74,7 @@ $list_sql = "SELECT id, purchase_no, purchase_date, invoice_no, invoice_date, su
              ORDER BY purchase_date DESC, id DESC";
 $result = $conn->query($list_sql);
 
-// ── Totals for filtered set ───────────────────────────────────────────────
+// â”€â”€ Totals for filtered set â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 $total_amount_sum = 0;
 $total_count = 0;
 $rows = [];
@@ -288,7 +288,7 @@ table.hist-table tbody tr:hover { background: rgba(214,139,22,0.06); }
     </div>
     <div class="stat-box">
         <div class="stat-label">Total Amount (Filtered)</div>
-        <div class="stat-value">₹ <?php echo fmt_inr($total_amount_sum); ?></div>
+        <div class="stat-value">â‚¹ <?php echo fmt_inr($total_amount_sum); ?></div>
     </div>
     <div class="stat-box flex flex-col justify-center">
         <div class="stat-label mb-1">Quick Action</div>
@@ -369,7 +369,7 @@ table.hist-table tbody tr:hover { background: rgba(214,139,22,0.06); }
                     <td><span class="mat-pill <?php echo htmlspecialchars($row['material_type']); ?>"><?php echo htmlspecialchars($row['material_type']); ?></span></td>
                     <td style="font-weight:600;"><?php echo rtrim(rtrim(number_format((float)$row['qty'],4),'0'),'.'); ?> <?php echo htmlspecialchars($row['unit']); ?></td>
                     <td><?php echo htmlspecialchars($row['payment_mode']); ?></td>
-                    <td style="font-weight:700;color:#800020;">₹ <?php echo fmt_inr($row['total_amount']); ?></td>
+                    <td style="font-weight:700;color:#800020;">â‚¹ <?php echo fmt_inr($row['total_amount']); ?></td>
                     <td style="text-align:center;">
                         <div class="flex gap-2 justify-center">
                             <a href="purchase_view.php?id=<?php echo intval($row['id']); ?>" class="action-btn action-view" title="View Details">
@@ -411,3 +411,4 @@ function closeSidebar(){
 </script>
 </body>
 </html>
+
