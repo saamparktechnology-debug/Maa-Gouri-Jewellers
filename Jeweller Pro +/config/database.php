@@ -134,6 +134,18 @@ foreach ($customers_cols as $col_name => $col_definition) {
     }
 }
 
+$create_contacts = "CREATE TABLE IF NOT EXISTS contacts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    mobile VARCHAR(15) UNIQUE NOT NULL,
+    email VARCHAR(100),
+    address TEXT,
+    gst_number VARCHAR(20),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)";
+mysqli_query($conn, $create_contacts);
+
+
 $create_sanchari_customers = "CREATE TABLE IF NOT EXISTS sanchari_customers (
 id INT AUTO_INCREMENT PRIMARY KEY,
 customer_id VARCHAR(20) UNIQUE NOT NULL,
