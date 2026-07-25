@@ -488,6 +488,24 @@ $create_password_resets = "CREATE TABLE IF NOT EXISTS password_resets (
 )";
 mysqli_query($conn, $create_password_resets);
 
+// Add missing columns to sanchari_payments if they don't exist
+$sanchari_cols = mysqli_query($conn, "SHOW COLUMNS FROM sanchari_payments LIKE 'balance_amount'");
+if ($sanchari_cols && mysqli_num_rows($sanchari_cols) == 0) {
+    @mysqli_query($conn, "ALTER TABLE sanchari_payments ADD COLUMN balance_amount DECIMAL(12,2) DEFAULT 0.00 AFTER amount");
+}
+$sanchari_cols2 = mysqli_query($conn, "SHOW COLUMNS FROM sanchari_payments LIKE 'paid_amount'");
+if ($sanchari_cols2 && mysqli_num_rows($sanchari_cols2) == 0) {
+    @mysqli_query($conn, "ALTER TABLE sanchari_payments ADD COLUMN paid_amount DECIMAL(12,2) DEFAULT 0.00 AFTER amount");
+}
+$sanchari_cols3 = mysqli_query($conn, "SHOW COLUMNS FROM sanchari_payments LIKE 'payment_status'");
+if ($sanchari_cols3 && mysqli_num_rows($sanchari_cols3) == 0) {
+    @mysqli_query($conn, "ALTER TABLE sanchari_payments ADD COLUMN payment_status VARCHAR(20) DEFAULT 'paid' AFTER balance_amount");
+}
+$sanchari_cols4 = mysqli_query($conn, "SHOW COLUMNS FROM sanchari_payments LIKE 'payment_mode'");
+if ($sanchari_cols4 && mysqli_num_rows($sanchari_cols4) == 0) {
+    @mysqli_query($conn, "ALTER TABLE sanchari_payments ADD COLUMN payment_mode VARCHAR(50) DEFAULT 'Cash' AFTER payment_status");
+}
+
 // Set session user if needed
 if(isset($_SESSION['user_id'])) {
     $check = mysqli_query($conn, "SELECT id FROM users WHERE id = '{$_SESSION['user_id']}'");
