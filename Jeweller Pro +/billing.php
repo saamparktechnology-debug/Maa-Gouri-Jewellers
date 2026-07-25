@@ -480,7 +480,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
         die("<div style='padding:30px;font-family:sans-serif;background:#fff1f2;color:#991b1b;border:2px solid #f87171;border-radius:12px;margin:40px auto;max-width:650px;'>
             <h3 style='margin-top:0;'>❌ Invoice Creation Failed</h3>
             <p><strong>MySQL Error:</strong> " . htmlspecialchars(mysqli_error($conn)) . "</p>
-            <p><a href='billing.php' style='color:#991b1b;font-weight:bold;text-decoration:underline;'>â† Back to Billing</a></p>
+            <p><a href='billing.php' style='color:#991b1b;font-weight:bold;text-decoration:underline;'>← Back to Billing</a></p>
         </div>");
     }
     if($inv_exec) {

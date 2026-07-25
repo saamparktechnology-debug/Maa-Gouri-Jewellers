@@ -25,7 +25,7 @@ if(file_exists($cache_file)) {
     }
 }
 
-// ── USD/INR rate fetch (needed to convert USD prices â†’ INR) ──
+// ── USD/INR rate fetch (needed to convert USD prices ←’ INR) ──
 function getUsdInr() {
     // Try exchangerate-api (free, no key needed for basic endpoint)
     $url = 'https://api.exchangerate-api.com/v4/latest/USD';
@@ -69,7 +69,7 @@ function fetchFromGoldApi($usdInr) {
     if(!isset($gd['price']) || !isset($sd['price']) || !isset($pd['price'])) return null;
     
     // goldapi gives price per troy oz in INR
-    // 1 troy oz = 31.1035 g â†’ per gram = price/31.1035 â†’ per 10g = price/3.11035
+    // 1 troy oz = 31.1035 g ←’ per gram = price/31.1035 ←’ per 10g = price/3.11035
     // Apply Indian market markup: Gold ~15.5%, Silver ~27%, Platinum ~5%
     $gold24_10g  = round(($gd['price'] / 3.11035) * 1.155);
     $gold22_10g  = round($gold24_10g * 0.9167);   // 22K = 91.67% of 24K
@@ -148,7 +148,7 @@ function fetchViaForexAndSpot($usdInr) {
         'platinum' => isset($pd['price']) ? (float)$pd['price'] : null
     ];
     
-    // Convert USD/oz â†’ INR/10g with Indian market markups
+    // Convert USD/oz ←’ INR/10g with Indian market markups
     $gold24_10g = round((($prices['gold']   * $usdInr) / 3.11035) * 1.155);
     $silver_10g = round((($prices['silver'] * $usdInr) / 3.11035) * 1.27);
     $plat_10g   = isset($prices['platinum']) ? round((($prices['platinum'] * $usdInr) / 3.11035) * 1.05) : 51510;
