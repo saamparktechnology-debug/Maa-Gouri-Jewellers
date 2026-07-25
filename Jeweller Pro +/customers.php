@@ -674,7 +674,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                     <i class="fas fa-receipt ml-1" style="font-size:10px;color:#d68b16;" title="View Orders"></i>
                                 </div>
                                 <?php if(!empty($customer['gst_number'])): ?>
-                                    <div class="text-xs mt-0.5" style="color:#6d28d9;">ðŸ› GST: <?php echo htmlspecialchars($customer['gst_number']); ?></div>
+                                    <div class="text-xs mt-0.5" style="color:#6d28d9;">🏛️ GST: <?php echo htmlspecialchars($customer['gst_number']); ?></div>
                                 <?php endif; ?>
                             </td>
                             <td class="text-sm" style="color:#374151;">📱 <?php echo htmlspecialchars($mob); ?></td>
@@ -744,7 +744,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 <textarea name="address" rows="2" placeholder="Customer addressâ€¦" class="jewel-input"></textarea>
             </div>
             <div class="mb-4">
-                <label>ðŸ› GST Number <span style="color:#9ca3af;font-weight:400;">(Optional)</span></label>
+                <label>🏛️ GST Number <span style="color:#9ca3af;font-weight:400;">(Optional)</span></label>
                 <input type="text" name="gst" placeholder="e.g. 22AAAAA0000A1Z5" maxlength="15" class="jewel-input" oninput="this.value=this.value.toUpperCase()">
                 <p class="text-xs mt-1" style="color:#9ca3af;">15-character GST Identification Number</p>
             </div>
@@ -783,7 +783,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 <textarea name="address" id="editAddress" rows="2" class="jewel-input"></textarea>
             </div>
             <div class="mb-4">
-                <label>ðŸ› GST Number <span style="color:#9ca3af;font-weight:400;">(Optional)</span></label>
+                <label>🏛️ GST Number <span style="color:#9ca3af;font-weight:400;">(Optional)</span></label>
                 <input type="text" name="gst" id="editGst" placeholder="e.g. 22AAAAA0000A1Z5" maxlength="15" class="jewel-input" oninput="this.value=this.value.toUpperCase()">
             </div>
             <div class="flex gap-3">
@@ -968,7 +968,7 @@ function openOrderHistory(mobile, name) {
             let html = '';
             data.orders.forEach(o => {
                 const statusClass = o.payment_status === 'paid' ? 'paid' : (o.payment_status === 'part' ? 'part' : 'unpaid');
-                const statusLabel = o.payment_status === 'paid' ? '✅ Paid' : (o.payment_status === 'part' ? 'âš  Part Paid' : 'âŒ Unpaid');
+                const statusLabel = o.payment_status === 'paid' ? '✅ Paid' : (o.payment_status === 'part' ? 'âš  Part Paid' : '❌ Unpaid');
                 const date = new Date(o.created_at).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'});
                 html += `<div class="oh-order-card">
                     <div class="oh-order-head">

@@ -21,7 +21,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_income'])) {
     if(mysqli_query($conn, "INSERT INTO income (income_date, source, category, amount, description, payment_method, invoice_no, created_by) VALUES ('$income_date', '$source', '$category', $amount, '$description', '$payment_method', '$invoice_no', $created_by)")) {
         $success_income = "✅ Income added successfully!";
     } else {
-        $error_income = "âŒ Error: " . mysqli_error($conn);
+        $error_income = "❌ Error: " . mysqli_error($conn);
     }
 }
 
@@ -38,7 +38,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_expense'])) {
     if(mysqli_query($conn, "INSERT INTO expenses (expense_date, category, amount, description, payment_method, bill_no, vendor_name, created_by) VALUES ('$expense_date', '$category', $amount, '$description', '$payment_method', '$bill_no', '$vendor_name', $created_by)")) {
         $success_expense = "✅ Expense added successfully!";
     } else {
-        $error_expense = "âŒ Error: " . mysqli_error($conn);
+        $error_expense = "❌ Error: " . mysqli_error($conn);
     }
 }
 

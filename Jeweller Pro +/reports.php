@@ -923,7 +923,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                     </div>
                     <p class="font-bold text-lg" style="color:#166534;">₹<?php echo number_format($pay_summary['paid_amt'],2); ?></p>
                     <p class="text-xs mt-1" style="color:#15803d;">Total collected (full payment)</p>
-                    <button onclick="toggleDetail('detailPaid')" class="toggle-detail-btn">ðŸ‘ View Customers</button>
+                    <button onclick="toggleDetail('detailPaid')" class="toggle-detail-btn">👁️ View Customers</button>
                 </div>
                 <!-- Part -->
                 <div class="stat-card-part p-4">
@@ -933,17 +933,17 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                     </div>
                     <p class="font-bold text-lg" style="color:#9a3412;">₹<?php echo number_format($pay_summary['part_amt'],2); ?></p>
                     <p class="text-xs mt-1" style="color:#c2410c;">âš  Balance: ₹<?php echo number_format($pay_summary['part_balance'],2); ?></p>
-                    <button onclick="toggleDetail('detailPart')" class="toggle-detail-btn">ðŸ‘ View Customers</button>
+                    <button onclick="toggleDetail('detailPart')" class="toggle-detail-btn">👁️ View Customers</button>
                 </div>
                 <!-- Unpaid -->
                 <div class="stat-card-unpaid p-4">
                     <div class="flex justify-between items-start mb-2">
-                        <span class="font-bold text-sm" style="color:#9f1239;">âŒ Advanced (Credit)</span>
+                        <span class="font-bold text-sm" style="color:#9f1239;">❌ Advanced (Credit)</span>
                         <span class="text-2xl font-black" style="color:#9f1239;"><?php echo $pay_summary['unpaid_count']; ?></span>
                     </div>
                     <p class="font-bold text-lg" style="color:#9f1239;">₹<?php echo number_format($pay_summary['unpaid_amt'],2); ?></p>
                     <p class="text-xs mt-1" style="color:#be123c;">âš  Total due: ₹<?php echo number_format($pay_summary['unpaid_balance'],2); ?></p>
-                    <button onclick="toggleDetail('detailUnpaid')" class="toggle-detail-btn">ðŸ‘ View Customers</button>
+                    <button onclick="toggleDetail('detailUnpaid')" class="toggle-detail-btn">👁️ View Customers</button>
                 </div>
             </div>
 
@@ -1009,7 +1009,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
 
             <!-- Unpaid detail -->
             <div id="detailUnpaid" class="detail-collapse">
-                <h4 class="font-bold text-sm mb-3" style="color:#be123c;">âŒ Unpaid — Full Payment Pending</h4>
+                <h4 class="font-bold text-sm mb-3" style="color:#be123c;">❌ Unpaid — Full Payment Pending</h4>
                 <?php if(empty($unpaid_rows)): ?>
                     <p class="text-sm" style="color:#16a34a;">No unpaid customers! 🎉</p>
                 <?php else: ?>
@@ -1108,7 +1108,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                             <strong style="color:#475569;">0% (No GST)</strong>
                         </div>
                         <div class="flex justify-between py-2 px-3 rounded-xl mt-1" style="background:rgba(100,116,139,0.1);">
-                            <span class="font-bold" style="color:#475569;">âŒ GST Collected</span>
+                            <span class="font-bold" style="color:#475569;">❌ GST Collected</span>
                             <strong class="text-lg" style="color:#334155;">₹0.00</strong>
                         </div>
                     </div>
@@ -1118,7 +1118,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
             <div class="gst-total-box">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                        <p class="font-bold text-sm" style="color:#0d9488;">ðŸ› Total GST Payable to Govt — <?php echo $month_label; ?></p>
+                        <p class="font-bold text-sm" style="color:#0d9488;">🏛️ Total GST Payable to Govt — <?php echo $month_label; ?></p>
                         <p class="text-xs mt-1" style="color:#14b8a6;">CGST ₹<?php echo number_format($cgst,2); ?> + SGST ₹<?php echo number_format($sgst,2); ?></p>
                     </div>
                     <p class="text-2xl font-black" style="color:#0f766e;">₹<?php echo number_format($actual_gst,2); ?></p>
@@ -1155,7 +1155,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                         <option value="" <?php if(!$filter_status) echo 'selected'; ?>>All</option>
                         <option value="paid"   <?php if($filter_status==='paid')   echo 'selected'; ?>>✅ Paid</option>
                         <option value="part"   <?php if($filter_status==='part')   echo 'selected'; ?>>⏳ Part</option>
-                        <option value="unpaid" <?php if($filter_status==='unpaid') echo 'selected'; ?>>âŒ Unpaid</option>
+                        <option value="unpaid" <?php if($filter_status==='unpaid') echo 'selected'; ?>>❌ Unpaid</option>
                     </select>
                 </div>
                 <div>
@@ -1223,7 +1223,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                         $ps = $bill['payment_status'];
                         if ($ps === 'paid')        $status_badge = '<span class="badge-paid">✅ Paid</span>';
                         elseif ($ps === 'part')    $status_badge = '<span class="badge-part">⏳ Part</span>';
-                        elseif ($ps === 'unpaid')  $status_badge = '<span class="badge-unpaid">âŒ Unpaid</span>';
+                        elseif ($ps === 'unpaid')  $status_badge = '<span class="badge-unpaid">❌ Unpaid</span>';
                         else                       $status_badge = htmlspecialchars($ps);
                     ?>
                     <tr>

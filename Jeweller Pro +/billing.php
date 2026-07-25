@@ -478,7 +478,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
     $inv_exec = mysqli_query($conn, $invoice_query);
     if(!$inv_exec) {
         die("<div style='padding:30px;font-family:sans-serif;background:#fff1f2;color:#991b1b;border:2px solid #f87171;border-radius:12px;margin:40px auto;max-width:650px;'>
-            <h3 style='margin-top:0;'>âŒ Invoice Creation Failed</h3>
+            <h3 style='margin-top:0;'>❌ Invoice Creation Failed</h3>
             <p><strong>MySQL Error:</strong> " . htmlspecialchars(mysqli_error($conn)) . "</p>
             <p><a href='billing.php' style='color:#991b1b;font-weight:bold;text-decoration:underline;'>â† Back to Billing</a></p>
         </div>");
@@ -1964,7 +1964,7 @@ function onGramStockChange() {
     if (qty <= 0) {
         rateInput.value = '';
         weightInput.value = '';
-        infoDiv.innerHTML = '<strong style="color:#dc2626;">' + name + '</strong> | <strong style="color:#dc2626;">âŒ OUT OF STOCK (0 pcs available)</strong>';
+        infoDiv.innerHTML = '<strong style="color:#dc2626;">' + name + '</strong> | <strong style="color:#dc2626;">❌ OUT OF STOCK (0 pcs available)</strong>';
     } else if (shopRate10g > 0) {
         rateInput.value = shopRate10g.toFixed(0);
         const hint = document.getElementById('gramRatePerGramHint');
@@ -2068,7 +2068,7 @@ function onGramItemTypeChange() {
     if (inStock && stockQty > 0) {
         statusDiv.innerHTML = '<span class="px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800 border border-green-300">✅ In Stock (' + stockQty + ' pcs available in inventory)</span>';
     } else {
-        statusDiv.innerHTML = '<span class="px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800 border border-red-300">âŒ Out of Stock (0 items available in inventory)</span>';
+        statusDiv.innerHTML = '<span class="px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800 border border-red-300">❌ Out of Stock (0 items available in inventory)</span>';
     }
     statusDiv.classList.remove('hidden');
 }
@@ -2215,11 +2215,11 @@ function submitGramItem() {
         });
         const totalReqPcs = existingPcs + qty;
         if (stockQty <= 0) {
-            alert('âŒ Out of Stock!\n"' + name + '" is currently out of stock (0 pcs available).');
+            alert('❌ Out of Stock!\n"' + name + '" is currently out of stock (0 pcs available).');
             return;
         }
         if (totalReqPcs > stockQty) {
-            alert('âŒ Exceeds Available Stock!\nOnly ' + stockQty + ' pcs available in stock for "' + name + '", but ' + totalReqPcs + ' pcs requested.');
+            alert('❌ Exceeds Available Stock!\nOnly ' + stockQty + ' pcs available in stock for "' + name + '", but ' + totalReqPcs + ' pcs requested.');
             return;
         }
     } else if (source === 'category') {
@@ -2234,7 +2234,7 @@ function submitGramItem() {
         const stockQty = opt ? (parseFloat(opt.dataset.stockQty) || 0) : 0;
 
         if (!inStock || stockQty <= 0) {
-            alert('âŒ Item Out of Stock!\n"' + type + '" is currently not available in your stock inventory.');
+            alert('❌ Item Out of Stock!\n"' + type + '" is currently not available in your stock inventory.');
             return;
         }
 
@@ -2424,7 +2424,7 @@ function onQtyStockChange() {
     qtyInput.value = 1;
     
     if (qty <= 0) {
-        infoDiv.innerHTML = '<strong style="color:#dc2626;">' + name + '</strong> | <strong style="color:#dc2626;">âŒ OUT OF STOCK (0 pcs available)</strong>';
+        infoDiv.innerHTML = '<strong style="color:#dc2626;">' + name + '</strong> | <strong style="color:#dc2626;">❌ OUT OF STOCK (0 pcs available)</strong>';
     } else {
         infoDiv.innerHTML = '<strong>' + name + '</strong> Selected. Price per Piece: ₹' + price.toFixed(2) + ' | Available Stock: <strong style="color:#059669;">' + qty + ' pcs</strong>';
     }
@@ -2509,11 +2509,11 @@ function submitQtyItem() {
         });
         const totalReqPcs = existingPcs + qty;
         if (stockQty <= 0) {
-            alert('âŒ Out of Stock!\n"' + name + '" is currently out of stock (0 pcs available).');
+            alert('❌ Out of Stock!\n"' + name + '" is currently out of stock (0 pcs available).');
             return;
         }
         if (totalReqPcs > stockQty) {
-            alert('âŒ Exceeds Available Stock!\nOnly ' + stockQty + ' pcs available in stock for "' + name + '", but ' + totalReqPcs + ' pcs requested.');
+            alert('❌ Exceeds Available Stock!\nOnly ' + stockQty + ' pcs available in stock for "' + name + '", but ' + totalReqPcs + ' pcs requested.');
             return;
         }
     } else if (source === 'category') {

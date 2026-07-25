@@ -291,7 +291,7 @@ if($_SERVER['REQUEST_METHOD']=='POST' && isset($_POST['save_api_settings'])) {
     mysqli_query($conn,"UPDATE whatsapp_settings SET status='inactive'");
     if(mysqli_query($conn,"INSERT INTO whatsapp_settings (api_type,api_url,api_token,instance_id,reminder_days,status) VALUES ('$api_type','$api_url','$api_token','$instance_id',$reminder_days,'active')"))
         $api_success = "✅ API settings saved successfully!";
-    else $api_error = "âŒ Error: ".mysqli_error($conn);
+    else $api_error = "❌ Error: ".mysqli_error($conn);
 }
 
 // Send Single
@@ -312,27 +312,27 @@ if($_SERVER['REQUEST_METHOD']=='POST' && isset($_POST['send_single'])) {
             $fn  = time().'_'.rand(1000,9999).'.'.$ext;
             $up  = 'uploads/whatsapp_media/'.$fn;
             if(move_uploaded_file($_FILES['single_media_file']['tmp_name'], $up)) { $media_file_path=$up; $media_file_name=$_FILES['single_media_file']['name']; }
-        } else $single_error = "âŒ Invalid file type! Only images and videos allowed.";
+        } else $single_error = "❌ Invalid file type! Only images and videos allowed.";
     }
 
-    if(empty($number)) $single_error = "âŒ Please enter a mobile number!";
+    if(empty($number)) $single_error = "❌ Please enter a mobile number!";
     elseif($use_template) {
         if(empty($customer_name) || $tpl_amount==='' || empty($tpl_due_date)) {
-            $single_error = "âŒ For template messages, please fill Customer Name, Amount, and Due Date!";
+            $single_error = "❌ For template messages, please fill Customer Name, Amount, and Due Date!";
         } else {
             $dueDateFormatted = date('d-m-Y', strtotime($tpl_due_date));
             $amountFormatted  = number_format((float)$tpl_amount, 2);
             $logMsg = "[Template: payment_reminder_1] Hello $customer_name, Your payment of ₹$amountFormatted is due on $dueDateFormatted.";
             $result = sendWhatsAppTemplate($number, 'payment_reminder_1', 'en_US', [$customer_name, '₹'.$amountFormatted, $dueDateFormatted], $number, $conn);
             if($result['success']) { logWhatsAppMessage($number,$customer_name,'single_template',$logMsg,'','','sent',json_encode($result),$conn); $single_success="✅ Template message sent to $number!<br><small>Whinta response: ".htmlspecialchars($result['response']??'')."</small>"; }
-            else { logWhatsAppMessage($number,$customer_name,'single_template',$logMsg,'','','failed',$result['error'],$conn); $single_error="âŒ Failed: ".$result['error']; }
+            else { logWhatsAppMessage($number,$customer_name,'single_template',$logMsg,'','','failed',$result['error'],$conn); $single_error="❌ Failed: ".$result['error']; }
         }
     }
-    elseif(empty($message) && empty($media_file_path)) $single_error = "âŒ Please enter a message or select media!";
+    elseif(empty($message) && empty($media_file_path)) $single_error = "❌ Please enter a message or select media!";
     else {
         $result = sendWhatsAppMessage($number, $message, $conn, $media_file_path, $media_type);
         if($result['success']) { logWhatsAppMessage($number,$customer_name,'single',$message,$media_file_path,$media_file_name,'sent',json_encode($result),$conn); $single_success="✅ Message sent to $number!"; }
-        else { logWhatsAppMessage($number,$customer_name,'single',$message,$media_file_path,$media_file_name,'failed',$result['error'],$conn); $single_error="âŒ Failed: ".$result['error']; }
+        else { logWhatsAppMessage($number,$customer_name,'single',$message,$media_file_path,$media_file_name,'failed',$result['error'],$conn); $single_error="❌ Failed: ".$result['error']; }
     }
 }
 
@@ -350,11 +350,11 @@ if($_SERVER['REQUEST_METHOD']=='POST' && isset($_POST['send_bulk'])) {
             $ext=pathinfo($_FILES['bulk_media_file']['name'],PATHINFO_EXTENSION);
             $fn=time().'_'.rand(1000,9999).'.'.$ext; $up='uploads/whatsapp_media/'.$fn;
             if(move_uploaded_file($_FILES['bulk_media_file']['tmp_name'],$up)) { $media_file_path=$up; $media_file_name=$_FILES['bulk_media_file']['name']; }
-        } else $bulk_error="âŒ Invalid file type!";
+        } else $bulk_error="❌ Invalid file type!";
     }
 
-    if(empty($selected)) $bulk_error="âŒ Please select at least one customer!";
-    elseif(empty($bulk_msg)&&empty($media_file_path)) $bulk_error="âŒ Please enter a message or select media!";
+    if(empty($selected)) $bulk_error="❌ Please select at least one customer!";
+    elseif(empty($bulk_msg)&&empty($media_file_path)) $bulk_error="❌ Please enter a message or select media!";
     else {
         foreach($selected as $cid) {
             $c=mysqli_fetch_assoc(mysqli_query($conn,"SELECT name,mobile FROM customers WHERE id=".intval($cid)));
@@ -365,7 +365,7 @@ if($_SERVER['REQUEST_METHOD']=='POST' && isset($_POST['send_bulk'])) {
                 else { $failed_count++; logWhatsAppMessage($c['mobile'],$c['name'],'bulk',$bulk_msg,$media_file_path,$media_file_name,'failed',$r['error'],$conn); }
             }
         }
-        $bulk_result="✅ Sent: $sent_count | âŒ Failed: $failed_count";
+        $bulk_result="✅ Sent: $sent_count | ❌ Failed: $failed_count";
     }
 }
 
@@ -402,7 +402,7 @@ if(isset($_GET['send_advance_reminders'])) {
         if($r['success']) { $sent_count++; logWhatsAppMessage($c['customer_mobile'],$c['customer_name'],'advance_reminder',$msg,'','','sent',json_encode($r),$conn); }
         else { $failed_count++; logWhatsAppMessage($c['customer_mobile'],$c['customer_name'],'advance_reminder',$msg,'','','failed',$r['error'],$conn); }
     }
-    $advance_reminder_result="✅ Reminders Sent: $sent_count | âŒ Failed: $failed_count";
+    $advance_reminder_result="✅ Reminders Sent: $sent_count | ❌ Failed: $failed_count";
 }
 
 $api_settings         = mysqli_fetch_assoc(mysqli_query($conn,"SELECT * FROM whatsapp_settings WHERE status='active' LIMIT 1"));
@@ -897,7 +897,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         <label class="field-label">📎 Media Type</label>
                         <select name="single_media_type" id="singleMediaType" class="jewel-input" onchange="toggleMedia('single')">
                             <option value="text">📜 Text Only</option>
-                            <option value="image">ðŸ–¼ Image</option>
+                            <option value="image">🖼️ Image</option>
                             <option value="video">🎥 Video</option>
                         </select>
                     </div>
@@ -944,7 +944,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 <label class="field-label mb-1">📋 Select Customers</label>
                 <div class="flex gap-3 mb-2">
                     <button type="button" class="btn-sm-link" style="color:#16a34a;" onclick="selectAll()">✅ Select All</button>
-                    <button type="button" class="btn-sm-link" style="color:#dc2626;" onclick="deselectAll()">âŒ Deselect All</button>
+                    <button type="button" class="btn-sm-link" style="color:#dc2626;" onclick="deselectAll()">❌ Deselect All</button>
                 </div>
                 <div class="customer-select-box mb-4">
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1">
@@ -962,7 +962,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         <label class="field-label">📎 Media Type</label>
                         <select name="media_type" id="bulkMediaType" class="jewel-input" onchange="toggleMedia('bulk')">
                             <option value="text">📜 Text Only</option>
-                            <option value="image">ðŸ–¼ Image</option>
+                            <option value="image">🖼️ Image</option>
                             <option value="video">🎥 Video</option>
                         </select>
                     </div>
@@ -987,7 +987,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
             <div class="flex flex-wrap items-end gap-3 mb-4 p-4 rounded-xl" style="background:#fdf6e3;border:1px solid rgba(181,115,14,0.15);">
                 <div>
-                    <label class="field-label">â° Reminder Filter</label>
+                    <label class="field-label">⏰ Reminder Filter</label>
                     <select id="reminderDaysFilter" class="jewel-input" style="width:180px;">
                         <option value="1">1 day before</option>
                         <option value="2">2 days before</option>
@@ -1073,7 +1073,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                 <?php if($log['status']=='sent'): ?>
                                     <span class="badge-sent">✓“ Sent</span>
                                 <?php else: ?>
-                                    <span class="badge-failed">✓— Failed</span>
+                                    <span class="badge-failed">❌ Failed</span>
                                 <?php endif; ?>
                             </td>
                         </tr>
