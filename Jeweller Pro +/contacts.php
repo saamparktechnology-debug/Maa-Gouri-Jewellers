@@ -417,7 +417,7 @@ h1, h2, h3, .gold-font { font-family: 'Poppins', sans-serif; font-weight: 700; }
                     Cancel
                 </button>
                 <button type="submit" class="flex-1 py-2.5 text-xs font-bold text-white rounded-xl shadow-md" style="background:linear-gradient(135deg, #7a4e0a 0%, #d68b16 100%);">
-                    ðŸ’¾ Save Contact
+                    💾 Save Contact
                 </button>
             </div>
         </form>

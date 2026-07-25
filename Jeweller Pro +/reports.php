@@ -1041,7 +1041,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                     <?php foreach(['filter_from','filter_to','filter_name','filter_status','filter_gst'] as $fk) {
                         if(!empty($_GET[$fk])) echo '<input type="hidden" name="'.$fk.'" value="'.htmlspecialchars($_GET[$fk]).'">';
                     } ?>
-                    <label class="filter-label whitespace-nowrap">ðŸ“… Month:</label>
+                    <label class="filter-label whitespace-nowrap">📅 Month:</label>
                     <input type="month" name="gst_month" value="<?php echo htmlspecialchars($gst_month); ?>" class="jewel-input" style="width:160px;">
                     <button type="submit" class="btn-jewel" style="padding:8px 16px;font-size:12px;">Go</button>
                     <a href="reports.php" class="btn-jewel" style="padding:8px 14px;font-size:12px;background:linear-gradient(135deg,#6b7280,#4b5563);">All Time</a>
@@ -1061,13 +1061,13 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
             $month_label = $gst_month ? date('F Y', strtotime($gst_month.'-01')) : 'All Time';
             ?>
 
-            <p class="text-xs mb-4" style="color:#7a4e0a;">ðŸ“Œ Showing data for: <strong style="color:#800020;"><?php echo $month_label; ?></strong></p>
+            <p class="text-xs mb-4" style="color:#7a4e0a;">📜Œ Showing data for: <strong style="color:#800020;"><?php echo $month_label; ?></strong></p>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <!-- GST Card -->
                 <div class="stat-card-gst p-5">
                     <div class="flex justify-between items-center mb-3">
-                        <span class="font-bold text-sm" style="color:#134e4a;">ðŸ“„ GST Bills</span>
+                        <span class="font-bold text-sm" style="color:#134e4a;">📜„ GST Bills</span>
                         <span class="text-2xl font-black" style="color:#0f766e;"><?php echo $gst_summary['gst_count']; ?> bills</span>
                     </div>
                     <div class="space-y-2 text-sm">
@@ -1135,11 +1135,11 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
             <!-- Filter bar -->
             <form method="GET" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5 p-4 rounded-xl" style="background:#fdf6e3;border:1px solid rgba(181,115,14,0.15);">
                 <div>
-                    <label class="filter-label">ðŸ“… From Date</label>
+                    <label class="filter-label">📅 From Date</label>
                     <input type="date" name="filter_from" value="<?php echo htmlspecialchars($filter_from); ?>" class="jewel-input w-full">
                 </div>
                 <div>
-                    <label class="filter-label">ðŸ“… To Date</label>
+                    <label class="filter-label">📅 To Date</label>
                     <input type="date" name="filter_to" value="<?php echo htmlspecialchars($filter_to); ?>" class="jewel-input w-full">
                 </div>
                 <div>
@@ -1147,7 +1147,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                     <input type="text" name="filter_name" value="<?php echo htmlspecialchars($filter_name); ?>" placeholder="Searchâ€¦" class="jewel-input w-full">
                 </div>
                 <div>
-                    <label class="filter-label">ðŸ’³ Payment</label>
+                    <label class="filter-label">💳 Payment</label>
                     <select name="filter_status" class="jewel-input w-full">
                         <option value="" <?php if(!$filter_status) echo 'selected'; ?>>All</option>
                         <option value="paid"   <?php if($filter_status==='paid')   echo 'selected'; ?>>✓… Paid</option>
@@ -1159,7 +1159,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                     <label class="filter-label">🧾 GST Type</label>
                     <select name="filter_gst" class="jewel-input w-full">
                         <option value="" <?php if(!$filter_gst) echo 'selected'; ?>>All</option>
-                        <option value="gst"     <?php if($filter_gst==='gst')     echo 'selected'; ?>>ðŸ“„ GST (3%)</option>
+                        <option value="gst"     <?php if($filter_gst==='gst')     echo 'selected'; ?>>📜„ GST (3%)</option>
                         <option value="non_gst" <?php if($filter_gst==='non_gst') echo 'selected'; ?>>📋 Non-GST</option>
                     </select>
                 </div>
@@ -1243,7 +1243,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                         </td>
                         <td class="text-center">
                             <?php if(strpos($bill['gst_type'], 'gst') === 0): ?>
-                                <span style="color:#0d9488;font-weight:700;font-size:11px;">ðŸ“„ GST</span>
+                                <span style="color:#0d9488;font-weight:700;font-size:11px;">📜„ GST</span>
                                 <?php if($gst_amt>0): ?>
                                     <div style="font-size:9px;color:#14b8a6;">Total: ₹<?php echo number_format($gst_amt,2); ?></div>
                                     <div style="font-size:9px;color:#14b8a6;">C+S: ₹<?php echo number_format($cgst_amt,2); ?> ea</div>
@@ -1262,7 +1262,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                                 </a>
                                 <button onclick="confirmDeleteInvoice('<?php echo htmlspecialchars($bill['invoice_no']); ?>')"
                                         class="btn-jewel" style="background:linear-gradient(135deg,#7f1d1d,#ef4444);padding:3px 10px;font-size:10px;border-radius:20px;white-space:nowrap;">
-                                   ðŸ—‘ï¸ Delete
+                                   🗑️ï¸ Delete
                                 </button>
                             </div>
                         </td>
@@ -1666,10 +1666,10 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
             
             <div class="flex gap-3">
                 <button type="button" onclick="selectDeleteMode('permanent')" id="btnDeletePerm" class="flex-1 py-3 px-4 rounded-xl border border-red-300 text-red-700 bg-red-50 hover:bg-red-100 font-semibold text-xs transition duration-200 text-center cursor-pointer">
-                    ðŸ—‘ï¸ Delete Permanently<br><span class="text-[9px] font-normal text-red-500">(Stock is NOT updated)</span>
+                    🗑️ï¸ Delete Permanently<br><span class="text-[9px] font-normal text-red-500">(Stock is NOT updated)</span>
                 </button>
                 <button type="button" onclick="selectDeleteMode('restore_stock')" id="btnDeleteRestore" class="flex-1 py-3 px-4 rounded-xl border border-green-300 text-green-700 bg-green-50 hover:bg-green-100 font-semibold text-xs transition duration-200 text-center cursor-pointer">
-                    ðŸ“¦ Move to Stock<br><span class="text-[9px] font-normal text-green-500">(Add items to inventory)</span>
+                    📜¦ Move to Stock<br><span class="text-[9px] font-normal text-green-500">(Add items to inventory)</span>
                 </button>
             </div>
             

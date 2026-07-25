@@ -2336,7 +2336,7 @@ function submitGramItem() {
     showNotif('✓… Added Item: ' + name, 'success');
 }
 
-// ==================== ðŸ“¦ QTY FORM LOGIC ====================
+// ==================== 📜¦ QTY FORM LOGIC ====================
 
 // Stock search & filter with floating suggestions
 function filterQtyStock(query) {
@@ -2784,7 +2784,7 @@ function calculateTotal() {
     }
     const submitBtn = document.getElementById('submitBtn');
     if (submitBtn) {
-        submitBtn.innerHTML = (cgst + sgst > 0) ? '✓¨ Generate Tax Invoice ✓¨' : '✓¨ Generate Cash Memo ✓¨';
+        submitBtn.innerHTML = (cgst + sgst > 0) ? '✨ Generate Tax Invoice ✨' : '✨ Generate Cash Memo ✨';
     }
     updateBalanceFromPart();
 }

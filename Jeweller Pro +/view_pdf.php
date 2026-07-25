@@ -347,7 +347,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                         <div class="bill-to-title">Received From</div>
                         <div class="customer-name-big"><?php echo htmlspecialchars($inv['customer_name']); ?></div>
                         <?php if(!empty($inv['customer_address'])): ?>
-                        <div class="customer-address-text">ðŸ“ Address: <?php echo htmlspecialchars($inv['customer_address']); ?></div>
+                        <div class="customer-address-text">📜 Address: <?php echo htmlspecialchars($inv['customer_address']); ?></div>
                         <?php endif; ?>
                     </div>
                     <div class="bill-to-right">
@@ -469,7 +469,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                         <div class="bill-to-title"><?php echo $bill_to_label; ?></div>
                         <div class="customer-name-big"><?php echo htmlspecialchars($inv['customer_name']); ?></div>
                         <?php if(!empty($inv['customer_address'])): ?>
-                        <div class="customer-address-text">ðŸ“ Address: <?php echo htmlspecialchars($inv['customer_address']); ?></div>
+                        <div class="customer-address-text">📜 Address: <?php echo htmlspecialchars($inv['customer_address']); ?></div>
                         <?php endif; ?>
                     </div>
                     <div class="bill-to-right">
@@ -477,7 +477,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                         <?php if(!empty($inv['customer_gstin'])): ?>
                         ðŸ›ï¸ GSTIN: <strong><?php echo htmlspecialchars($inv['customer_gstin']); ?></strong><br>
                         <?php endif; ?>
-                        ðŸ“ <strong>Place of Supply:</strong><br>
+                        📜 <strong>Place of Supply:</strong><br>
                         <div style="margin-top:2px;font-size:11.5px;color:#334155;line-height:1.4;">
                             <?php echo $COMPANY['address_line1']; ?><br>
                             <?php echo $COMPANY['address_line2']; ?><br>

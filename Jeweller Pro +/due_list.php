@@ -1134,15 +1134,15 @@ function sendWhatsAppReminder(name, mobile, invoiceNo, due, total) {
         msg += '\n\nThank you for your *complete payment* for Invoice *' + invoiceNo + '*.';
         msg += '\n💰 Total Paid: ₹' + total.toFixed(2);
         msg += '\n✓… Your account is fully cleared.';
-        msg += '\n\nThank you for trusting *MAA GOURI JEWELLERS*! ðŸŒŸ\n📞 +91-8617536679';
+        msg += '\n\nThank you for trusting *MAA GOURI JEWELLERS*! 🌟\n📞 +91-8617536679';
     } else {
         // Part paid / still due
         var paid = total - due;
         msg = 'ðŸ™ Dear ' + name + ',';
         msg += '\n\nThis is a gentle reminder regarding your pending due for Invoice *' + invoiceNo + '*.';
-        msg += '\n\nðŸ’³ Invoice Total: ₹' + total.toFixed(2);
+        msg += '\n\n💳 Invoice Total: ₹' + total.toFixed(2);
         msg += '\n✓… Amount Paid: ₹' + paid.toFixed(2);
-        msg += '\nðŸ”´ *Remaining Due: ₹' + due.toFixed(2) + '*';
+        msg += '\n🔴 *Remaining Due: ₹' + due.toFixed(2) + '*';
         msg += '\n\nKindly clear the pending amount at your earliest convenience.';
         msg += '\n\nThank you,\n*MAA GOURI JEWELLERS*\n📞 +91-8617536679';
     }
@@ -1389,7 +1389,7 @@ function submitReceivePayment() {
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                     <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #d68b16;border-radius:10px;cursor:pointer;background:#fff9ee;" id="lblModeCash">
                         <input type="radio" name="rcv_mode" value="Cash" checked onclick="selectRcvMode('Cash')">
-                        <span style="font-size:12px;font-weight:700;color:#7a4e0a;">ðŸ’µ Cash</span>
+                        <span style="font-size:12px;font-weight:700;color:#7a4e0a;">💵 Cash</span>
                     </label>
                     <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;cursor:pointer;background:#fff;" id="lblModeUpi">
                         <input type="radio" name="rcv_mode" value="UPI" onclick="selectRcvMode('UPI')">
@@ -1414,7 +1414,7 @@ function submitReceivePayment() {
             <div style="display:flex;gap:10px;margin-top:6px;">
                 <button type="button" onclick="closeReceiveModal()" style="flex:1;padding:10px;border-radius:10px;border:1px solid #cbd5e1;background:#f1f5f9;color:#475569;font-size:12px;font-weight:600;cursor:pointer;">Cancel</button>
                 <button type="button" onclick="submitReceivePayment()" style="flex:1.5;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg, #7a4e0a, #d68b16);color:#fff;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(214,139,22,0.3);">
-                    ðŸ’¾ Save &amp; Print Invoice
+                    💾 Save &amp; Print Invoice
                 </button>
             </div>
         </div>
@@ -1440,11 +1440,11 @@ function submitReceivePayment() {
 
     if (!faLoaded()) {
         var map = {
-            'fa-user': '👤', 'fa-user-circle':'👤', 'fa-sign-out-alt':'ðŸ”“', 'fa-sign-in-alt':'ðŸ”',
-            'fa-list':'📋', 'fa-arrow-left':'â†', 'fa-check-circle':'✓…', 'fa-save':'ðŸ’¾',
-            'fa-trash-alt':'ðŸ—‘ï¸', 'fa-spinner':'â³', 'fa-check':'✓“', 'fa-chart-bar':'📊',
-            'fa-receipt':'🧾','fa-chart-line':'📈','fa-boxes':'ðŸ“¦','fa-users':'ðŸ‘¥','fa-gem':'💎',
-            'fa-book':'ðŸ“–','fa-weight-hanging':'âš–ï¸','fa-coins':'ðŸª™','fa-search':'ðŸ”','fa-plus-circle':'âž•'
+            'fa-user': '👤', 'fa-user-circle':'👤', 'fa-sign-out-alt':'🔓', 'fa-sign-in-alt':'ðŸ”',
+            'fa-list':'📋', 'fa-arrow-left':'â†', 'fa-check-circle':'✓…', 'fa-save':'💾',
+            'fa-trash-alt':'🗑️ï¸', 'fa-spinner':'â³', 'fa-check':'✓“', 'fa-chart-bar':'📊',
+            'fa-receipt':'🧾','fa-chart-line':'📈','fa-boxes':'📜¦','fa-users':'👥','fa-gem':'💎',
+            'fa-book':'📜–','fa-weight-hanging':'âš–ï¸','fa-coins':'🪙','fa-search':'ðŸ”','fa-plus-circle':'➕'
         };
 
         document.querySelectorAll('i[class*="fa-"]').forEach(function(i){

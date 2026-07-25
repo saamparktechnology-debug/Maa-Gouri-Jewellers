@@ -57,7 +57,7 @@ foreach ($required_admins as $adm) {
 }
 
 echo "<div style='font-family:sans-serif;padding:30px;max-width:600px;margin:50px auto;background:#f0fdf4;border:1px solid #86efac;border-radius:12px;color:#166534;'>";
-echo "<h2>âœ… Database Reset Complete!</h2>";
+echo "<h2>✅ Database Reset Complete!</h2>";
 echo "<p>All stock, products, customers, invoices, due records, purchases, and sanchari entries have been completely cleared for a fresh start.</p>";
 echo "<p>Admin logins created (Password: <code>123456</code>):</p>";
 echo "<ul>";

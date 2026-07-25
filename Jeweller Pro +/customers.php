@@ -105,7 +105,7 @@ if(isset($_GET['delete_id'])) {
         mysqli_query($conn, "DELETE FROM invoices WHERE customer_mobile = '{$customer['mobile']}'");
     }
     mysqli_query($conn, "DELETE FROM customers WHERE id = $delete_id");
-    echo "<script>alert('ðŸ—‘ï¸ Customer deleted successfully!'); window.location.href='customers.php';</script>";
+    echo "<script>alert('🗑️ï¸ Customer deleted successfully!'); window.location.href='customers.php';</script>";
     exit();
 }
 
@@ -603,9 +603,9 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             <div class="filter-wrap flex flex-col md:flex-row justify-between items-center gap-4">
                 <!-- Filter buttons -->
                 <div class="flex flex-wrap gap-2">
-                    <a href="?filter=all"        class="btn-filter <?php echo $filter=='all'        ? 'active' : ''; ?>">ðŸ‘‘ All Customers</a>
-                    <a href="?filter=this_month" class="btn-filter <?php echo $filter=='this_month' ? 'active' : ''; ?>">ðŸ“… This Month</a>
-                    <a href="?filter=this_year"  class="btn-filter <?php echo $filter=='this_year'  ? 'active' : ''; ?>">ðŸŽ¯ This Year</a>
+                    <a href="?filter=all"        class="btn-filter <?php echo $filter=='all'        ? 'active' : ''; ?>">👑 All Customers</a>
+                    <a href="?filter=this_month" class="btn-filter <?php echo $filter=='this_month' ? 'active' : ''; ?>">📅 This Month</a>
+                    <a href="?filter=this_year"  class="btn-filter <?php echo $filter=='this_year'  ? 'active' : ''; ?>">🎯 This Year</a>
                 </div>
 
                 <!-- Search -->
@@ -676,7 +676,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             </td>
                             <td class="text-sm" style="color:#374151;">📱 <?php echo htmlspecialchars($mob); ?></td>
                             <td class="text-sm hidden sm:table-cell" style="color:#6b7280;"><?php echo htmlspecialchars($customer['email'] ?? 'N/A'); ?></td>
-                            <td class="text-sm" style="color:#374151;">ðŸ“… <?php echo date('d M Y', strtotime($customer['created_at'])); ?></td>
+                            <td class="text-sm" style="color:#374151;">📅 <?php echo date('d M Y', strtotime($customer['created_at'])); ?></td>
                             <td class="text-center">
                                 <div class="font-bold text-sm" style="color:#800020;"><?php echo $order_count; ?> orders</div>
                                 <div class="text-xs" style="color:#059669;">₹<?php echo number_format($total_amt, 2); ?></div>
@@ -725,7 +725,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         <h3 class="text-xl font-bold gold-font"><i class="fas fa-user-plus mr-2" style="color:#d68b16;"></i> Add New Customer</h3>
         <form method="POST">
             <div class="mb-3">
-                <label>ðŸ‘‘ Full Name <span style="color:#ef4444;">*</span></label>
+                <label>👑 Full Name <span style="color:#ef4444;">*</span></label>
                 <input type="text" name="name" required placeholder="Customer nameâ€¦" class="jewel-input">
             </div>
             <div class="mb-3">
@@ -733,11 +733,11 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 <input type="tel" name="mobile" required placeholder="10-digit mobileâ€¦" class="jewel-input">
             </div>
             <div class="mb-3">
-                <label>ðŸ“§ Email Address</label>
+                <label>📜§ Email Address</label>
                 <input type="email" name="email" placeholder="email@example.com" class="jewel-input">
             </div>
             <div class="mb-3">
-                <label>ðŸ“ Address</label>
+                <label>📜 Address</label>
                 <textarea name="address" rows="2" placeholder="Customer addressâ€¦" class="jewel-input"></textarea>
             </div>
             <div class="mb-4">
@@ -764,7 +764,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         <form method="POST">
             <input type="hidden" name="customer_id" id="editCustomerId">
             <div class="mb-3">
-                <label>ðŸ‘‘ Full Name <span style="color:#ef4444;">*</span></label>
+                <label>👑 Full Name <span style="color:#ef4444;">*</span></label>
                 <input type="text" name="name" id="editName" required class="jewel-input">
             </div>
             <div class="mb-3">
@@ -772,11 +772,11 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 <input type="tel" name="mobile" id="editMobile" required class="jewel-input">
             </div>
             <div class="mb-3">
-                <label>ðŸ“§ Email Address</label>
+                <label>📜§ Email Address</label>
                 <input type="email" name="email" id="editEmail" class="jewel-input">
             </div>
             <div class="mb-3">
-                <label>ðŸ“ Address</label>
+                <label>📜 Address</label>
                 <textarea name="address" id="editAddress" rows="2" class="jewel-input"></textarea>
             </div>
             <div class="mb-4">
@@ -971,7 +971,7 @@ function openOrderHistory(mobile, name) {
                     <div class="oh-order-head">
                         <div>
                             <span style="font-weight:700;color:#7a4e0a;font-size:13px;">${o.invoice_no}</span>
-                            <span style="color:#9ca3af;font-size:11px;margin-left:8px;">ðŸ“… ${date}</span>
+                            <span style="color:#9ca3af;font-size:11px;margin-left:8px;">📅 ${date}</span>
                         </div>
                         <div style="display:flex;align-items:center;gap:8px;">
                             <span class="oh-badge ${statusClass}">${statusLabel}</span>
@@ -1000,7 +1000,7 @@ function openOrderHistory(mobile, name) {
 
                 // Footer
                 html += `<div style="background:#f9f5eb;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px;font-size:12px;">
-                    <span style="color:#6b7280;">ðŸ’³ ${o.payment_method || 'Cash'}</span>
+                    <span style="color:#6b7280;">💳 ${o.payment_method || 'Cash'}</span>
                     <div style="display:flex;gap:16px;">
                         <span style="color:#059669;font-weight:700;">Total: ₹${parseFloat(o.total_amount).toLocaleString('en-IN',{minimumFractionDigits:2})}</span>
                         ${parseFloat(o.balance_amount) > 0 ? '<span style="color:#dc2626;font-weight:700;">Due: ₹'+parseFloat(o.balance_amount).toLocaleString('en-IN',{minimumFractionDigits:2})+'</span>' : ''}

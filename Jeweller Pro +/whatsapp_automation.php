@@ -395,7 +395,7 @@ if(isset($_GET['send_advance_reminders'])) {
             $msg = "[Template: payment_reminder_1] Hello {$c['customer_name']}, Your payment of ₹$amountFormatted is due on $dueDateFormatted.";
             $r = sendWhatsAppTemplate($c['customer_mobile'], 'payment_reminder_1', 'en_US', [$c['customer_name'], '₹'.$amountFormatted, $dueDateFormatted], $c['customer_mobile'], $conn);
         } else {
-            $msg="💎 *MAA GOURI JEWELLERS - PAYMENT REMINDER* 💎\n\nDear {$c['customer_name']},\n\nYour advance payment is due in *$dlv days*.\n\nðŸ“… Due: $dueDateFormatted\n💰 Amount: ₹$amountFormatted\n\nPlease pay at earliest convenience.\n\nThank you! ✓¨";
+            $msg="💎 *MAA GOURI JEWELLERS - PAYMENT REMINDER* 💎\n\nDear {$c['customer_name']},\n\nYour advance payment is due in *$dlv days*.\n\n📅 Due: $dueDateFormatted\n💰 Amount: ₹$amountFormatted\n\nPlease pay at earliest convenience.\n\nThank you! ✨";
             $r=sendWhatsAppMessage($c['customer_mobile'],$msg,$conn);
         }
 
@@ -896,13 +896,13 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                     <div>
                         <label class="field-label">📎 Media Type</label>
                         <select name="single_media_type" id="singleMediaType" class="jewel-input" onchange="toggleMedia('single')">
-                            <option value="text">ðŸ“ Text Only</option>
+                            <option value="text">📜 Text Only</option>
                             <option value="image">ðŸ–¼ï¸ Image</option>
                             <option value="video">🎥 Video</option>
                         </select>
                     </div>
                     <div id="singleMediaUploadDiv" style="display:none;">
-                        <label class="field-label">ðŸ“ Choose File</label>
+                        <label class="field-label">📜 Choose File</label>
                         <input type="file" name="single_media_file" accept="image/*,video/*" class="jewel-input">
                     </div>
                     <div class="sm:col-span-2">
@@ -917,7 +917,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             <input type="number" step="0.01" name="template_amount" placeholder="5000" class="jewel-input">
                         </div>
                         <div>
-                            <label class="field-label">ðŸ“… Due Date</label>
+                            <label class="field-label">📅 Due Date</label>
                             <input type="date" name="template_due_date" class="jewel-input">
                         </div>
                         <div class="sm:col-span-2">
@@ -925,7 +925,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         </div>
                     </div>
                     <div class="sm:col-span-2" id="singleMessageDiv">
-                        <label class="field-label">ðŸ“ Message</label>
+                        <label class="field-label">📜 Message</label>
                         <textarea name="message" rows="3" placeholder="Type your message hereâ€¦" class="jewel-input"></textarea>
                     </div>
                 </div>
@@ -961,17 +961,17 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                     <div>
                         <label class="field-label">📎 Media Type</label>
                         <select name="media_type" id="bulkMediaType" class="jewel-input" onchange="toggleMedia('bulk')">
-                            <option value="text">ðŸ“ Text Only</option>
+                            <option value="text">📜 Text Only</option>
                             <option value="image">ðŸ–¼ï¸ Image</option>
                             <option value="video">🎥 Video</option>
                         </select>
                     </div>
                     <div id="bulkMediaUploadDiv" style="display:none;">
-                        <label class="field-label">ðŸ“ Choose File</label>
+                        <label class="field-label">📜 Choose File</label>
                         <input type="file" name="bulk_media_file" accept="image/*,video/*" class="jewel-input">
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="field-label">ðŸ“ Bulk Message</label>
+                        <label class="field-label">📜 Bulk Message</label>
                         <textarea name="bulk_message" rows="3" placeholder="Message to send to all selected customersâ€¦" class="jewel-input"></textarea>
                     </div>
                 </div>
@@ -1034,7 +1034,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             <td>📱 <?php echo htmlspecialchars($adv['customer_mobile'] ?: '—'); ?></td>
                             <td class="text-right font-bold" style="color:#d68b16;">₹<?php echo number_format((float)($adv['balance_amount'] ?? $adv['advance_amount']),2); ?></td>
                             <td class="text-right" style="color:#7a4e0a;">₹<?php echo number_format((float)($adv['total_amount'] ?? 0),2); ?></td>
-                            <td class="text-center">ðŸ“… <?php echo !empty($adv['due_date']) ? date('d M Y', strtotime($adv['due_date'])) : '—'; ?></td>
+                            <td class="text-center">📅 <?php echo !empty($adv['due_date']) ? date('d M Y', strtotime($adv['due_date'])) : '—'; ?></td>
                             <td class="text-center"><?php echo $adv['reminder_days']; ?> days</td>
                             <td class="text-center <?php echo $dc; ?>"><?php echo $dt; ?></td>
                         </tr>

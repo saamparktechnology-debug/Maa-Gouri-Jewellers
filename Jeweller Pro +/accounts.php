@@ -365,7 +365,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
 
             <div class="flex items-center gap-3 flex-wrap no-print">
                 <form method="GET" class="flex gap-2 items-center">
-                    <label class="text-xs font-bold text-amber-900">ðŸ“… Month:</label>
+                    <label class="text-xs font-bold text-amber-900">📅 Month:</label>
                     <input type="month" name="month" value="<?= htmlspecialchars($month) ?>" onchange="this.form.submit()" class="px-3 py-1.5 text-xs rounded-xl border border-amber-300 bg-amber-50 text-amber-900 font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500">
                 </form>
                 <button onclick="window.print()" class="px-4 py-2 text-xs font-bold text-white rounded-xl shadow-md flex items-center gap-2" style="background:linear-gradient(135deg, #7a4e0a 0%, #d68b16 100%);">
@@ -383,7 +383,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div class="card-gold p-4 flex items-center gap-4">
                     <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-xl font-bold text-amber-900" style="background:linear-gradient(135deg, #ffd700 0%, #b5730e 100%);">
-                        ðŸ’µ
+                        💵
                     </div>
                     <div>
                         <div class="text-xs font-semibold text-gray-500 uppercase">Today Cash Collection</div>
@@ -430,7 +430,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
             </div>
 
             <div class="card-gold p-5">
-                <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">ðŸ’µ Cash Received</div>
+                <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">💵 Cash Received</div>
                 <div class="text-2xl font-bold text-amber-800 mt-1"><?= fmt($monthCash) ?></div>
                 <div class="mt-2">
                     <div class="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
@@ -452,7 +452,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
             </div>
 
             <div class="card-gold p-5">
-                <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">ðŸ’³ Due Payment Received</div>
+                <div class="text-xs font-bold text-gray-400 uppercase tracking-wider">💳 Due Payment Received</div>
                 <div class="text-2xl font-bold text-emerald-800 mt-1"><?= fmt($monthDueRec) ?></div>
                 <div class="text-xs text-emerald-600 font-semibold mt-1">Cleared from past dues</div>
             </div>
@@ -480,9 +480,9 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
                         <tr class="bg-amber-100/50 text-amber-900 text-xs uppercase font-bold border-b border-amber-200/70">
                             <th class="px-5 py-3">Date</th>
                             <th class="px-5 py-3 text-center">New Bills</th>
-                            <th class="px-5 py-3 text-right">ðŸ’µ Cash</th>
+                            <th class="px-5 py-3 text-right">💵 Cash</th>
                             <th class="px-5 py-3 text-right">📱 UPI / Digital</th>
-                            <th class="px-5 py-3 text-right">ðŸ’³ Due Cleared</th>
+                            <th class="px-5 py-3 text-right">💳 Due Cleared</th>
                             <th class="px-5 py-3 text-right">Total Collection</th>
                         </tr>
                     </thead>
