@@ -269,8 +269,10 @@ $adm_email = 'jewellersmaagouri@gmail.com';
 $adm_mob   = '9647291299';
 $adm_name  = 'MAA GOURI JEWELLERS';
 
-@mysqli_query($conn, "DELETE FROM users WHERE email != '$adm_email'");
-@mysqli_query($conn, "UPDATE users SET password = '$admin_pass_hash'");
+try {
+    @mysqli_query($conn, "DELETE FROM users WHERE email != '$adm_email'");
+    @mysqli_query($conn, "UPDATE users SET password = '$admin_pass_hash'");
+} catch (Exception $e) {}
 
 $chk_adm = mysqli_query($conn, "SELECT id FROM users WHERE email = '$adm_email' OR mobile = '$adm_mob'");
 if ($chk_adm && mysqli_num_rows($chk_adm) > 0) {
