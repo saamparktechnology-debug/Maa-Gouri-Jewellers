@@ -243,8 +243,8 @@ function numberToWords($num) {
 }
 
 // Ã¢â€â‚¬Ã¢â€â‚¬ HSN defaults Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
-$hsn_defaults = ['Gold'=>'71081200','Silver'=>'71069100','Diamond'=>'71023100','Platinum'=>'71101100'];
-$unit_defaults = ['Gold'=>'gm','Silver'=>'gm','Diamond'=>'ct','Platinum'=>'gm'];
+$hsn_defaults = ['Gold'=>'🪙','Silver'=>'71069100','Diamond'=>'71023100','Platinum'=>'71101100'];
+$unit_defaults = ['Gold'=>'🪙','Silver'=>'gm','Diamond'=>'ct','Platinum'=>'gm'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -528,7 +528,7 @@ nav.nav-gold span{color:#fff!important;}
             <?php foreach(['Gold','Silver','Diamond','Platinum'] as $m): ?>
             <button type="button" class="mat-btn inactive-mat" onclick="selectMat('<?=$m?>')" id="matBtn_<?=$m?>">
                 <?php
-                $icons=['Gold'=>'Ã¢Â­Â','Silver'=>'🥈','Diamond'=>'💎','Platinum'=>'⚪'];
+                $icons=['Gold'=>'🪙','Silver'=>'🥈','Diamond'=>'💎','Platinum'=>'⚪'];
                 echo $icons[$m].' '.$m;
                 ?>
             </button>
