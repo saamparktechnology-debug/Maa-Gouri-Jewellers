@@ -128,7 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_purchase'])) {
     $uid      = intval($_SESSION['user_id'] ?? 0);
 
     // Allow multiple items per purchase_no by dropping unique key if exists
-    @$conn->query("ALTER TABLE purchase_entries DROP INDEX purchase_no");
+    try { @$conn->query("ALTER TABLE purchase_entries DROP INDEX purchase_no"); } catch(Exception $e) {}
 
     $items_raw = json_decode($_POST['purchase_items'] ?? '[]', true);
     if (empty($items_raw) || !is_array($items_raw)) {
