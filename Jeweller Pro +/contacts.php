@@ -391,7 +391,7 @@ h1, h2, h3, .gold-font { font-family: 'Poppins', sans-serif; font-weight: 700; }
             <h3 class="text-lg font-bold text-white flex items-center gap-2" id="modalTitle">
                 <i class="fas fa-user-plus"></i> Add Contact
             </h3>
-            <button onclick="closeModal()" class="text-white hover:text-amber-200 text-lg font-bold">✓•</button>
+            <button onclick="closeModal()" class="text-white hover:text-amber-200 text-lg font-bold">✅</button>
         </div>
         <form method="POST" class="p-6 space-y-4">
             <input type="hidden" name="action" value="save">

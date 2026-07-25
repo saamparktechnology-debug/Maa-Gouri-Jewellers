@@ -1335,7 +1335,7 @@ if($is_logged_in) {
 <section class="py-12 md:py-20" style="background:#fdf6e3;">
     <div class="container mx-auto px-4 sm:px-6">
         <h2 class="text-3xl sm:text-4xl font-bold text-center mb-12" style="color:#800020;">
-            ✓¦ EXCLUSIVE FEATURES ✓¦
+            ✅ EXCLUSIVE FEATURES ✅
         </h2>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div class="gem-card p-8 text-center">

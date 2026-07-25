@@ -1346,7 +1346,7 @@ function submitReceivePayment() {
     <div style="background:#fff;border-radius:12px;max-width:720px;width:100%;max-height:calc(100vh - 48px);box-shadow:0 18px 50px rgba(0,0,0,0.18);overflow:hidden;">
         <div style="padding:18px 22px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;">
             <h2 id="historyModalTitle" style="font-size:18px;margin:0;color:#111827;">History</h2>
-            <button type="button" onclick="closeHistoryModal()" style="border:none;background:none;font-size:18px;color:#6b7280;cursor:pointer;">✓•</button>
+            <button type="button" onclick="closeHistoryModal()" style="border:none;background:none;font-size:18px;color:#6b7280;cursor:pointer;">✅</button>
         </div>
         <div id="historyModalBody" style="max-height:70vh;overflow:auto;padding:18px 22px;">Loading history...</div>
     </div>
@@ -1359,7 +1359,7 @@ function submitReceivePayment() {
             <div style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;">
                 <i class="fas fa-hand-holding-usd"></i> Receive Due Payment
             </div>
-            <button onclick="closeReceiveModal()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;">✓•</button>
+            <button onclick="closeReceiveModal()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;">✅</button>
         </div>
         <div style="padding:20px;display:flex;flex-direction:column;gap:14px;">
             <!-- Customer & Inv Card -->
@@ -1441,10 +1441,10 @@ function submitReceivePayment() {
     if (!faLoaded()) {
         var map = {
             'fa-user': '👤', 'fa-user-circle':'👤', 'fa-sign-out-alt':'🔓', 'fa-sign-in-alt':'🔍',
-            'fa-list':'📋', 'fa-arrow-left':'←', 'fa-check-circle':'✅', 'fa-save':'💾',
-            'fa-trash-alt':'🗑️', 'fa-spinner':'⏳', 'fa-check':'✓“', 'fa-chart-bar':'📊',
+            'fa-list':'📋', 'fa-arrow-left':'←', 'fa-check-circle':'✅', 'fa-save':'💾',
+            'fa-trash-alt':'🗑️', 'fa-spinner':'⏳', 'fa-check':'✅', 'fa-chart-bar':'📊',
             'fa-receipt':'🧾','fa-chart-line':'📈','fa-boxes':'📜¦','fa-users':'👥','fa-gem':'💎',
-            'fa-book':'📜–','fa-weight-hanging':'âš–','fa-coins':'🪙','fa-search':'🔍','fa-plus-circle':'➕'
+            'fa-book':'📜–','fa-weight-hanging':'⚖️','fa-coins':'🪙','fa-search':'🔍','fa-plus-circle':'➕'
         };
 
         document.querySelectorAll('i[class*="fa-"]').forEach(function(i){

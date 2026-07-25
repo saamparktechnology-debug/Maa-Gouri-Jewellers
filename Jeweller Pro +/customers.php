@@ -60,7 +60,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_customer'])) {
 
     $chk = mysqli_query($conn, "SELECT id FROM customers WHERE mobile = '$mobile'");
     if(mysqli_num_rows($chk) > 0) {
-        echo "<script>alert('âš  Customer with this mobile number already exists!'); window.location.href='customers.php';<\/script>";
+        echo "<script>alert('⚠️ Customer with this mobile number already exists!'); window.location.href='customers.php';<\/script>";
         exit();
     }
 
@@ -467,10 +467,10 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(214,139,22,0.015) 3px,rgba(214,139,22,0.015) 4px);pointer-events:none;z-index:1;"></div>
 
     <!-- Corner ornaments -->
-    <!-- <div style="position:absolute;top:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite;">✓¦</div>
-    <div style="position:absolute;top:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 1s;">✓¦</div>
-    <div style="position:absolute;bottom:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 2s;">✓¦</div>
-    <div style="position:absolute;bottom:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 3s;">✓¦</div> -->
+    <!-- <div style="position:absolute;top:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite;">✅</div>
+    <div style="position:absolute;top:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 1s;">✅</div>
+    <div style="position:absolute;bottom:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 2s;">✅</div>
+    <div style="position:absolute;bottom:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 3s;">✅</div> -->
 
     <!-- Stars / sparkles container -->
     <div id="loaderStars" style="position:absolute;inset:0;pointer-events:none;z-index:2;"></div>
@@ -692,7 +692,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                     <button onclick='openEditModal(<?php echo htmlspecialchars(json_encode($customer), ENT_QUOTES, "UTF-8"); ?>)' class="btn-edit">
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
-                                    <a href="?delete_id=<?php echo $customer['id']; ?>" onclick="return confirm('âš  Delete this customer?')" class="btn-delete">
+                                    <a href="?delete_id=<?php echo $customer['id']; ?>" onclick="return confirm('⚠️ Delete this customer?')" class="btn-delete">
                                         <i class="fas fa-trash"></i> Del
                                     </a>
                                 </div>
@@ -876,7 +876,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             <div style="display:flex;align-items:center;gap:8px;">
                 <div id="ohSummaryBadge" style="background:rgba(255,255,255,0.2);color:#fff;font-size:11px;font-weight:700;padding:4px 14px;border-radius:20px;"></div>
                 <button id="ohDownloadBtn" onclick="downloadStatementPDF()" style="display:none;background:rgba(255,255,255,0.22);border:1.5px solid rgba(255,255,255,0.5);color:#fff;font-size:11px;font-weight:700;padding:5px 13px;border-radius:20px;cursor:pointer;gap:5px;align-items:center;">
-                    â¬‡ PDF
+                    ⬇️ PDF
                 </button>
                 <button onclick="closeOrderHistory()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;font-size:16px;cursor:pointer;line-height:1;">&times;</button>
             </div>
@@ -968,7 +968,7 @@ function openOrderHistory(mobile, name) {
             let html = '';
             data.orders.forEach(o => {
                 const statusClass = o.payment_status === 'paid' ? 'paid' : (o.payment_status === 'part' ? 'part' : 'unpaid');
-                const statusLabel = o.payment_status === 'paid' ? '✅ Paid' : (o.payment_status === 'part' ? 'âš  Part Paid' : '❌ Unpaid');
+                const statusLabel = o.payment_status === 'paid' ? '✅ Paid' : (o.payment_status === 'part' ? '⚠️ Part Paid' : '❌ Unpaid');
                 const date = new Date(o.created_at).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'});
                 html += `<div class="oh-order-card">
                     <div class="oh-order-head">

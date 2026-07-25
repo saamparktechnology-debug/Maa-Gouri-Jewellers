@@ -932,7 +932,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                         <span class="text-2xl font-black" style="color:#9a3412;"><?php echo $pay_summary['part_count']; ?></span>
                     </div>
                     <p class="font-bold text-lg" style="color:#9a3412;">₹<?php echo number_format($pay_summary['part_amt'],2); ?></p>
-                    <p class="text-xs mt-1" style="color:#c2410c;">âš  Balance: ₹<?php echo number_format($pay_summary['part_balance'],2); ?></p>
+                    <p class="text-xs mt-1" style="color:#c2410c;">⚠️ Balance: ₹<?php echo number_format($pay_summary['part_balance'],2); ?></p>
                     <button onclick="toggleDetail('detailPart')" class="toggle-detail-btn">👁️ View Customers</button>
                 </div>
                 <!-- Unpaid -->
@@ -942,7 +942,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                         <span class="text-2xl font-black" style="color:#9f1239;"><?php echo $pay_summary['unpaid_count']; ?></span>
                     </div>
                     <p class="font-bold text-lg" style="color:#9f1239;">₹<?php echo number_format($pay_summary['unpaid_amt'],2); ?></p>
-                    <p class="text-xs mt-1" style="color:#be123c;">âš  Total due: ₹<?php echo number_format($pay_summary['unpaid_balance'],2); ?></p>
+                    <p class="text-xs mt-1" style="color:#be123c;">⚠️ Total due: ₹<?php echo number_format($pay_summary['unpaid_balance'],2); ?></p>
                     <button onclick="toggleDetail('detailUnpaid')" class="toggle-detail-btn">👁️ View Customers</button>
                 </div>
             </div>
@@ -983,7 +983,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 <div class="overflow-x-auto">
                     <table class="report-table">
                         <thead><tr>
-                            <th>Customer</th><th>Mobile</th><th class="text-right">Bill Total</th><th class="text-right">Paid</th><th class="text-right">âš  Balance</th><th class="text-center">Date</th><th class="text-center">Invoice</th><th class="text-center">Action</th>
+                            <th>Customer</th><th>Mobile</th><th class="text-right">Bill Total</th><th class="text-right">Paid</th><th class="text-right">⚠️ Balance</th><th class="text-center">Date</th><th class="text-center">Invoice</th><th class="text-center">Action</th>
                         </tr></thead>
                         <tbody>
                         <?php foreach($part_rows as $r): ?>
@@ -1016,7 +1016,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 <div class="overflow-x-auto">
                     <table class="report-table">
                         <thead><tr>
-                            <th>Customer</th><th>Mobile</th><th class="text-right">Bill Total</th><th class="text-right">âš  Due</th><th class="text-center">Date</th><th class="text-center">Invoice</th>
+                            <th>Customer</th><th>Mobile</th><th class="text-right">Bill Total</th><th class="text-right">⚠️ Due</th><th class="text-center">Date</th><th class="text-center">Invoice</th>
                         </tr></thead>
                         <tbody>
                         <?php foreach($unpaid_rows as $r): ?>
@@ -1590,7 +1590,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
         
         let confirmMsg = '';
         if (currentDeleteMode === 'permanent') {
-            confirmMsg = "âš  FINAL WARNING: This action is permanent and CANNOT be undone.\nAre you sure you want to delete Invoice #" + currentDeleteInvoiceNo + " permanently (without restoring stock)?";
+            confirmMsg = "⚠️ FINAL WARNING: This action is permanent and CANNOT be undone.\nAre you sure you want to delete Invoice #" + currentDeleteInvoiceNo + " permanently (without restoring stock)?";
         } else {
             confirmMsg = "Are you sure you want to delete Invoice #" + currentDeleteInvoiceNo + " and move the specified quantities back to stock?";
         }

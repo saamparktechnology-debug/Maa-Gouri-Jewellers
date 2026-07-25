@@ -691,7 +691,7 @@ nav.nav-gold span{color:#fff!important;}
 <div class="form-card mb-6">
     <div class="section-heading"><i class="fas fa-rupee-sign mr-2"></i>Amount Summary</div>
     <div class="amount-box">
-        <div class="amount-row"><span style="color:#555;">Subtotal (Qty Ãƒ— Rate)</span><span id="disp_subtotal" style="font-weight:600;">₹ 0.00</span></div>
+        <div class="amount-row"><span style="color:#555;">Subtotal (Qty × Rate)</span><span id="disp_subtotal" style="font-weight:600;">₹ 0.00</span></div>
         <div class="amount-row" id="disp_cgst_row"><span style="color:#555;">CGST</span><span id="disp_cgst">₹ 0.00</span></div>
         <div class="amount-row" id="disp_sgst_row"><span style="color:#555;">SGST</span><span id="disp_sgst">₹ 0.00</span></div>
         <div class="amount-row hidden" id="disp_igst_row"><span style="color:#555;">IGST</span><span id="disp_igst">₹ 0.00</span></div>

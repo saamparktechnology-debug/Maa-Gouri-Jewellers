@@ -480,7 +480,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
         die("<div style='padding:30px;font-family:sans-serif;background:#fff1f2;color:#991b1b;border:2px solid #f87171;border-radius:12px;margin:40px auto;max-width:650px;'>
             <h3 style='margin-top:0;'>❌ Invoice Creation Failed</h3>
             <p><strong>MySQL Error:</strong> " . htmlspecialchars(mysqli_error($conn)) . "</p>
-            <p><a href='billing.php' style='color:#991b1b;font-weight:bold;text-decoration:underline;'>← Back to Billing</a></p>
+            <p><a href='billing.php' style='color:#991b1b;font-weight:bold;text-decoration:underline;'>← Back to Billing</a></p>
         </div>");
     }
     if($inv_exec) {
@@ -1633,7 +1633,7 @@ function submitPayment() {
                 <p class="text-xs mb-3" style="color:#9ca3af;">Enter price <strong>per 10 grams</strong> (as shown in market). Billing auto-converts to per gram.</p>
                 <button onclick="autoFillShopFromLive()" class="w-full py-2 rounded-lg text-xs font-bold mb-3"
                     style="background:linear-gradient(135deg,#059669,#34d399);color:#fff;border:none;cursor:pointer;">
-                    âš¡ Auto-fill from Live Market Rates
+                    ⚡ Auto-fill from Live Market Rates
                 </button>
                 <?php
                 $shopFields = [
@@ -1863,7 +1863,7 @@ function switchSource(tab, source) {
     resetItemCharges();
 }
 
-// ==================== âš– GRAM FORM LOGIC ====================
+// ==================== ⚖️ GRAM FORM LOGIC ====================
 
 // Stock search & filter with floating suggestions
 function filterGramStock(query) {
@@ -2897,7 +2897,7 @@ function saveShopRate(key) {
     if (inputEl && inputEl.nextElementSibling) {
         const saveBtn = inputEl.nextElementSibling;
         const origText = saveBtn.textContent;
-        saveBtn.textContent = '✓“ Saved';
+        saveBtn.textContent = '✅ Saved';
         saveBtn.style.background = '#059669';
         saveBtn.style.color = '#ffffff';
         setTimeout(() => {
@@ -2907,7 +2907,7 @@ function saveShopRate(key) {
         }, 2000);
     }
     
-    showNotif('✓” ' + label + ' shop rate saved: \u20B9' + val.toLocaleString('en-IN') + ' / 10g', 'success');
+    showNotif('✅ ' + label + ' shop rate saved: \u20B9' + val.toLocaleString('en-IN') + ' / 10g', 'success');
     calcShopValue();
     refreshActiveBillingRate();
 }
@@ -2929,7 +2929,7 @@ function saveAllShopRates() {
     localStorage.setItem('shopRateSavedAt', now);
     document.getElementById('shopRateSaveStatus').textContent = '\u2714 All Saved';
     document.getElementById('shopRateLastSaved').textContent  = 'Last saved: ' + now;
-    showNotif('✓” All Shop Rates Saved Successfully!', 'success');
+    showNotif('✅ All Shop Rates Saved Successfully!', 'success');
     calcShopValue();
     refreshActiveBillingRate();
 }

@@ -679,10 +679,10 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 <!-- Loading Overlay -->
 <div id="loadingOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;display:flex;justify-content:center;align-items:center;overflow:hidden;transition:opacity 0.6s ease,visibility 0.6s ease;background:radial-gradient(ellipse at 50% 60%, #1a0a00 0%, #0d0500 100%);">
     <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(214,139,22,0.015) 3px,rgba(214,139,22,0.015) 4px);pointer-events:none;z-index:1;"></div>
-    <!-- <div style="position:absolute;top:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite;">✓¦</div>
-    <div style="position:absolute;top:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 1s;">✓¦</div>
-    <div style="position:absolute;bottom:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 2s;">✓¦</div>
-    <div style="position:absolute;bottom:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 3s;">✓¦</div> -->
+    <!-- <div style="position:absolute;top:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite;">✅</div>
+    <div style="position:absolute;top:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 1s;">✅</div>
+    <div style="position:absolute;bottom:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 2s;">✅</div>
+    <div style="position:absolute;bottom:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 3s;">✅</div> -->
     <div id="loaderStars" style="position:absolute;inset:0;pointer-events:none;z-index:2;"></div>
     <div id="loaderRings" style="position:absolute;inset:0;pointer-events:none;z-index:2;display:flex;align-items:center;justify-content:center;"></div>
     <div style="position:relative;z-index:10;text-align:center;">
@@ -836,7 +836,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             <div class="flex flex-col sm:flex-row sm:items-center gap-2">
                 <i class="fas fa-exclamation-triangle text-red-500 text-xl flex-shrink-0"></i>
                 <div>
-                    <p class="font-bold text-red-700 text-sm">âš  Low Stock Alert!</p>
+                    <p class="font-bold text-red-700 text-sm">⚠️ Low Stock Alert!</p>
                     <p class="text-red-600 text-xs mb-2">Following products have low stock (less than 5 units):</p>
                     <div class="flex flex-wrap gap-2">
                         <?php
@@ -915,7 +915,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         </div>
 
                         <div class="mb-3">
-                            <label>âš– Weight (grams)</label>
+                            <label>⚖️ Weight (grams)</label>
                             <input type="text" name="weight" placeholder="e.g. 12.5" class="jewel-input">
                         </div>
 
@@ -1160,7 +1160,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 </div>
             </div>
             <div class="mb-3">
-                <label>âš– Weight (grams)</label>
+                <label>⚖️ Weight (grams)</label>
                 <input type="text" name="weight" id="editProductWeight" class="jewel-input">
             </div>
             <div class="mb-3">
@@ -1202,9 +1202,9 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 <div id="deleteModal" class="modal-overlay">
     <div class="modal-content text-center">
         <i class="fas fa-exclamation-triangle text-5xl mb-4" style="color:#ef4444;"></i>
-        <h3 class="text-xl font-bold gold-font">âš  Delete Product</h3>
+        <h3 class="text-xl font-bold gold-font">⚠️ Delete Product</h3>
         <p class="my-3 text-sm" style="color:#4b5563;">Are you sure you want to delete <strong id="deleteProductName" style="color:#800020;"></strong>?</p>
-        <p class="mb-4 text-xs" style="color:#d97706;">âš  Related invoice records may also be removed.</p>
+        <p class="mb-4 text-xs" style="color:#d97706;">⚠️ Related invoice records may also be removed.</p>
         <form method="POST">
             <input type="hidden" name="product_id" id="deleteProductId">
             <div class="flex gap-3">

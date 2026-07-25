@@ -24,7 +24,7 @@ if(!$invoice_no) { die("Invoice number missing."); }
 // Fetch invoice
 $inv_res = mysqli_query($conn, "SELECT * FROM invoices WHERE invoice_no = '$invoice_no'");
 if(!$inv_res || mysqli_num_rows($inv_res) == 0) {
-    die("<h3 style='font-family:sans-serif;padding:20px;'>Invoice not found: ".htmlspecialchars($invoice_no)."</h3><a href='reports.php'>← Back to Reports</a>");
+    die("<h3 style='font-family:sans-serif;padding:20px;'>Invoice not found: ".htmlspecialchars($invoice_no)."</h3><a href='reports.php'>← Back to Reports</a>");
 }
 $inv = mysqli_fetch_assoc($inv_res);
 
@@ -287,7 +287,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
 
 <div class="print-actions">
     <div style="display:flex;gap:10px;">
-        <a href="billing.php" class="btn-back">← Back to Billing</a>
+        <a href="billing.php" class="btn-back">← Back to Billing</a>
         <a href="reports.php" class="btn-back">📊 Reports</a>
     </div>
     <button onclick="window.print()" class="btn-print">🖨️ Print / Download PDF (A4)</button>
@@ -315,7 +315,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                     </div>
                     <div class="header-right">
                         <div class="tax-invoice-tag" style="color:#059669;font-size:17px;">PAYMENT RECEIPT</div>
-                        <span class="payment-status-pill pill-paid">✓“ PAYMENT RECEIVED</span>
+                        <span class="payment-status-pill pill-paid">✅ PAYMENT RECEIVED</span>
                     </div>
                 </div>
 
@@ -380,7 +380,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                             <td class="right" style="color:#b91c1c;font-weight:700;">₹<?php echo number_format($rec_prev_balance, 2); ?></td>
                         </tr>
                         <tr style="background:rgba(209,250,229,0.7) !important;font-weight:bold;">
-                            <td style="color:#065f46;font-size:13px;">✓” PAYMENT RECEIVED NOW (Date: <?php echo $rec_payment_date; ?>)</td>
+                            <td style="color:#065f46;font-size:13px;">✅ PAYMENT RECEIVED NOW (Date: <?php echo $rec_payment_date; ?>)</td>
                             <td class="right" style="color:#065f46;font-size:16px;font-weight:800;">₹<?php echo number_format($rec_paid_amount, 2); ?></td>
                         </tr>
                         <tr class="subtotal-row">
@@ -441,7 +441,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                         <span class="payment-status-pill <?php echo 'pill-'.$inv['payment_status']; ?>">
                             <?php
                             $ps = $inv['payment_status'];
-                            echo ($ps==='paid') ? '✓“ PAID' : (($ps==='part') ? 'PART PAID' : (($ps==='unpaid') ? 'UNPAID' : strtoupper($ps)));
+                            echo ($ps==='paid') ? '✅ PAID' : (($ps==='part') ? 'PART PAID' : (($ps==='unpaid') ? 'UNPAID' : strtoupper($ps)));
                             ?>
                         </span>
                     </div>
