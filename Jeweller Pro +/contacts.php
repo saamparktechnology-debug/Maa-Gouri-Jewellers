@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 require_once 'config/database.php';
 require_once 'config/company_config.php';
@@ -10,7 +10,7 @@ if(!isset($_SESSION['user_id'])) {
 
 $is_logged_in = true;
 
-// ── Handle Add/Edit/Delete ───────────────────────────────────────────────────
+// -- Handle Add/Edit/Delete --------------------------------------------------─
 $msg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $name    = trim($_POST['name'] ?? '');
@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 }
 $msg = $_GET['msg'] ?? '';
 
-// ── Search ───────────────────────────────────────────────────────────────
+// -- Search --------------------------------------------------------------─
 $search = trim($_GET['search'] ?? '');
 if ($search !== '') {
     $s = mysqli_real_escape_string($conn, $search);

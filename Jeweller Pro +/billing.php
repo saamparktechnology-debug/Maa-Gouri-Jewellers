@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
@@ -104,7 +104,7 @@ if($chk_reminder && mysqli_num_rows($chk_reminder) == 0) {
     mysqli_query($conn, "ALTER TABLE invoices ADD COLUMN reminder_sent TINYINT(1) DEFAULT 0");
 }
 
-// ── NEW: AJAX: Mark invoice as paid (partial or full custom amount) ───────
+// -- NEW: AJAX: Mark invoice as paid (partial or full custom amount) ------─
 if(isset($_GET['action']) && $_GET['action'] === 'mark_paid') {
     header('Content-Type: application/json');
     if($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -291,7 +291,7 @@ $itemTypeOptions['Diamond']  = array_unique(array_merge($itemTypeOptions['Diamon
 $itemTypeOptions['Others']   = array_unique(array_merge($itemTypeOptions['Others'],
   ['Shankha','Pala','Mala','Moti Mala','Trasel','Branch Fram','Braslate Pala',
   'Parl Mala','Gala','Reparing','Stamp Charg','Other']));
-// ── NEW: Fetch due-today payments ─────────────────────────────────────────
+// -- NEW: Fetch due-today payments ----------------------------------------─
 $today = date('Y-m-d');
 $due_today_result = mysqli_query($conn, "
     SELECT invoice_no, customer_name, customer_mobile, customer_address,
@@ -440,7 +440,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
         }
     }
 
-    // ── STOCK VALIDATION: Pre-check available stock pieces before creating invoice ──
+    // -- STOCK VALIDATION: Pre-check available stock pieces before creating invoice --
     $raw_items = json_decode($_POST['items'] ?? '[]', true);
     if (is_array($raw_items)) {
         $req_pcs_map = [];
@@ -480,7 +480,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
         die("<div style='padding:30px;font-family:sans-serif;background:#fff1f2;color:#991b1b;border:2px solid #f87171;border-radius:12px;margin:40px auto;max-width:650px;'>
             <h3 style='margin-top:0;'> Invoice Creation Failed</h3>
             <p><strong>MySQL Error:</strong> " . htmlspecialchars(mysqli_error($conn)) . "</p>
-            <p><a href='billing.php' style='color:#991b1b;font-weight:bold;text-decoration:underline;'>← Back to Billing</a></p>
+            <p><a href='billing.php' style='color:#991b1b;font-weight:bold;text-decoration:underline;'>&larr; Back to Billing</a></p>
         </div>");
     }
     if($inv_exec) {
@@ -1283,10 +1283,10 @@ function submitPayment() {
                                 <p class="text-xs mb-2 text-gray-400">Search stock by name, SKU, or serial number.</p>
                                 <div class="flex gap-2 mb-2 relative">
                                     <div class="relative flex-1">
-                                        <input type="text" id="gramStockSearch" placeholder=" Search stock..." class="jewel-input w-full rounded-lg px-3 py-2 text-sm" oninput="filterGramStock(this.value)" autocomplete="off">
+                                        <input type="text" id="gramStockSearch" placeholder=" Search stock..." class="jewel-input w-full rounded-lg px-3 py-2 text-sm" oninput="filterGramStock(this.value)" autocomplete="off">
                                         <div id="gramStockSuggestions" class="autocomplete-suggestions hidden"></div>
                                     </div>
-                                    <button type="button" onclick="clearGramStockSearch()" class="px-3 py-2 rounded-lg text-sm bg-white border border-yellow-300 text-yellow-800">↩</button>
+                                    <button type="button" onclick="clearGramStockSearch()" class="px-3 py-2 rounded-lg text-sm bg-white border border-yellow-300 text-yellow-800">&#x21A9;</button>
                                 </div>
                                 <div class="mb-3">
                                     <label class="block mb-1 text-xs font-semibold text-yellow-800">Select Product</label>
@@ -3278,7 +3278,7 @@ function sendPaymentReminder() {
     .catch(error => { showNotif('\u26A0\uFE0F ' + (error?.message || 'Reminder email could not be sent.'), 'error'); });
 }
 
-// ── NEW: Due Today — Send Reminder ────────────────────────────────────────
+// -- NEW: Due Today — Send Reminder ----------------------------------------
 function sendDueReminder(invoiceNo, customerName, customerMobile, balanceAmount) {
     const btn = document.getElementById('remind-btn-' + invoiceNo);
     if(!btn) return;

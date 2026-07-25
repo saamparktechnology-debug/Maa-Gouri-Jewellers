@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 require_once 'config/database.php';
 require_once 'config/company_config.php';
@@ -740,7 +740,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 <input type="email" name="email" placeholder="email@example.com" class="jewel-input">
             </div>
             <div class="mb-3">
-                <label> Address</label>
+                <label> Address</label>
                 <textarea name="address" rows="2" placeholder="Customer address..." class="jewel-input"></textarea>
             </div>
             <div class="mb-4">
@@ -779,7 +779,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 <input type="email" name="email" id="editEmail" class="jewel-input">
             </div>
             <div class="mb-3">
-                <label> Address</label>
+                <label> Address</label>
                 <textarea name="address" id="editAddress" rows="2" class="jewel-input"></textarea>
             </div>
             <div class="mb-4">
@@ -1031,7 +1031,7 @@ document.addEventListener('keydown', function(e) {
     if(e.key === 'Escape') closeOrderHistory();
 });
 
-// ── PDF Statement Download ──────────────────────────────────────────────────
+// -- PDF Statement Download --------------------------------------------------
 function downloadStatementPDF() {
     const d = window._ohData;
     if(!d) return;
@@ -1044,7 +1044,7 @@ function downloadStatementPDF() {
     const W = 210, margin = 14;
     let y = 0;
 
-    // ── Header bar ───────────────────────────────────────────────────────────
+    // -- Header bar ----------------------------------------------------------─
     doc.setFillColor(122, 78, 10);
     doc.rect(0, 0, W, 28, 'F');
     doc.setTextColor(255, 255, 255);
@@ -1056,7 +1056,7 @@ function downloadStatementPDF() {
     doc.text('CUSTOMER ACCOUNT STATEMENT', W/2, 24, {align:'center'});
     y = 34;
 
-    // ── Customer info box ────────────────────────────────────────────────────
+    // -- Customer info box ----------------------------------------------------
     doc.setFillColor(253, 246, 227);
     doc.setDrawColor(181, 115, 14);
     doc.roundedRect(margin, y, W - margin*2, 22, 3, 3, 'FD');
@@ -1068,7 +1068,7 @@ function downloadStatementPDF() {
     doc.text('Total Orders: ' + d.orders.length, W - margin - 4, y+15, {align:'right'});
     y += 28;
 
-    // ── Summary strip ────────────────────────────────────────────────────────
+    // -- Summary strip --------------------------------------------------------
     const cols4 = (W - margin*2) / 4;
     const summaryItems = [
         { label:'Total Spent',   val:'Rs.' + d.totalSpent.toLocaleString('en-IN',{minimumFractionDigits:2}), color:[5,150,105] },
@@ -1088,7 +1088,7 @@ function downloadStatementPDF() {
     });
     y += 22;
 
-    // ── Orders table ─────────────────────────────────────────────────────────
+    // -- Orders table --------------------------------------------------------─
     const colW = [28, 22, 62, 22, 28, 24]; // Invoice, Date, Items, Qty, Amount, Status
     const headers = ['Invoice No', 'Date', 'Items', 'Qty(gm)', 'Amount', 'Status'];
     const tblW = W - margin*2;
@@ -1163,7 +1163,7 @@ function downloadStatementPDF() {
         rowIdx++;
     });
 
-    // ── Footer ───────────────────────────────────────────────────────────────
+    // -- Footer --------------------------------------------------------------─
     y += 6;
     if(y > 265) { doc.addPage(); y = 20; }
     doc.setDrawColor(181,115,14); doc.line(margin, y, W-margin, y);

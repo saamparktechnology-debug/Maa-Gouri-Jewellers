@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 require_once 'config/database.php';
 require_once 'config/company_config.php';
@@ -25,7 +25,7 @@ if ($chkModeCol && mysqli_num_rows($chkModeCol) == 0) {
     @mysqli_query($conn, "ALTER TABLE due_update_history ADD COLUMN payment_mode VARCHAR(50) DEFAULT 'Cash'");
 }
 
-// ── AJAX: Receive Due Payment ───────────────────────────────────────────────
+// -- AJAX: Receive Due Payment ----------------------------------------------─
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'receive_due_payment') {
     header('Content-Type: application/json');
     $id          = intval($_POST['id'] ?? 0);
@@ -82,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'recei
     exit();
 }
 
-// ── AJAX: send reminder ───────────────────────────────────────────────────────
+// -- AJAX: send reminder ------------------------------------------------------─
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'ajax_send_reminder') {
     header('Content-Type: application/json');
     $customer_email  = trim($_POST['customer_email']  ?? '');
@@ -133,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'ajax_
     exit();
 }
 
-// ── POST: clear due for an invoice ───────────────────────────────────────────
+// -- POST: clear due for an invoice ------------------------------------------─
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete_due') {
     $id = intval($_POST['id'] ?? 0);
     if ($id > 0) {
@@ -142,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
     }
 }
 
-// ── AJAX: fetch due update history for modal ─────────────────────────────────
+// -- AJAX: fetch due update history for modal --------------------------------─
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'ajax_history') {
     header('Content-Type: application/json');
     $id = intval($_POST['id'] ?? 0);
@@ -174,7 +174,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'ajax_
     exit();
 }
 
-// ── Export all due customers history as CSV ─────────────────────────────────
+// -- Export all due customers history as CSV --------------------------------─
 if (($_GET['action'] ?? '') === 'export_due_history') {
     $hasPaidAmountCol = false;
     $colRes = mysqli_query($conn, "SHOW COLUMNS FROM invoices LIKE 'paid_amount'");
@@ -246,7 +246,7 @@ if (($_GET['action'] ?? '') === 'export_due_history') {
     exit();
 }
 
-// ── Helper: build & send account statement email after a due update ────────────
+// -- Helper: build & send account statement email after a due update ------------
 function sendDueStatementEmail($conn, $id, $new_balance, $due_date) {
     $result = ['attempted' => false, 'sent' => false, 'message' => ''];
 
@@ -339,7 +339,7 @@ function sendDueStatementEmail($conn, $id, $new_balance, $due_date) {
     return $result;
 }
 
-// ── POST: update due amount / due date ────────────────────────────────────────
+// -- POST: update due amount / due date ----------------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'update') {
     $id       = intval($_POST['id'] ?? 0);
     $balance  = floatval($_POST['balance_amount'] ?? 0);
@@ -392,7 +392,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
     }
 }
 
-// ── Fetch all invoices with a due balance (with search support) ───────────────
+// -- Fetch all invoices with a due balance (with search support) --------------─
 $search_query = mysqli_real_escape_string($conn, trim($_GET['search'] ?? ''));
 $search_where = "";
 if (!empty($search_query)) {
@@ -531,19 +531,19 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
 }
 @media (min-width: 769px) { .mobile-burger { display: none !important; } }
 
-/* ── Layout ───────────────────────────────────── */
+/* -- Layout ------------------------------------─ */
 .page-heading { margin-bottom: 24px; }
 .page-heading h1, .page-heading h2 { margin: 0; }
 .page-heading p { margin: 0.5rem 0 0 0; color: #7a4e0a; font-size: 14px; }
 
-/* ── Alert ────────────────────────────────────── */
+/* -- Alert -------------------------------------- */
 .alert-success { background: #ecfdf5; border: 1px solid #6ee7b7; color: #065f46; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; font-size: 14px; }
 
-/* ── Table shell ──────────────────────────────── */
+/* -- Table shell -------------------------------- */
 .due-table-wrap { overflow-x: auto; border-radius: 14px; }
 .due-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; min-width: 860px; }
 
-/* ── Header ───────────────────────────────────── */
+/* -- Header ------------------------------------─ */
 .due-table thead th {
     text-align: left;
     font-size: 11px;
@@ -555,7 +555,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
     background: transparent;
 }
 
-/* ── Rows ─────────────────────────────────────── */
+/* -- Rows --------------------------------------─ */
 .due-table tbody tr {
     background: #ffffff;
     border-radius: 12px;
@@ -574,14 +574,14 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
 .due-table tbody td:first-child { border-radius: 12px 0 0 12px; }
 .due-table tbody td:last-child  { border-radius: 0 12px 12px 0; }
 
-/* ── Cell helpers ─────────────────────────────── */
+/* -- Cell helpers ------------------------------─ */
 .items-cell { max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #6b7280; }
 .customer-name { font-weight: 600; color: #111827; }
 .inv-badge { display: inline-block; margin-top: 5px; padding: 2px 9px; border-radius: 999px; font-size: 11px; background: #fef3c7; color: #92400e; font-weight: 600; }
 .mobile-text { font-weight: 600; color: #374151; }
 .email-text  { color: #6b7280; font-size: 12px; max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* ── Inline form inputs ───────────────────────── */
+/* -- Inline form inputs ------------------------─ */
 .field-label { font-size: 10px; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
 .inline-input {
     width: 100%; border: 1.5px solid #e5e7eb; border-radius: 8px;
@@ -591,7 +591,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
 }
 .inline-input:focus { outline: none; border-color: #f59e0b; background: #fff; }
 
-/* ── Buttons ──────────────────────────────────── */
+/* -- Buttons ------------------------------------ */
 .btn { display: inline-flex; align-items: center; gap: 5px; padding: 7px 13px; border-radius: 8px; border: 0; cursor: pointer; font-weight: 600; font-size: 12px; transition: opacity 0.15s, transform 0.1s; white-space: nowrap; }
 .btn:active { transform: scale(0.97); }
 .btn:disabled { opacity: 0.55; cursor: not-allowed; }
@@ -606,7 +606,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
     .btn-export { background: #111827; color: #fff; padding: 10px 18px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 13px; transition: all 0.2s; border: 1px solid rgba(255,255,255,0.15); }
     .btn-export:hover { background: #1f2937; transform: translateY(-1px); box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
 
-/* ── Action Grid Buttons ──────────────────────── */
+/* -- Action Grid Buttons ------------------------ */
 .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; width: 100%; min-width: 220px; }
 .action-btn {
     display: inline-flex;
@@ -654,7 +654,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
     margin-bottom: 2px;
     display: block;
 }
-/* ── Toast ────────────────────────────────────── */
+/* -- Toast -------------------------------------- */
 #toast {
     position: fixed; bottom: 28px; right: 28px; z-index: 9999;
     padding: 14px 22px; border-radius: 12px; font-size: 13px;
@@ -672,7 +672,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
     .due-table td, .due-table thead th { padding: 10px 10px; }
 }
 
-/* ── Loading Overlay ──────────────────────────── */
+/* -- Loading Overlay ---------------------------- */
 #loadingOverlay {
     position: fixed;
     top: 0;
@@ -1111,7 +1111,7 @@ function filterDueTable(query) {
 <div id="toast"></div>
 
 <script>
-/* ── Toast helper ─────────────────────────────────── */
+/* -- Toast helper ----------------------------------─ */
 function showToast(msg, type) {
     var t = document.getElementById('toast');
     t.textContent = msg;
@@ -1120,7 +1120,7 @@ function showToast(msg, type) {
     t._timer = setTimeout(function() { t.className = ''; }, 3200);
 }
 
-/* ── WhatsApp Reminder ────────────────────────────── */
+/* -- WhatsApp Reminder ------------------------------ */
 function sendWhatsAppReminder(name, mobile, invoiceNo, due, total) {
     // Clean mobile: remove spaces, dashes, leading 0; add 91 country code
     var cleaned = mobile.replace(/[\s\-\(\)]/g, '');
@@ -1212,7 +1212,7 @@ function closeHistoryModal() {
     modal.style.display = 'none';
 }
 
-/* ── Receive Modal JS ── */
+/* -- Receive Modal JS -- */
 function openReceiveModal(id, invoiceNo, customerName, totalAmt, currentDue, currentDueDate) {
     document.getElementById('rcvInvoiceId').value = id;
     document.getElementById('rcvRawDue').value = currentDue;
@@ -1441,10 +1441,10 @@ function submitReceivePayment() {
     if (!faLoaded()) {
         var map = {
             'fa-user': '', 'fa-user-circle':'', 'fa-sign-out-alt':'', 'fa-sign-in-alt':'',
-            'fa-list':'', 'fa-arrow-left':'←', 'fa-check-circle':'', 'fa-save':'',
+            'fa-list':'', 'fa-arrow-left':'&larr;', 'fa-check-circle':'', 'fa-save':'',
             'fa-trash-alt':'', 'fa-spinner':'', 'fa-check':'', 'fa-chart-bar':'',
             'fa-receipt':'','fa-chart-line':'','fa-boxes':'¦','fa-users':'','fa-gem':'',
-            'fa-book':'–','fa-weight-hanging':'','fa-coins':'','fa-search':'','fa-plus-circle':''
+            'fa-book':'–','fa-weight-hanging':'','fa-coins':'','fa-search':'','fa-plus-circle':''
         };
 
         document.querySelectorAll('i[class*="fa-"]').forEach(function(i){

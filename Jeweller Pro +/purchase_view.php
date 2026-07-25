@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 require_once 'config/database.php';
 if(file_exists('config/company_config.php')) {
@@ -241,7 +241,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
     </table>
 
     <div class="flex justify-between items-center pt-4 border-t border-amber-200 no-print">
-        <a href="purchase_history.php" class="px-4 py-2 bg-white border border-amber-300 text-amber-900 rounded-xl font-semibold text-xs text-decoration-none">← Back to History</a>
+        <a href="purchase_history.php" class="px-4 py-2 bg-white border border-amber-300 text-amber-900 rounded-xl font-semibold text-xs text-decoration-none">&larr; Back to History</a>
         <button onclick="window.print()" class="btn-gold px-5 py-2 rounded-xl font-bold text-xs"><i class="fas fa-print mr-1"></i> Print Statement</button>
     </div>
 </div>
