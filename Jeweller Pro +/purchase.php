@@ -528,7 +528,7 @@ nav.nav-gold span{color:#fff!important;}
             <?php foreach(['Gold','Silver','Diamond','Platinum'] as $m): ?>
             <button type="button" class="mat-btn inactive-mat" onclick="selectMat('<?=$m?>')" id="matBtn_<?=$m?>">
                 <?php
-                $icons=['Gold'=>'Ã¢Â­Â','Silver'=>'Ã°Å¸Â¥Ë†','Diamond'=>'Ã°Å¸â€™Å½','Platinum'=>'Ã¢Å¡Âª'];
+                $icons=['Gold'=>'Ã¢Â­Â','Silver'=>'🥈','Diamond'=>'💎','Platinum'=>'⚪'];
                 echo $icons[$m].' '.$m;
                 ?>
             </button>
