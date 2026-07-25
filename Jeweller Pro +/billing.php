@@ -1379,15 +1379,20 @@ function submitPayment() {
                         <div class="mt-4 pt-4" style="border-top:1px dashed rgba(214,139,22,0.3);">
                             <h4 class="text-xs font-bold mb-2" style="color:#7a4e0a;">Additional Details for this Item</h4>
                             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                <div>
-                                     <div class="flex items-center justify-between mb-1">
-                                         <label id="mcLabel" class="text-xs font-semibold" style="color:#7a4e0a;">Making Charge (%)</label>
-                                         <button type="button" id="mcToggleBtn" onclick="toggleMcMode()" class="px-1.5 py-0.5 text-xs font-bold rounded bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200 transition-all flex items-center gap-1 shadow-sm cursor-pointer whitespace-nowrap">
-                                             <i class="fas fa-exchange-alt text-amber-700"></i> <span id="mcToggleBtnText">Direct (₹)</span>
-                                         </button>
+                                 <div>
+                                     <div class="flex items-center justify-between mb-1.5 flex-wrap gap-1">
+                                         <label id="mcLabel" class="text-xs font-bold" style="color:#7a4e0a;">Making Charge</label>
+                                         <div class="inline-flex p-0.5 bg-amber-100/90 border border-amber-300/80 rounded-lg shadow-inner gap-0.5">
+                                             <button type="button" id="btnMcPct" onclick="setMcMode('pct')" class="mc-tab-btn active px-2 py-0.5 text-xs font-bold rounded transition-all cursor-pointer bg-amber-600 text-white shadow-sm border border-amber-500">
+                                                 % Pct
+                                             </button>
+                                             <button type="button" id="btnMcDirect" onclick="setMcMode('direct')" class="mc-tab-btn px-2 py-0.5 text-xs font-bold rounded transition-all cursor-pointer bg-white/80 text-amber-900 hover:bg-white border border-amber-200">
+                                                 ₹ Direct
+                                             </button>
+                                         </div>
                                      </div>
                                      <div class="relative">
-                                         <input type="number" id="itemMakingCharge" value="" step="0.1" min="0" placeholder="0" class="jewel-input w-full rounded-lg px-2 py-1 text-sm font-semibold pr-6" oninput="updateMakingChargeHint()">
+                                         <input type="number" id="itemMakingCharge" value="" step="0.1" min="0" placeholder="e.g. 12" class="jewel-input w-full rounded-lg px-2 py-1 text-sm font-semibold pr-7" oninput="updateMakingChargeHint()">
                                          <span id="mcUnitSuffix" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-bold text-amber-700 pointer-events-none">%</span>
                                      </div>
                                      <div id="itemMakingChargeHint" class="text-xs mt-1 font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200" style="display:none;"></div>
@@ -2072,22 +2077,29 @@ function onGramItemTypeChange() {
 
 let currentMcMode = 'pct'; // 'pct' or 'direct'
 
-function toggleMcMode() {
-    const label = document.getElementById('mcLabel');
-    const btnText = document.getElementById('mcToggleBtnText');
+function setMcMode(mode) {
+    currentMcMode = mode;
+    const btnPct = document.getElementById('btnMcPct');
+    const btnDirect = document.getElementById('btnMcDirect');
     const suffix = document.getElementById('mcUnitSuffix');
     const input = document.getElementById('itemMakingCharge');
 
-    if (currentMcMode === 'pct') {
-        currentMcMode = 'direct';
-        if (label) label.textContent = 'Making Charge (₹)';
-        if (btnText) btnText.textContent = 'Percentage (%)';
+    if (mode === 'direct') {
+        if (btnPct) {
+            btnPct.className = 'mc-tab-btn px-2 py-0.5 text-xs font-bold rounded transition-all cursor-pointer bg-white/80 text-amber-900 hover:bg-white border border-amber-200';
+        }
+        if (btnDirect) {
+            btnDirect.className = 'mc-tab-btn active px-2 py-0.5 text-xs font-bold rounded transition-all cursor-pointer bg-emerald-600 text-white shadow-sm border border-emerald-500';
+        }
         if (suffix) suffix.textContent = '₹';
         if (input) { input.step = '1'; input.placeholder = 'e.g. 500'; }
     } else {
-        currentMcMode = 'pct';
-        if (label) label.textContent = 'Making Charge (%)';
-        if (btnText) btnText.textContent = 'Direct (₹)';
+        if (btnPct) {
+            btnPct.className = 'mc-tab-btn active px-2 py-0.5 text-xs font-bold rounded transition-all cursor-pointer bg-amber-600 text-white shadow-sm border border-amber-500';
+        }
+        if (btnDirect) {
+            btnDirect.className = 'mc-tab-btn px-2 py-0.5 text-xs font-bold rounded transition-all cursor-pointer bg-white/80 text-amber-900 hover:bg-white border border-amber-200';
+        }
         if (suffix) suffix.textContent = '%';
         if (input) { input.step = '0.1'; input.placeholder = 'e.g. 12'; }
     }
@@ -2589,13 +2601,7 @@ function populateStockSelects() {
     document.getElementById('itemHallmark').value = '';
     document.getElementById('itemDiscount').value = '';
     document.getElementById('itemGstType').value = 'non_gst';
-    currentMcMode = 'pct';
-    const label = document.getElementById('mcLabel');
-    const btnText = document.getElementById('mcToggleBtnText');
-    const suffix = document.getElementById('mcUnitSuffix');
-    if (label) label.textContent = 'Making Charge (%)';
-    if (btnText) btnText.textContent = 'Direct (₹)';
-    if (suffix) suffix.textContent = '%';
+    setMcMode('pct');
     const hint = document.getElementById('itemMakingChargeHint');
     if(hint) { hint.textContent = ''; hint.style.display = 'none'; }
 }
