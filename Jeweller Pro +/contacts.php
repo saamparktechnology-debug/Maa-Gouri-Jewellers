@@ -10,7 +10,7 @@ if(!isset($_SESSION['user_id'])) {
 
 $is_logged_in = true;
 
-// -- Handle Add/Edit/Delete --------------------------------------------------─
+//  Handle Add/Edit/Delete 
 $msg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $name    = trim($_POST['name'] ?? '');
@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 }
 $msg = $_GET['msg'] ?? '';
 
-// -- Search --------------------------------------------------------------─
+//  Search 
 $search = trim($_GET['search'] ?? '');
 if ($search !== '') {
     $s = mysqli_real_escape_string($conn, $search);
@@ -68,7 +68,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-<title>Contacts — MAA GOURI JEWELLERS</title>
+<title>Contacts - MAA GOURI JEWELLERS</title>
 <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
@@ -355,10 +355,10 @@ h1, h2, h3, .gold-font { font-family: 'Poppins', sans-serif; font-weight: 700; }
                             </a>
                         </td>
                         <td class="px-5 py-3.5 text-xs text-gray-600">
-                            <?= $c['email'] ? '<a href="mailto:'.htmlspecialchars($c['email']).'" class="text-blue-600 hover:underline flex items-center gap-1.5"><i class="fas fa-envelope text-blue-500"></i> '.htmlspecialchars($c['email']).'</a>' : '<span class="text-gray-300">—</span>' ?>
+                            <?= $c['email'] ? '<a href="mailto:'.htmlspecialchars($c['email']).'" class="text-blue-600 hover:underline flex items-center gap-1.5"><i class="fas fa-envelope text-blue-500"></i> '.htmlspecialchars($c['email']).'</a>' : '<span class="text-gray-300">-</span>' ?>
                         </td>
                         <td class="px-5 py-3.5 text-xs text-gray-600 max-w-xs">
-                            <?= $c['address'] ? htmlspecialchars($c['address']) : '<span class="text-gray-300">—</span>' ?>
+                            <?= $c['address'] ? htmlspecialchars($c['address']) : '<span class="text-gray-300">-</span>' ?>
                         </td>
                         <td class="px-5 py-3.5 text-center whitespace-nowrap">
                             <button onclick='editModal(<?= json_encode($c) ?>)' class="px-3 py-1 text-xs font-bold text-blue-900 bg-blue-100 rounded-lg hover:bg-blue-200 transition mr-1">

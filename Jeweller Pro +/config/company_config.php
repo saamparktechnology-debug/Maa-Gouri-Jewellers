@@ -1,13 +1,13 @@
 <?php
 // 
-// COMPANY CONFIGURATION — Maa Gouri Jewellers
+// COMPANY CONFIGURATION - Maa Gouri Jewellers
 // Update this file only when details change.
 // 
 
 $COMPANY = [
     'name'          => 'MAA GOURI JEWELLERS',
     'name_short'    => 'Gouri Jewellers',
-    'tagline'       => 'Trusted Tradition · Timeless Elegance',
+    'tagline'       => 'Trusted Tradition  Timeless Elegance',
     'sub_tagline'   => 'Precious Jewellery, Precious Relationships',
     'proprietor'    => 'Prop: Maa Gouri Jewellers',
     'address_line1' => 'Jamna, Pingla',

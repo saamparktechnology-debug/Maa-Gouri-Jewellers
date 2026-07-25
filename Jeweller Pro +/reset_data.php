@@ -253,7 +253,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_reset']) && $
             <div style="font-size:64px;margin-bottom:16px;"></div>
             <h2 style="color:#065f46;font-size:22px;font-weight:700;margin-bottom:8px;">Data Reset Complete</h2>
             <p style="color:#047857;font-size:14px;margin-bottom:24px;"><?php echo htmlspecialchars($message); ?></p>
-            <p style="color:#065f46;font-size:13px;margin-bottom:24px;">All counters now show ₹0.00 · All records cleared · User login preserved.</p>
+            <p style="color:#065f46;font-size:13px;margin-bottom:24px;">All counters now show ₹0.00  All records cleared  User login preserved.</p>
             <a href="index.php" style="display:inline-block;background:linear-gradient(135deg,#065f46,#059669);color:#fff;padding:14px 36px;border-radius:50px;font-weight:700;text-decoration:none;font-size:14px;">
                 <i class="fas fa-home mr-2"></i>Go to Dashboard
             </a>
@@ -315,7 +315,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_reset']) && $
 
                 <div style="text-align:center;margin-top:16px;">
                     <a href="index.php" style="color:#6b7280;font-size:13px;text-decoration:none;">
-                        <i class="fas fa-times mr-1"></i> Cancel — Go Back to Dashboard
+                        <i class="fas fa-times mr-1"></i> Cancel - Go Back to Dashboard
                     </a>
                 </div>
             </form>

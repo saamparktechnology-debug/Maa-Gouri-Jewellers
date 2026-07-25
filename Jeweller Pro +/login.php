@@ -23,7 +23,7 @@ if (isset($_GET['fix'])) {
     $success = "Admin account (jewellersmaagouri@gmail.com / 123456) ready!";
 }
 
-// --─ LOGIN ------------------------------------------------------------------─
+//  LOGIN 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['send_otp'])) {
     $email    = mysqli_real_escape_string($conn, trim($_POST['email']));
     $password = $_POST['password'];
@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['send_otp'])) {
     }
 }
 
-// --─ VERIFY OTP --------------------------------------------------------------
+//  VERIFY OTP 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['verify_otp'])) {
     $entered_otp = trim($_POST['otp']);
     if (!isset($_SESSION['otp_sent']) || !$_SESSION['otp_sent']) {
@@ -69,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['verify_otp'])) {
     }
 }
 
-// --─ RESEND OTP --------------------------------------------------------------
+//  RESEND OTP 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['resend_otp'])) {
     unset($_SESSION['otp'], $_SESSION['otp_sent'], $_SESSION['otp_expires'],
           $_SESSION['otp_email'], $_SESSION['otp_user_id'],
@@ -116,7 +116,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
             overflow: hidden;
         }
 
-        /* -- Subtle gem-like background animation -- */
+        /*  Subtle gem-like background animation  */
         body::before {
             content: '';
             position: fixed; inset: 0;
@@ -132,7 +132,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
             to   { opacity: 1;   transform: scale(1.02); filter: blur(1.2px); }
         }
 
-        /* -- Main card -- */
+        /*  Main card  */
         .login-card {
             position: relative; z-index: 10;
             width: 100%; max-width: 900px;
@@ -146,7 +146,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
             grid-template-columns: 1fr 1fr;
         }
 
-        /* -- Left panel (slideshow) -- */
+        /*  Left panel (slideshow)  */
         .left-panel {
             position: relative;
             min-height: 520px;
@@ -244,7 +244,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
         }
         .dot.active { background: var(--gold); width: 20px; border-radius: 4px; }
 
-        /* -- Right panel (form) -- */
+        /*  Right panel (form)  */
         .right-panel {
             padding: 44px 40px;
             display: flex; flex-direction: column; justify-content: center;
@@ -271,7 +271,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
         }
         .form-logo p { font-size: 11px; color: var(--text-mid); margin-top: 3px; }
 
-        /* -- Form section title -- */
+        /*  Form section title  */
         .form-title {
             font-family: 'Poppins', serif;
             font-size: 20px; font-weight: 700;
@@ -285,7 +285,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
             border-radius: 2px;
         }
 
-        /* -- Alert boxes -- */
+        /*  Alert boxes  */
         .alert {
             display: flex; align-items: center; gap: 10px;
             padding: 10px 14px; border-radius: 10px;
@@ -294,7 +294,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
         .alert-error  { background: #fff1f2; border: 1px solid #fecdd3; color: #9f1239; }
         .alert-success{ background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
 
-        /* -- Input groups -- */
+        /*  Input groups  */
         .input-group { margin-bottom: 16px; }
         .input-label {
             display: block; font-size: 12px; font-weight: 600;
@@ -331,7 +331,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
         }
         .eye-btn:hover { color: var(--gold); }
 
-        /* -- Forgot password -- */
+        /*  Forgot password  */
         .forgot-link {
             text-align: right; margin-top: -8px; margin-bottom: 20px;
         }
@@ -342,7 +342,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
         }
         .forgot-link a:hover { opacity: 0.7; }
 
-        /* -- Submit button -- */
+        /*  Submit button  */
         .btn-submit {
             width: 100%;
             padding: 11px;
@@ -361,7 +361,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
         }
         .btn-submit:active { transform: translateY(0); }
 
-        /* -- Divider -- */
+        /*  Divider  */
         .divider {
             display: flex; align-items: center; gap: 12px;
             margin: 18px 0; color: rgba(122,78,10,0.4); font-size: 11px;
@@ -371,7 +371,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
             background: rgba(181,115,14,0.2);
         }
 
-        /* -- OTP boxes -- */
+        /*  OTP boxes  */
         .otp-row {
             display: flex; justify-content: center; gap: 10px; margin-bottom: 24px;
         }
@@ -412,7 +412,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
         }
         .otp-shield i { color: #fff; font-size: 26px; }
 
-        /* -- Resend / back links -- */
+        /*  Resend / back links  */
         .text-link {
             background: none; border: none; cursor: pointer;
             font-family: 'Poppins', sans-serif;
@@ -428,7 +428,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
         }
         .text-link-gray:hover { color: var(--text-mid); }
 
-        /* -- Trust badges -- */
+        /*  Trust badges  */
         .trust-badges {
             display: flex; justify-content: center; gap: 20px;
             margin-top: 22px; padding-top: 18px;
@@ -440,7 +440,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
         }
         .badge-item i { font-size: 16px; color: var(--gold); }
 
-        /* -- Responsive -- */
+        /*  Responsive  */
         @media (max-width: 720px) {
             .login-card { grid-template-columns: 1fr; }
             .left-panel { display: none; }
@@ -481,7 +481,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
 
 <div class="login-card">
 
-    <!-- ════ LEFT PANEL ════ -->
+    <!--  LEFT PANEL  -->
     <div class="left-panel">
         <!-- Slides -->
         <img class="slide-img active" src="assets/images/slider/nakles.png"   alt="Gold Necklace">
@@ -507,7 +507,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
             <!-- Bottom text -->
             <div class="left-bottom">
                 <h3>Crafting Timeless<br>Elegance</h3>
-                <p>Complete jewellery management — GST billing, live stock tracking, customer insights &amp; more.</p>
+                <p>Complete jewellery management - GST billing, live stock tracking, customer insights &amp; more.</p>
                 <div class="feature-list">
                     <div class="feature-item"><i class="fas fa-file-invoice-dollar"></i> GST &amp; Non-GST Billing</div>
                     <div class="feature-item"><i class="fas fa-boxes"></i> Live Stock Tracking</div>
@@ -527,7 +527,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
         </div>
     </div>
 
-    <!-- ════ RIGHT PANEL ════ -->
+    <!--  RIGHT PANEL  -->
     <div class="right-panel">
 
         <!-- Logo -->
@@ -556,7 +556,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
             </div>
         <?php endif; ?>
 
-        <!-- ════ LOGIN FORM ════ -->
+        <!--  LOGIN FORM  -->
         <div id="loginForm" <?php echo $otpSent ? 'style="display:none"' : ''; ?>>
             <div class="form-title"><i class="fas fa-sign-in-alt" style="color:var(--gold);font-size:16px;"></i> Secure Login</div>
 
@@ -573,7 +573,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
                     <label class="input-label">Password</label>
                     <div class="input-wrap">
                         <i class="fas fa-lock input-icon"></i>
-                        <input type="password" name="password" id="passwordInput" required placeholder="••••••••" class="jewel-field" style="padding-right:38px;">
+                        <input type="password" name="password" id="passwordInput" required placeholder="" class="jewel-field" style="padding-right:38px;">
                         <button type="button" class="eye-btn" onclick="togglePass()">
                             <i class="fas fa-eye" id="eyeIcon"></i>
                         </button>
@@ -597,7 +597,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
             </div>
         </div>
 
-        <!-- ════ OTP FORM ════ -->
+        <!--  OTP FORM  -->
         <div id="otpForm" <?php echo $otpSent ? '' : 'style="display:none"'; ?>>
             <div class="otp-shield"><i class="fas fa-shield-alt"></i></div>
 
@@ -646,7 +646,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
 </div><!-- /login-card -->
 
 <script>
-    /* -- Slideshow -- */
+    /*  Slideshow  */
     (function(){
         const imgs = document.querySelectorAll('.slide-img');
         const dots = document.querySelectorAll('.dot');
@@ -669,7 +669,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
         start();
     })();
 
-    /* -- Password toggle -- */
+    /*  Password toggle  */
     function togglePass() {
         const inp = document.getElementById('passwordInput');
         const ico = document.getElementById('eyeIcon');
@@ -677,13 +677,13 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
         else                         { inp.type = 'password'; ico.classList.replace('fa-eye-slash','fa-eye'); }
     }
 
-    /* -- Show/hide forms -- */
+    /*  Show/hide forms  */
     function backToLogin() {
         document.getElementById('loginForm').style.display = 'block';
         document.getElementById('otpForm').style.display   = 'none';
     }
 
-    /* -- OTP boxes -- */
+    /*  OTP boxes  */
     const boxes     = ['o1','o2','o3','o4','o5','o6'].map(id => document.getElementById(id));
     const verifyBtn = document.getElementById('verifyBtn');
     const otpHidden = document.getElementById('otpHidden');
@@ -721,7 +721,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
         });
     });
 
-    /* -- Resend countdown -- */
+    /*  Resend countdown  */
     <?php if($otpSent): ?>
     (function(){
         let sec = 30;

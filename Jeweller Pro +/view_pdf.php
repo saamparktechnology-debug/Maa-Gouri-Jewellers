@@ -125,7 +125,7 @@ $total_words = num2words($total) . ' Rupees Only';
 
 $logo_file = 'assets/images/moti-removebg-preview.png';
 
-// -- DUE PAYMENT RECEIPT MODE LOGIC --
+//  DUE PAYMENT RECEIPT MODE LOGIC 
 $is_receipt = (isset($_GET['receipt']) && $_GET['receipt'] == '1') || isset($_GET['history_id']);
 $history_id = intval($_GET['history_id'] ?? 0);
 
@@ -160,7 +160,7 @@ if ($is_receipt) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title><?php echo $doc_title; ?> — <?php echo htmlspecialchars($invoice_no); ?></title>
+<title><?php echo $doc_title; ?> - <?php echo htmlspecialchars($invoice_no); ?></title>
 <link rel="icon" type="image/png" href="logo.png">
 <link rel="shortcut icon" type="image/png" href="logo.png">
 <style>
@@ -351,7 +351,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                         <?php endif; ?>
                     </div>
                     <div class="bill-to-right">
-                         Ph No: <strong>+91-<?php echo htmlspecialchars($inv['customer_mobile'] ?? '—'); ?></strong><br>
+                         Ph No: <strong>+91-<?php echo htmlspecialchars($inv['customer_mobile'] ?? '-'); ?></strong><br>
                         <?php if(!empty($inv['customer_gstin'])): ?>
                          GSTIN: <strong><?php echo htmlspecialchars($inv['customer_gstin']); ?></strong><br>
                         <?php endif; ?>
@@ -459,7 +459,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                     </div>
                     <div class="meta-item">
                         <span class="meta-label"><?php echo ($current_balance > 0) ? 'Next Due Date' : 'Due Date'; ?></span>
-                        <span class="meta-value" style="<?php echo ($current_balance > 0) ? 'color:#b91c1c;' : ''; ?>"><?php echo !empty($next_due_date_display) ? $next_due_date_display : ($due_date ?: '—'); ?></span>
+                        <span class="meta-value" style="<?php echo ($current_balance > 0) ? 'color:#b91c1c;' : ''; ?>"><?php echo !empty($next_due_date_display) ? $next_due_date_display : ($due_date ?: '-'); ?></span>
                     </div>
                 </div>
 
@@ -473,7 +473,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                         <?php endif; ?>
                     </div>
                     <div class="bill-to-right">
-                         Ph No: <strong>+91-<?php echo htmlspecialchars($inv['customer_mobile'] ?? '—'); ?></strong><br>
+                         Ph No: <strong>+91-<?php echo htmlspecialchars($inv['customer_mobile'] ?? '-'); ?></strong><br>
                         <?php if(!empty($inv['customer_gstin'])): ?>
                          GSTIN: <strong><?php echo htmlspecialchars($inv['customer_gstin']); ?></strong><br>
                         <?php endif; ?>
@@ -553,8 +553,8 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                                 <?php endif; ?>
                             </td>
                             <td class="center"><strong><?php echo $item_pcs; ?> Pcs</strong></td>
-                            <td class="right"><strong><?php echo ($gross_wt > 0) ? number_format($gross_wt, 3).' g' : '—'; ?></strong></td>
-                            <td class="right"><strong><?php echo ($net_wt > 0) ? number_format($net_wt, 3).' g' : '—'; ?></strong></td>
+                            <td class="right"><strong><?php echo ($gross_wt > 0) ? number_format($gross_wt, 3).' g' : '-'; ?></strong></td>
+                            <td class="right"><strong><?php echo ($net_wt > 0) ? number_format($net_wt, 3).' g' : '-'; ?></strong></td>
                             <td class="right">₹<?php echo number_format($rate, 2); ?></td>
                             <td class="right">
                                 <?php if($is_gst && $tax_amt > 0): ?>

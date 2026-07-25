@@ -10,7 +10,7 @@ if(!isset($_SESSION['user_id'])) {
 
 $is_logged_in = true;
 
-// -- Ensure required columns & due_update_history table exist ----------------
+//  Ensure required columns & due_update_history table exist 
 $cols = ['cash_paid', 'upi_paid', 'account_paid', 'cheque_paid', 'old_gold_value'];
 foreach ($cols as $c) {
     $chk = mysqli_query($conn, "SHOW COLUMNS FROM invoices LIKE '$c'");
@@ -27,7 +27,7 @@ if ($chkHistoryTable && mysqli_num_rows($chkHistoryTable) > 0) {
     }
 }
 
-// -- Month filter --------------------------------------------------------─
+//  Month filter 
 $month = isset($_GET['month']) ? $_GET['month'] : date('Y-m');
 if (!preg_match('/^\d{4}-\d{2}$/', $month)) $month = date('Y-m');
 $monthStart = $month . '-01';
@@ -37,7 +37,7 @@ $monthLabel = date('F Y', strtotime($monthStart));
 $monthStartEsc = mysqli_real_escape_string($conn, $monthStart);
 $monthEndEsc   = mysqli_real_escape_string($conn, $monthEnd);
 
-// -- 1. Fetch all paid/part invoices for the month ----------------------------
+//  1. Fetch all paid/part invoices for the month 
 $sql = "
     SELECT
         DATE(created_at)               AS day,
@@ -90,7 +90,7 @@ while ($row = mysqli_fetch_assoc($res)) {
     $days[$d]['bills']   += 1;
 }
 
-// -- 2. Fetch Due Payments Cleared Today / In Month (from due_update_history) ─
+//  2. Fetch Due Payments Cleared Today / In Month (from due_update_history) 
 if ($chkHistoryTable && mysqli_num_rows($chkHistoryTable) > 0) {
     $dueSql = "
         SELECT 
@@ -128,7 +128,7 @@ if ($chkHistoryTable && mysqli_num_rows($chkHistoryTable) > 0) {
 ksort($days);
 $days = array_reverse($days, true);
 
-// -- Month totals ----------------------------------------------------------
+//  Month totals 
 $monthCash     = array_sum(array_column($days, 'cash'));
 $monthUpi      = array_sum(array_column($days, 'upi'));
 $monthCheque   = array_sum(array_column($days, 'cheque'));
@@ -137,7 +137,7 @@ $monthTotal    = array_sum(array_column($days, 'total'));
 $monthBills    = array_sum(array_column($days, 'bills'));
 $monthDueRec   = array_sum(array_column($days, 'due_collections'));
 
-// -- Today highlight ------------------------------------------------------─
+//  Today highlight 
 $today = date('Y-m-d');
 $todayCash      = $days[$today]['cash']      ?? 0;
 $todayUpi       = $days[$today]['upi']       ?? 0;
@@ -159,7 +159,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
-<title>Accounts — MAA GOURI JEWELLERS</title>
+<title>Accounts - MAA GOURI JEWELLERS</title>
 <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
@@ -360,7 +360,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
                 <h1 class="text-2xl font-bold text-amber-950 flex items-center gap-2">
                     <i class="fas fa-book text-amber-600"></i> Cash &amp; Accounts Ledger
                 </h1>
-                <p class="text-xs text-gray-500 mt-1">Cash, UPI &amp; Due Payment Collection History — <strong class="text-amber-800"><?= htmlspecialchars($monthLabel) ?></strong></p>
+                <p class="text-xs text-gray-500 mt-1">Cash, UPI &amp; Due Payment Collection History - <strong class="text-amber-800"><?= htmlspecialchars($monthLabel) ?></strong></p>
             </div>
 
             <div class="flex items-center gap-3 flex-wrap no-print">
@@ -378,7 +378,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
         <?php if ($month === date('Y-m')): ?>
         <div>
             <div class="text-xs font-bold uppercase tracking-wider text-amber-800 mb-3 flex items-center gap-2">
-                <i class="fas fa-bolt text-amber-500"></i> Today's Live Collections — <?= date('d M Y') ?>
+                <i class="fas fa-bolt text-amber-500"></i> Today's Live Collections - <?= date('d M Y') ?>
             </div>
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div class="card-gold p-4 flex items-center gap-4">
@@ -462,7 +462,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
         <div class="card-gold overflow-hidden">
             <div class="px-6 py-4 flex items-center justify-between border-b border-amber-200/60" style="background:linear-gradient(135deg, #7a4e0a 0%, #d68b16 100%);">
                 <h3 class="text-lg font-bold text-white flex items-center gap-2">
-                    <i class="fas fa-list-alt"></i> Daily Collection Ledger — <?= htmlspecialchars($monthLabel) ?>
+                    <i class="fas fa-list-alt"></i> Daily Collection Ledger - <?= htmlspecialchars($monthLabel) ?>
                 </h3>
                 <span class="text-xs font-bold px-3 py-1 rounded-full bg-white/20 text-white"><?= count($days) ?> Active Days</span>
             </div>
@@ -506,13 +506,13 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
                             <span class="px-2.5 py-1 text-xs font-bold rounded-full bg-amber-100 text-amber-900 border border-amber-200"><?= $v['bills'] ?></span>
                         </td>
                         <td class="px-5 py-3.5 text-right font-bold text-amber-800 text-xs">
-                            <?= $v['cash'] > 0 ? fmt($v['cash']) : '<span class="text-gray-300 font-normal">—</span>' ?>
+                            <?= $v['cash'] > 0 ? fmt($v['cash']) : '<span class="text-gray-300 font-normal">-</span>' ?>
                         </td>
                         <td class="px-5 py-3.5 text-right font-bold text-rose-900 text-xs">
-                            <?= $v['upi'] > 0 ? fmt($v['upi']) : '<span class="text-gray-300 font-normal">—</span>' ?>
+                            <?= $v['upi'] > 0 ? fmt($v['upi']) : '<span class="text-gray-300 font-normal">-</span>' ?>
                         </td>
                         <td class="px-5 py-3.5 text-right font-bold text-emerald-700 text-xs">
-                            <?= ($v['due_collections'] ?? 0) > 0 ? ('+' . fmt($v['due_collections'])) : '<span class="text-gray-300 font-normal">—</span>' ?>
+                            <?= ($v['due_collections'] ?? 0) > 0 ? ('+' . fmt($v['due_collections'])) : '<span class="text-gray-300 font-normal">-</span>' ?>
                         </td>
                         <td class="px-5 py-3.5 text-right font-extrabold text-gray-900 text-sm">
                             <?= fmt($v['total']) ?>

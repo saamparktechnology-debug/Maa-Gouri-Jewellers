@@ -1,6 +1,6 @@
 <?php
 // MAA GOURI-jewellers/metal_rates.php
-// Live Indian Metal Rates — Multi-source with accurate fallback
+// Live Indian Metal Rates - Multi-source with accurate fallback
 // Sources tried in order:
 //   1. metals-api.com (free tier)
 //   2. api.gold-api.com (free)
@@ -10,7 +10,7 @@
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
-// -- Cache file (stores last successful fetch for 30 min) --
+//  Cache file (stores last successful fetch for 30 min) 
 $cache_file = sys_get_temp_dir() . '/radhe_shyam_metal_rates.json';
 $cache_ttl  = 1800; // 30 minutes
 
@@ -25,7 +25,7 @@ if(file_exists($cache_file)) {
     }
 }
 
-// -- USD/INR rate fetch (needed to convert USD prices &larr; INR) --
+//  USD/INR rate fetch (needed to convert USD prices &larr; INR) 
 function getUsdInr() {
     // Try exchangerate-api (free, no key needed for basic endpoint)
     $url = 'https://api.exchangerate-api.com/v4/latest/USD';
@@ -41,16 +41,16 @@ function getUsdInr() {
     return 96.26;
 }
 
-// -- Method 1: Open Metals Data (free, no key) --
+//  Method 1: Open Metals Data (free, no key) 
 function fetchFromOpenMetals($usdInr) {
     // XAU = Gold troy oz, XAG = Silver troy oz, XPT = Platinum troy oz
     // 1 troy oz = 31.1035 grams
     $url = 'https://openexchangerates.org/api/latest.json?app_id=free&symbols=XAU,XAG,XPT&base=USD';
-    // This needs key — skip, use alternative
+    // This needs key - skip, use alternative
     return null;
 }
 
-// -- Method 2: gold-api.com (free, no key for spot price) --
+//  Method 2: gold-api.com (free, no key for spot price) 
 function fetchFromGoldApi($usdInr) {
     $ctx = stream_context_create(['http' => ['timeout' => 6, 'ignore_errors' => true,
         'header' => "x-access-token: goldapi-free\r\n"]]);
@@ -88,7 +88,7 @@ function fetchFromGoldApi($usdInr) {
     ];
 }
 
-// -- Method 3: metals-api free (limited calls) --
+//  Method 3: metals-api free (limited calls) 
 function fetchFromMetalsApi($usdInr) {
     $url = 'https://metals-api.com/api/latest?access_key=free&base=INR&symbols=XAU,XAG,XPT';
     $ctx = stream_context_create(['http' => ['timeout' => 6, 'ignore_errors' => true]]);
@@ -111,7 +111,7 @@ function fetchFromMetalsApi($usdInr) {
     $silver_10g = round(($inr_per_oz_silver / 3.11035) * 1.27);
     $plat_10g   = round(($inr_per_oz_plat   / 3.11035) * 1.05);
     
-    // sanity check — gold should be > 100000 per 10g in 2026
+    // sanity check - gold should be > 100000 per 10g in 2026
     if($gold24_10g < 100000 || $gold24_10g > 350000) return null;
     
     return [
@@ -125,7 +125,7 @@ function fetchFromMetalsApi($usdInr) {
     ];
 }
 
-// -- Method 4: Fetch via free open exchange rates --
+//  Method 4: Fetch via free open exchange rates 
 function fetchViaForexAndSpot($usdInr) {
     // Use api.gold-api.com free API (no key)
     $ctx = stream_context_create(['http' => ['timeout' => 6, 'ignore_errors' => true]]);
@@ -168,21 +168,21 @@ function fetchViaForexAndSpot($usdInr) {
     ];
 }
 
-// -- Accurate Fallback (Updated: 28 May 2026) --
+//  Accurate Fallback (Updated: 28 May 2026) 
 // Sources: GoodReturns, Candere, GoldPriceIndia
 function getAccurateFallback() {
     return [
         'success'  => true,
         'source'   => 'Fallback (17 Jul 2026)',
         'fallback' => true,
-        'gold24'   => 142530,   // ₹1,42,530 per 10g — GoodReturns July 2026
-        'gold22'   => 130650,   // ₹1,30,650 per 10g — GoodReturns July 2026
-        'silver'   => 2160,     // ₹2,160 per 10g (₹2,16,000/kg) — GoodReturns July 2026
-        'platinum' => 51510,    // ₹51,510 per 10g — GoodReturns July 2026
+        'gold24'   => 142530,   // ₹1,42,530 per 10g - GoodReturns July 2026
+        'gold22'   => 130650,   // ₹1,30,650 per 10g - GoodReturns July 2026
+        'silver'   => 2160,     // ₹2,160 per 10g (₹2,16,000/kg) - GoodReturns July 2026
+        'platinum' => 51510,    // ₹51,510 per 10g - GoodReturns July 2026
     ];
 }
 
-// -- Try each source --
+//  Try each source 
 $usdInr = getUsdInr();
 $result = null;
 

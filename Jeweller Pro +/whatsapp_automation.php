@@ -172,7 +172,7 @@ function sendWhatsAppMessage($phone, $message, $conn, $mediaFile = null, $mediaT
 
         if($mediaType != 'text' && $mediaFile && file_exists($mediaFile)) {
             // NOTE: Confirm exact field names in Whinta's "Send media" doc (Developer Tools > Access Token tab).
-            // Many cloud WhatsApp APIs need a publicly reachable media URL rather than a raw local file path —
+            // Many cloud WhatsApp APIs need a publicly reachable media URL rather than a raw local file path -
             // if Whinta rejects this, upload the file somewhere public first and pass that URL instead.
             $url  = "{$baseUrl}/send-media";
             $body = json_encode(['phone' => $toPhone, 'caption' => $message, 'media' => $mediaFile]);
@@ -426,7 +426,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <meta name="author" content="MANU GUPTA">
-    <title>WhatsApp Automation — MAA GOURI JEWELLERS</title>
+    <title>WhatsApp Automation - MAA GOURI JEWELLERS</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/theme.css">
@@ -836,13 +836,13 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         <?php if(isset($bulk_error)):             ?><div class="alert alert-error"><i class="fas fa-exclamation-circle"></i><?php echo $bulk_error; ?></div><?php endif; ?>
         <?php if(isset($advance_reminder_result)):?><div class="alert alert-purple"><i class="fas fa-bell"></i><?php echo $advance_reminder_result; ?></div><?php endif; ?>
 
-        <!-- -- API Settings -- -->
+        <!--  API Settings  -->
         <div class="jewel-card api-card p-5 mb-6">
             <h2 class="gold-font text-lg font-bold mb-4 title-api"><i class="fas fa-plug mr-2"></i>WhatsApp API Settings</h2>
             <form method="POST">
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div>
-                        <label class="field-label"> API Type</label>
+                        <label class="field-label"> API Type</label>
                         <select name="api_type" class="jewel-input">
                             <option value="greenapi" <?php echo ($api_settings&&$api_settings['api_type']=='greenapi')?'selected':''; ?>> hunk API</option>
                             <option value="whinta"   <?php echo ($api_settings&&$api_settings['api_type']=='whinta')?'selected':''; ?>> Whinta API</option>
@@ -854,7 +854,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         <input type="text" name="api_url" value="<?php echo htmlspecialchars($api_settings['api_url']??'https://api.hunk-api.com'); ?>" placeholder="https://api.hunk-api.com" class="jewel-input">
                     </div>
                     <div>
-                        <label class="field-label">🆔 Instance ID</label>
+                        <label class="field-label"> Instance ID</label>
                         <input type="text" name="instance_id" value="<?php echo htmlspecialchars($api_settings['instance_id']??''); ?>" placeholder="Your Instance ID" class="jewel-input">
                     </div>
                     <div>
@@ -880,7 +880,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             </div>
         </div>
 
-        <!-- -- Single Message -- -->
+        <!--  Single Message  -->
         <div class="jewel-card wa-card p-5 mb-6">
             <h2 class="gold-font text-lg font-bold mb-4 title-wa"><i class="fab fa-whatsapp mr-2"></i>Send Single Message</h2>
             <form method="POST" enctype="multipart/form-data">
@@ -896,13 +896,13 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                     <div>
                         <label class="field-label"> Media Type</label>
                         <select name="single_media_type" id="singleMediaType" class="jewel-input" onchange="toggleMedia('single')">
-                            <option value="text"> Text Only</option>
+                            <option value="text"> Text Only</option>
                             <option value="image"> Image</option>
                             <option value="video"> Video</option>
                         </select>
                     </div>
                     <div id="singleMediaUploadDiv" style="display:none;">
-                        <label class="field-label"> Choose File</label>
+                        <label class="field-label"> Choose File</label>
                         <input type="file" name="single_media_file" accept="image/*,video/*" class="jewel-input">
                     </div>
                     <div class="sm:col-span-2">
@@ -921,11 +921,11 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             <input type="date" name="template_due_date" class="jewel-input">
                         </div>
                         <div class="sm:col-span-2">
-                            <span class="text-xs" style="color:#7a4e0a;">Uses the Meta-approved "payment_reminder_1" template: "Hello {Customer Name}, Your payment of ₹{Amount} is due on {Due Date}." Fill Customer Name above too — it's used as the template's name variable.</span>
+                            <span class="text-xs" style="color:#7a4e0a;">Uses the Meta-approved "payment_reminder_1" template: "Hello {Customer Name}, Your payment of ₹{Amount} is due on {Due Date}." Fill Customer Name above too - it's used as the template's name variable.</span>
                         </div>
                     </div>
                     <div class="sm:col-span-2" id="singleMessageDiv">
-                        <label class="field-label"> Message</label>
+                        <label class="field-label"> Message</label>
                         <textarea name="message" rows="3" placeholder="Type your message here..." class="jewel-input"></textarea>
                     </div>
                 </div>
@@ -935,7 +935,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             </form>
         </div>
 
-        <!-- -- Bulk Message -- -->
+        <!--  Bulk Message  -->
         <div class="jewel-card bulk-card p-5 mb-6">
             <h2 class="gold-font text-lg font-bold mb-4 title-bulk"><i class="fas fa-users mr-2"></i>Bulk Message
                 <span class="text-sm font-normal ml-2" style="color:#9ca3af;">(<?php echo $total_customers; ?> customers)</span>
@@ -961,17 +961,17 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                     <div>
                         <label class="field-label"> Media Type</label>
                         <select name="media_type" id="bulkMediaType" class="jewel-input" onchange="toggleMedia('bulk')">
-                            <option value="text"> Text Only</option>
+                            <option value="text"> Text Only</option>
                             <option value="image"> Image</option>
                             <option value="video"> Video</option>
                         </select>
                     </div>
                     <div id="bulkMediaUploadDiv" style="display:none;">
-                        <label class="field-label"> Choose File</label>
+                        <label class="field-label"> Choose File</label>
                         <input type="file" name="bulk_media_file" accept="image/*,video/*" class="jewel-input">
                     </div>
                     <div class="sm:col-span-2">
-                        <label class="field-label"> Bulk Message</label>
+                        <label class="field-label"> Bulk Message</label>
                         <textarea name="bulk_message" rows="3" placeholder="Message to send to all selected customers..." class="jewel-input"></textarea>
                     </div>
                 </div>
@@ -981,7 +981,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             </form>
         </div>
 
-        <!-- -- Advance Customers -- -->
+        <!--  Advance Customers  -->
         <div class="jewel-card adv-card p-5 mb-6">
             <h2 class="gold-font text-lg font-bold mb-4 title-adv"><i class="fas fa-star mr-2"></i>Advance Customers &amp; Reminders</h2>
 
@@ -1031,10 +1031,10 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         <tr>
                             <td class="text-center"><input type="checkbox" class="advance-reminder-checkbox" value="<?php echo (int)$adv['id']; ?>" style="accent-color:#db2777;width:16px;height:16px;"></td>
                             <td class="font-semibold" style="color:#800020;"> <?php echo htmlspecialchars($adv['customer_name'] ?: 'Customer'); ?></td>
-                            <td> <?php echo htmlspecialchars($adv['customer_mobile'] ?: '—'); ?></td>
+                            <td> <?php echo htmlspecialchars($adv['customer_mobile'] ?: '-'); ?></td>
                             <td class="text-right font-bold" style="color:#d68b16;">₹<?php echo number_format((float)($adv['balance_amount'] ?? $adv['advance_amount']),2); ?></td>
                             <td class="text-right" style="color:#7a4e0a;">₹<?php echo number_format((float)($adv['total_amount'] ?? 0),2); ?></td>
-                            <td class="text-center"> <?php echo !empty($adv['due_date']) ? date('d M Y', strtotime($adv['due_date'])) : '—'; ?></td>
+                            <td class="text-center"> <?php echo !empty($adv['due_date']) ? date('d M Y', strtotime($adv['due_date'])) : '-'; ?></td>
                             <td class="text-center"><?php echo $adv['reminder_days']; ?> days</td>
                             <td class="text-center <?php echo $dc; ?>"><?php echo $dt; ?></td>
                         </tr>
@@ -1046,7 +1046,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             </div>
         </div>
 
-        <!-- -- Message Logs -- -->
+        <!--  Message Logs  -->
         <div class="jewel-card log-card p-5">
             <h2 class="gold-font text-lg font-bold mb-4 title-log"><i class="fas fa-history mr-2"></i>Message Logs <span class="text-sm font-normal" style="color:#9ca3af;">(Last 30)</span></h2>
             <div class="table-wrap overflow-x-auto rounded-xl" style="border:1px solid rgba(37,99,235,0.15);">
@@ -1099,7 +1099,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 </style>
 
 <script>
-    /* -- Sidebar -- */
+    /*  Sidebar  */
     function toggleSidebar() {
         const sidebar = document.getElementById('mainSidebar');
         const overlay = document.getElementById('sidebarOverlay');
@@ -1117,25 +1117,25 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         document.body.style.overflow = '';
     }
 
-    /* -- Media toggle -- */
+    /*  Media toggle  */
     function toggleMedia(prefix) {
         const sel = document.getElementById(prefix + 'MediaType');
         const div = document.getElementById(prefix + 'MediaUploadDiv');
         if(sel && div) div.style.display = sel.value !== 'text' ? 'block' : 'none';
     }
 
-    /* -- Single Message: template vs free-text toggle -- */
+    /*  Single Message: template vs free-text toggle  */
     function toggleSingleTemplate() {
         const checked = document.getElementById('singleUseTemplate').checked;
         document.getElementById('singleTemplateFieldsDiv').style.display = checked ? 'grid' : 'none';
         document.getElementById('singleMessageDiv').style.display = checked ? 'none' : 'block';
     }
 
-    /* -- Customer checkboxes -- */
+    /*  Customer checkboxes  */
     function selectAll()   { document.querySelectorAll('input[name="selected_customers[]"]').forEach(c => c.checked = true); }
     function deselectAll() { document.querySelectorAll('input[name="selected_customers[]"]').forEach(c => c.checked = false); }
 
-    /* -- Advance reminder link -- */
+    /*  Advance reminder link  */
     const reminderBtn = document.getElementById('sendFilteredReminders');
     if(reminderBtn) {
         reminderBtn.addEventListener('click', function(e) {

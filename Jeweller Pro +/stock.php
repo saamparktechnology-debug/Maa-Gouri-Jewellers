@@ -44,7 +44,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         $id = $_POST['product_id'];
         $quantity = $_POST['quantity'];
         if(mysqli_query($conn, "UPDATE products SET quantity = quantity + $quantity WHERE id = $id")) {
-            $success = "¦ Stock updated successfully!";
+            $success = " Stock updated successfully!";
         } else {
             $error = "Error updating stock: " . mysqli_error($conn);
         }
@@ -888,7 +888,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                 <optgroup label=" Diamond">
                                     <option value="Diamond">Diamond</option>
                                 </optgroup>
-                                <optgroup label="🟡 Other">
+                                <optgroup label=" Other">
                                     <option value="Other">Other</option>
                                 </optgroup>
                             </select>
@@ -922,7 +922,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         <input type="hidden" name="price" value="0">
 
                         <div class="mb-4">
-                            <label>¦ Quantity</label>
+                            <label> Quantity</label>
                             <input type="number" name="quantity" placeholder="Enter quantity" required class="jewel-input">
                         </div>
 
@@ -1006,13 +1006,13 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                         <div class="text-xs" style="color:#7a4e0a;"><?php echo htmlspecialchars($product['category'] ?? ''); ?></div>
                                     </td>
                                     <td>
-                                        <div class="font-medium text-sm" style="color:#b5730e;"><?php echo htmlspecialchars($product['item_name'] ?? '—'); ?></div>
+                                        <div class="font-medium text-sm" style="color:#b5730e;"><?php echo htmlspecialchars($product['item_name'] ?? '-'); ?></div>
                                     </td>
                                     <td>
-                                        <div class="text-sm font-semibold" style="color:#4b5563;"><?php echo htmlspecialchars($product['serial_no'] ?? '—'); ?></div>
+                                        <div class="text-sm font-semibold" style="color:#4b5563;"><?php echo htmlspecialchars($product['serial_no'] ?? '-'); ?></div>
                                     </td>
                                     <td>
-                                        <div class="text-sm font-semibold" style="color:#4b5563;"><?php echo htmlspecialchars($product['huid_code'] ?: '—'); ?></div>
+                                        <div class="text-sm font-semibold" style="color:#4b5563;"><?php echo htmlspecialchars($product['huid_code'] ?: '-'); ?></div>
                                     </td>
                                     <td class="text-sm">
                                         <?php echo htmlspecialchars($product['weight'] ?? 'N/A'); ?>
@@ -1022,7 +1022,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                         <?php if(!empty($product['created_at'])): ?>
                                             <span class="font-medium"><?php echo date('d M Y', strtotime($product['created_at'])); ?></span>
                                         <?php else: ?>
-                                            <span style="color:#d1d5db;">—</span>
+                                            <span style="color:#d1d5db;">-</span>
                                         <?php endif; ?>
                                     </td>
                                     <td class="text-center font-bold text-sm" style="color:#800020;"><?php echo $qty; ?></td>
@@ -1168,7 +1168,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 <input type="number" step="0.01" name="price" id="editProductPrice" required class="jewel-input">
             </div>
             <div class="mb-4">
-                <label>¦ Quantity</label>
+                <label> Quantity</label>
                 <input type="number" name="quantity" id="editProductQuantity" required class="jewel-input">
             </div>
             <div class="flex gap-3">
@@ -1265,7 +1265,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
         itemSel.innerHTML = '<option value="">-- Select Item Type --</option>';
 
-        // Do NOT auto-fill product name — admin must type it manually
+        // Do NOT auto-fill product name - admin must type it manually
 
         itemsByCategory[cat].forEach(function(item) {
             const opt = document.createElement('option');

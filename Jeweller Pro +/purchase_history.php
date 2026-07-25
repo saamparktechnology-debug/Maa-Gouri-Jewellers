@@ -26,7 +26,7 @@ $logo_paths = [
     'logo.png',
 ];
 
-// -- Filters ----------------------------------------------------------------
+//  Filters 
 $search      = isset($_GET['search']) ? trim($_GET['search']) : '';
 $material    = isset($_GET['material']) ? trim($_GET['material']) : '';
 $date_from   = isset($_GET['date_from']) ? trim($_GET['date_from']) : '';
@@ -51,7 +51,7 @@ if ($date_to !== '') {
 }
 $where_sql = count($where) ? ('WHERE ' . implode(' AND ', $where)) : '';
 
-// -- Handle delete --------------------------------------------------------─
+//  Handle delete 
 $delete_msg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
     $del_id = intval($_POST['delete_id']);
@@ -66,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_id'])) {
     $delete_msg = 'Purchase entry deleted successfully.';
 }
 
-// -- Fetch list ------------------------------------------------------------
+//  Fetch list 
 $list_sql = "SELECT id, purchase_no, purchase_date, invoice_no, invoice_date, supplier_name,
                     material_type, qty, unit, total_amount, payment_mode
              FROM purchase_entries
@@ -74,7 +74,7 @@ $list_sql = "SELECT id, purchase_no, purchase_date, invoice_no, invoice_date, su
              ORDER BY purchase_date DESC, id DESC";
 $result = $conn->query($list_sql);
 
-// -- Totals for filtered set ----------------------------------------------─
+//  Totals for filtered set 
 $total_amount_sum = 0;
 $total_count = 0;
 $rows = [];

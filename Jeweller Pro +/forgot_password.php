@@ -14,14 +14,14 @@ $success = '';
 
 $step = $_SESSION['fp_step'] ?? 'email';
 
-// -- ACTION: Restart/Start Over ----------------------------------------------─
+//  ACTION: Restart/Start Over 
 if (isset($_GET['action']) && $_GET['action'] === 'restart') {
     unset($_SESSION['fp_step'], $_SESSION['fp_email'], $_SESSION['fp_user_id'],
           $_SESSION['fp_name'], $_SESSION['fp_otp_verified']);
     $step = 'email';
 }
 
-// -- ACTION: Resend OTP ------------------------------------------------------─
+//  ACTION: Resend OTP 
 if (isset($_GET['action']) && $_GET['action'] === 'resend') {
     $email   = $_SESSION['fp_email'] ?? '';
     $user_id = $_SESSION['fp_user_id'] ?? 0;
@@ -88,7 +88,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'resend') {
     }
 }
 
-// -- STEP 1: Send OTP --------------------------------------------------------─
+//  STEP 1: Send OTP 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['send_otp'])) {
     $search = mysqli_real_escape_string($conn, trim($_POST['email']));
 
@@ -149,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['send_otp'])) {
     }
 }
 
-// -- STEP 2: Verify OTP ------------------------------------------------------─
+//  STEP 2: Verify OTP 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['verify_otp'])) {
     $otp   = mysqli_real_escape_string($conn, trim($_POST['otp']));
     $email = $_SESSION['fp_email'] ?? '';
@@ -176,7 +176,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['verify_otp'])) {
     }
 }
 
-// -- STEP 3: Reset Password --------------------------------------------------─
+//  STEP 3: Reset Password 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['reset_password'])) {
     $email   = $_SESSION['fp_email'] ?? '';
     $user_id = $_SESSION['fp_user_id'] ?? 0;

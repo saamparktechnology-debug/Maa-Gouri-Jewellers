@@ -86,7 +86,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <meta name="author" content="MANU GUPTA">
     <meta name="description" content="Income and Expense Management for MAA GOURI JEWELLERS">
-    <title>Income &amp; Expenses — MAA GOURI JEWELLERS</title>
+    <title>Income &amp; Expenses - MAA GOURI JEWELLERS</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -535,9 +535,9 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             <input type="text" name="source" required placeholder="e.g. Customer Name" class="jewel-input">
                         </div>
                         <div>
-                            <label class="field-label">‚ Category *</label>
+                            <label class="field-label"> Category *</label>
                             <select name="category" required class="jewel-input">
-                                <option value="">— Select Category —</option>
+                                <option value="">- Select Category -</option>
                                 <?php mysqli_data_seek($income_categories, 0); while($cat = mysqli_fetch_assoc($income_categories)): ?>
                                     <option value="<?php echo htmlspecialchars($cat['category_name']); ?>"> <?php echo htmlspecialchars($cat['category_name']); ?></option>
                                 <?php endwhile; ?>
@@ -557,11 +557,11 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             </select>
                         </div>
                         <div>
-                            <label class="field-label">„ Invoice No</label>
+                            <label class="field-label"> Invoice No</label>
                             <input type="text" name="invoice_no" placeholder="INV-001" class="jewel-input">
                         </div>
                         <div class="sm:col-span-2">
-                            <label class="field-label"> Description</label>
+                            <label class="field-label"> Description</label>
                             <textarea name="description" rows="2" placeholder="Additional details..." class="jewel-input"></textarea>
                         </div>
                     </div>
@@ -581,9 +581,9 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             <input type="date" name="expense_date" value="<?php echo date('Y-m-d'); ?>" required class="jewel-input">
                         </div>
                         <div>
-                            <label class="field-label">‚ Category *</label>
+                            <label class="field-label"> Category *</label>
                             <select name="category" required class="jewel-input">
-                                <option value="">— Select Category —</option>
+                                <option value="">- Select Category -</option>
                                 <?php mysqli_data_seek($expense_categories, 0); while($cat = mysqli_fetch_assoc($expense_categories)): ?>
                                     <option value="<?php echo htmlspecialchars($cat['category_name']); ?>"> <?php echo htmlspecialchars($cat['category_name']); ?></option>
                                 <?php endwhile; ?>
@@ -603,7 +603,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             </select>
                         </div>
                         <div>
-                            <label class="field-label">„ Bill No</label>
+                            <label class="field-label"> Bill No</label>
                             <input type="text" name="bill_no" placeholder="BILL-001" class="jewel-input">
                         </div>
                         <div>
@@ -611,7 +611,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             <input type="text" name="vendor_name" placeholder="Supplier/Vendor" class="jewel-input">
                         </div>
                         <div class="sm:col-span-2">
-                            <label class="field-label"> Description</label>
+                            <label class="field-label"> Description</label>
                             <textarea name="description" rows="2" placeholder="Additional details..." class="jewel-input"></textarea>
                         </div>
                     </div>
@@ -686,7 +686,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         <tr>
                             <td><?php echo date('d M Y', strtotime($exp['expense_date'])); ?></td>
                             <td style="color:#9f1239;"><?php echo htmlspecialchars($exp['category']); ?></td>
-                            <td style="color:#7a4e0a;"><?php echo htmlspecialchars($exp['vendor'] ?? '—'); ?></td>
+                            <td style="color:#7a4e0a;"><?php echo htmlspecialchars($exp['vendor'] ?? '-'); ?></td>
                             <td class="text-right font-bold" style="color:#dc2626;">₹<?php echo number_format($exp['amount'],2); ?></td>
                             <td style="text-transform:uppercase;font-size:11px;"><?php echo htmlspecialchars($exp['payment']); ?></td>
                             <td class="text-center">
@@ -737,7 +737,7 @@ footer { background: linear-gradient(0deg, #f5e6c8, #fdf6e3); border-top: 2px so
 </style>
 
 <script>
-    /* -- Sidebar -- */
+    /*  Sidebar  */
     function toggleSidebar() {
         const sidebar = document.getElementById('mainSidebar');
         const overlay = document.getElementById('sidebarOverlay');
@@ -755,7 +755,7 @@ footer { background: linear-gradient(0deg, #f5e6c8, #fdf6e3); border-top: 2px so
         document.body.style.overflow = '';
     }
 
-    /* -- Charts -- */
+    /*  Charts  */
     const incomeLabels  = <?php echo json_encode(array_keys($incom_by_cat)); ?>;
     const incomeData    = <?php echo json_encode(array_values($income_by_cat)); ?>;
     const expenseLabels = <?php echo json_encode(array_keys($expese_by_cat)); ?>;
