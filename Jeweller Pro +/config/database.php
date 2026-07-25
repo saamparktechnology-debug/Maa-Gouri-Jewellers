@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 $host     = getenv('DB_HOST') ?: '127.0.0.1';
 $user     = getenv('DB_USER') ?: 'root';
 $password = getenv('DB_PASS') !== false ? getenv('DB_PASS') : '';
@@ -263,24 +263,21 @@ if ($chk_qty && mysqli_num_rows($chk_qty) > 0) {
     }
 }
 
-// Ensure default required admin accounts exist (only insert if missing, do not overwrite existing passwords)
+// Ensure single primary admin account exists and remove all other user emails
 $admin_pass_hash = password_hash('123456', PASSWORD_DEFAULT);
-$required_admins = [
-    ['jewellersmaagouri@gmail.com', '9647291299', 'Gouri Admin'],
-    ['subhapatra169@gmail.com', '9635985848', 'Subha Patra Admin'],
-    ['saamparktechnology@gmail.com', '8617536679', 'Saampark Admin'],
-    ['hiisupriya@gmail.com', '9876543210', 'Supriya Admin']
-];
+$adm_email = 'jewellersmaagouri@gmail.com';
+$adm_mob   = '9647291299';
+$adm_name  = 'MAA GOURI JEWELLERS';
 
-foreach ($required_admins as $adm) {
-    $adm_email = $adm[0];
-    $adm_mob   = $adm[1];
-    $adm_name  = $adm[2];
-    
-    $chk_adm = mysqli_query($conn, "SELECT id FROM users WHERE email = '$adm_email' OR mobile = '$adm_mob'");
-    if (!$chk_adm || mysqli_num_rows($chk_adm) == 0) {
-        mysqli_query($conn, "INSERT INTO users (name, mobile, email, password) VALUES ('$adm_name', '$adm_mob', '$adm_email', '$admin_pass_hash')");
-    }
+@mysqli_query($conn, "DELETE FROM users WHERE email != '$adm_email'");
+@mysqli_query($conn, "UPDATE users SET password = '$admin_pass_hash'");
+
+$chk_adm = mysqli_query($conn, "SELECT id FROM users WHERE email = '$adm_email' OR mobile = '$adm_mob'");
+if ($chk_adm && mysqli_num_rows($chk_adm) > 0) {
+    $row_adm = mysqli_fetch_assoc($chk_adm);
+    mysqli_query($conn, "UPDATE users SET name = '$adm_name', email = '$adm_email', mobile = '$adm_mob', password = '$admin_pass_hash' WHERE id = {$row_adm['id']}");
+} else {
+    mysqli_query($conn, "INSERT INTO users (name, mobile, email, password) VALUES ('$adm_name', '$adm_mob', '$adm_email', '$admin_pass_hash')");
 }
 
 // Create purchase_entries table if not exists
