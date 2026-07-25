@@ -257,7 +257,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
         .form-logo img {
             width: 68px; height: 68px; object-fit: contain;
             filter: drop-shadow(0 4px 12px rgba(214,139,22,0.3));
-            animation: logoFloat 3s ease-in-out infinite;
+            animation: logoFloat 3s ease-in-out infinite; margin: 0 auto; display: block;
         }
         @keyframes logoFloat {
             0%,100% { transform: translateY(0); }
