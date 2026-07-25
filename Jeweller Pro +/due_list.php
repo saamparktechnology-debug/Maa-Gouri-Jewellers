@@ -1130,7 +1130,7 @@ function sendWhatsAppReminder(name, mobile, invoiceNo, due, total) {
     var msg = '';
     if (due <= 0) {
         // Fully paid
-        msg = 'ðŸ™ Dear ' + name + ',';
+        msg = ' Dear ' + name + ',';
         msg += '\n\nThank you for your *complete payment* for Invoice *' + invoiceNo + '*.';
         msg += '\n💰 Total Paid: ₹' + total.toFixed(2);
         msg += '\n✅ Your account is fully cleared.';
@@ -1138,7 +1138,7 @@ function sendWhatsAppReminder(name, mobile, invoiceNo, due, total) {
     } else {
         // Part paid / still due
         var paid = total - due;
-        msg = 'ðŸ™ Dear ' + name + ',';
+        msg = ' Dear ' + name + ',';
         msg += '\n\nThis is a gentle reminder regarding your pending due for Invoice *' + invoiceNo + '*.';
         msg += '\n\n💳 Invoice Total: ₹' + total.toFixed(2);
         msg += '\n✅ Amount Paid: ₹' + paid.toFixed(2);

@@ -924,7 +924,7 @@ window.addEventListener('load', function() {
         <p class="text-sm mt-1" style="color:#7a4e0a;">Create invoices and manage customer transactions</p>
     </div>
 
-    <!-- â•â• PAYMENT DUE TODAY SECTION â•â• -->
+    <!--  PAYMENT DUE TODAY SECTION  -->
 
 <?php if(!empty($due_today_bills)): ?>
     <div class="due-today-section">
@@ -1173,7 +1173,7 @@ function submitPayment() {
   });
 }
 </script>
-    <!-- â•â• END PAYMENT DUE TODAY SECTION â•â• -->
+    <!--  END PAYMENT DUE TODAY SECTION  -->
 
     <!-- Search Bill by Mobile -->
     <div class="jewel-card p-4 sm:p-5 mb-6">

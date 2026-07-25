@@ -553,7 +553,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                 <option value="cash">💵 Cash</option>
                                 <option value="card">💳 Card</option>
                                 <option value="upi">📱 UPI</option>
-                                <option value="bank">ðŸ¦ Bank Transfer</option>
+                                <option value="bank"> Bank Transfer</option>
                             </select>
                         </div>
                         <div>
@@ -599,7 +599,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                 <option value="cash">💵 Cash</option>
                                 <option value="card">💳 Card</option>
                                 <option value="upi">📱 UPI</option>
-                                <option value="bank">ðŸ¦ Bank Transfer</option>
+                                <option value="bank"> Bank Transfer</option>
                             </select>
                         </div>
                         <div>
@@ -607,7 +607,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             <input type="text" name="bill_no" placeholder="BILL-001" class="jewel-input">
                         </div>
                         <div>
-                            <label class="field-label">ðŸ¢ Vendor Name</label>
+                            <label class="field-label"> Vendor Name</label>
                             <input type="text" name="vendor_name" placeholder="Supplier/Vendor" class="jewel-input">
                         </div>
                         <div class="sm:col-span-2">
