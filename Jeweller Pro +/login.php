@@ -476,6 +476,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
         }
         .btn-back i { font-size: 14px; }
     </style>
+    <link rel="stylesheet" href="mobile.css">
 </head>
 <body>
 

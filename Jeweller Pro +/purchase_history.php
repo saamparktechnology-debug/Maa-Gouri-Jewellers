@@ -184,6 +184,7 @@ table.hist-table tbody tr:hover { background: rgba(214,139,22,0.06); }
 .alert-success { background: #d1fae5; border: 1px solid #6ee7b7; color: #065f46; border-radius: 12px; padding: 14px 18px; font-size: 13px; font-weight: 600; }
 .empty-state { text-align: center; padding: 50px 20px; color: #94a3b8; }
 </style>
+    <link rel="stylesheet" href="mobile.css">
 </head>
 <body style="background:#F5F5F5;margin:0;padding:0;">
 

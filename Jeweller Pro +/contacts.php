@@ -177,6 +177,7 @@ h1, h2, h3, .gold-font { font-family: 'Poppins', sans-serif; font-weight: 700; }
     .page-wrapper { margin-left: 0 !important; }
 }
 </style>
+    <link rel="stylesheet" href="mobile.css">
 </head>
 <body class="bg-amber-50/20 text-gray-800 antialiased">
 

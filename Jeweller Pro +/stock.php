@@ -603,6 +603,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         @keyframes starFade { 0%{opacity:0;transform:scale(0)} 50%{opacity:1} 100%{opacity:0;transform:scale(1)} }
         @keyframes ringExpand { 0%{opacity:0.7;transform:scale(0.2)} 100%{opacity:0;transform:scale(2)} }
     </style>
+    <link rel="stylesheet" href="mobile.css">
 </head>
 <body>
 

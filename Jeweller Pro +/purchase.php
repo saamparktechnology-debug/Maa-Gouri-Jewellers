@@ -335,6 +335,7 @@ nav.nav-gold span{color:#fff!important;}
 /*  Print/PDF hidden  */
 @media print{.sidebar,.nav-gold,.no-print{display:none!important}.page-wrapper{margin-left:0!important}}
 </style>
+    <link rel="stylesheet" href="mobile.css">
 </head>
 <body style="background:#F5F5F5;margin:0;padding:0;">
 

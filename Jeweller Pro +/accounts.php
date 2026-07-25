@@ -264,6 +264,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
     .card-gold { border: 1px solid #ccc !important; box-shadow: none !important; }
 }
 </style>
+    <link rel="stylesheet" href="mobile.css">
 </head>
 <body class="bg-amber-50/20 text-gray-800 antialiased">
 

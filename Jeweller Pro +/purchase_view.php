@@ -160,6 +160,7 @@ table.invoice-table td.money { font-weight: 600; }
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 }
 </style>
+    <link rel="stylesheet" href="mobile.css">
 </head>
 <body>
 

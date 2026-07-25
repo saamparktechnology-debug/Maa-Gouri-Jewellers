@@ -387,6 +387,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             .jewel-table { min-width: 640px; }
         }
     </style>
+    <link rel="stylesheet" href="mobile.css">
 </head>
 <body>
 

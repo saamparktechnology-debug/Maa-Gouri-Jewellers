@@ -173,7 +173,8 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_delete_invoice'
             echo '<!DOCTYPE html><html><head>';
             echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($redirect_url) . '">';
             echo '<script>window.location.replace(' . json_encode($redirect_url) . ');<\/script>';
-            echo '</head><body style="background:#fffbf4;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">';
+            echo '    <link rel="stylesheet" href="mobile.css">
+</head><body style="background:#fffbf4;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">';
             echo '<p style="color:#7a4e0a;font-weight:600;"> Done! Redirecting...</p>';
             echo '</body></html>';
             exit();
@@ -377,7 +378,8 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_reset_report'])
             echo '<!DOCTYPE html><html><head>';
             echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($redirect_url) . '">';
             echo '<script>window.location.replace(' . json_encode($redirect_url) . ');<\/script>';
-            echo '</head><body style="background:#fffbf4;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">';
+            echo '    <link rel="stylesheet" href="mobile.css">
+</head><body style="background:#fffbf4;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">';
             echo '<p style="color:#7a4e0a;font-weight:600;"> Done! Redirecting...</p>';
             echo '</body></html>';
             exit();
@@ -663,6 +665,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
             .report-table { min-width: 780px; }
         }
     </style>
+    <link rel="stylesheet" href="mobile.css">
 </head>
 <body>
 

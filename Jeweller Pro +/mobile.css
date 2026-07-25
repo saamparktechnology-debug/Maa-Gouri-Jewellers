@@ -1,0 +1,337 @@
+/* ===================================================
+   JEWELLERY PRO+ — GLOBAL MOBILE RESPONSIVE STYLESHEET
+   Applies to: Maa Gouri, Moti, Radhe Shyam
+   =================================================== */
+
+/* ── 1. BASE RESET ── */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+
+/* ── 2. NAV BAR — kill fixed margin-left on mobile ── */
+@media (max-width: 768px) {
+    nav.nav-gold {
+        margin-left: 0 !important;
+        padding-left: 8px !important;
+        padding-right: 8px !important;
+    }
+
+    /* ── 3. PAGE WRAPPER — full width on mobile ── */
+    .page-wrapper {
+        margin-left: 0 !important;
+        padding: 0 !important;
+    }
+
+    /* ── 4. SIDEBAR — slide-in only ── */
+    .sidebar {
+        transform: translateX(-100%) !important;
+        z-index: 1050 !important;
+    }
+    .sidebar.open {
+        transform: translateX(0) !important;
+    }
+
+    /* ── 5. BURGER MENU — always show on mobile ── */
+    .mobile-burger {
+        display: block !important;
+    }
+
+    /* ── 6. CONTAINERS — prevent overflow ── */
+    .container, [class*="container"] {
+        max-width: 100% !important;
+        padding-left: 12px !important;
+        padding-right: 12px !important;
+    }
+
+    /* ── 7. TABLES — horizontal scroll ── */
+    table {
+        min-width: 100% !important;
+    }
+    .due-table-wrap,
+    .table-responsive,
+    .inv-table-wrap,
+    .overflow-x-auto,
+    div[style*="overflow-x:auto"],
+    div[style*="overflow-x: auto"] {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+    /* Wrap any unwrapped table inside a scrollable div via CSS */
+    .due-table, .jewel-table, .inv-table, .purchase-table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        white-space: nowrap;
+    }
+    .due-table td, .jewel-table td, .inv-table td {
+        white-space: normal;
+        word-break: break-word;
+    }
+
+    /* ── 8. GRIDS — stack to single column ── */
+    .grid, [class*="grid-cols"] {
+        grid-template-columns: 1fr !important;
+    }
+    /* Specific 2-col layouts */
+    .grid-cols-2, .md\:grid-cols-2, .sm\:grid-cols-2 {
+        grid-template-columns: 1fr !important;
+    }
+    .grid-cols-3, .md\:grid-cols-3, .sm\:grid-cols-3 {
+        grid-template-columns: 1fr !important;
+    }
+    .grid-cols-4, .md\:grid-cols-4, .sm\:grid-cols-4 {
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+    /* ── 9. STAT CARDS — wrap properly ── */
+    .stat-gem {
+        min-width: 140px;
+        flex: 1 1 140px;
+    }
+    .flex.gap-4, .flex.gap-3, .flex.gap-6 {
+        flex-wrap: wrap;
+    }
+
+    /* ── 10. BUTTONS — full width on forms ── */
+    .btn-save, .btn-pdf {
+        width: 100% !important;
+        text-align: center !important;
+        justify-content: center !important;
+        margin-bottom: 8px !important;
+    }
+    .flex.flex-wrap.gap-4.justify-center.mb-10 {
+        flex-direction: column !important;
+        align-items: stretch !important;
+    }
+    .flex.flex-wrap.gap-4.justify-center.mb-10 > * {
+        width: 100% !important;
+        text-align: center !important;
+        justify-content: center !important;
+    }
+
+    /* ── 11. FORM CARDS — comfortable padding ── */
+    .form-card, .jewel-card {
+        padding: 16px !important;
+        border-radius: 12px !important;
+    }
+
+    /* ── 12. MODALS — full screen on mobile ── */
+    #receiveModal > div,
+    #historyModal > div,
+    #paymentModal > div,
+    [id$="Modal"] > div {
+        max-width: 96vw !important;
+        width: 96vw !important;
+        max-height: 90vh !important;
+        overflow-y: auto !important;
+        border-radius: 12px !important;
+        margin: auto !important;
+    }
+
+    /* ── 13. LOGIN PAGE ── */
+    .login-box, .login-card, form.login-form {
+        width: 94vw !important;
+        max-width: 420px !important;
+        margin: 20px auto !important;
+        padding: 24px !important;
+    }
+
+    /* ── 14. BILLING PAGE — item rows ── */
+    .billing-item-row, .item-row {
+        flex-direction: column !important;
+    }
+
+    /* ── 15. PURCHASE FORM ── */
+    .form-input {
+        font-size: 16px !important; /* prevent zoom on iOS */
+    }
+    select.form-input, textarea.form-input {
+        font-size: 16px !important;
+    }
+
+    /* ── 16. PURCHASE ITEMS TABLE ── */
+    #purchaseItemsList, table#purchaseItemsList {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* ── 17. HEADING SIZES ── */
+    h1 { font-size: 18px !important; }
+    h2 { font-size: 16px !important; }
+    h3 { font-size: 14px !important; }
+
+    /* ── 18. ACCOUNTS / INCOME TABLE ── */
+    .accounts-table-wrap, .income-table-wrap {
+        overflow-x: auto !important;
+    }
+
+    /* ── 19. ACTION BUTTONS IN TABLES — better spacing ── */
+    .action-grid {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 6px !important;
+    }
+    .action-btn {
+        font-size: 11px !important;
+        padding: 7px 8px !important;
+    }
+
+    /* ── 20. REPORTS CARDS ── */
+    .page-heading {
+        padding: 12px !important;
+    }
+
+    /* ── 21. DUE LIST TABLE — constrain wide columns ── */
+    .due-table th, .due-table td {
+        font-size: 11px !important;
+        padding: 6px 8px !important;
+    }
+    .due-table th[style*="width:155px"] {
+        display: none !important;
+    }
+    .due-table td:nth-child(4) {
+        display: none !important;
+    }
+
+    /* ── 22. FOOTER ── */
+    footer {
+        padding: 14px 12px !important;
+        font-size: 10px !important;
+    }
+
+    /* ── 23. INVOICE / PDF PRINT AREA — no sidebar ── */
+    .print-actions {
+        flex-direction: column !important;
+        gap: 8px !important;
+        padding: 10px !important;
+    }
+    .invoice-card {
+        width: 100% !important;
+        max-width: 100% !important;
+        border-radius: 0 !important;
+        padding: 16px !important;
+    }
+
+    /* ── 24. TOP HEADER IN INVOICE ── */
+    .top-header {
+        flex-direction: column !important;
+        text-align: center !important;
+        gap: 10px !important;
+    }
+    .header-right {
+        text-align: center !important;
+    }
+    .shop-title {
+        font-size: 18px !important;
+    }
+    .shop-details-line {
+        font-size: 10px !important;
+    }
+
+    /* ── 25. CUSTOMER CARDS / RECORDS ── */
+    .customer-card, .record-card {
+        padding: 12px !important;
+    }
+
+    /* ── 26. STOCK PAGE ── */
+    .stock-filters {
+        flex-direction: column !important;
+    }
+
+    /* ── 27. SANCHARI PAGES (Moti only) ── */
+    .sanchari-card, .sanchari-table {
+        overflow-x: auto !important;
+    }
+
+    /* ── 28. NAV TOP LINK TEXT — hide on mobile ── */
+    .nav-link-text {
+        display: none !important;
+    }
+
+    /* ── 29. BOTTOM SECTION IN INVOICE ── */
+    .bottom-section {
+        grid-template-columns: 1fr !important;
+    }
+    .meta-bar {
+        grid-template-columns: 1fr 1fr !important;
+        font-size: 10px !important;
+    }
+
+    /* ── 30. TOUCH TARGETS — min 44px ── */
+    a, button, input[type="submit"], input[type="button"] {
+        min-height: 38px;
+    }
+    input[type="date"], input[type="text"],
+    input[type="number"], input[type="email"],
+    select, textarea {
+        min-height: 42px;
+        font-size: 16px !important; /* prevents iOS zoom */
+    }
+
+    /* ── 31. WHATSAPP PAGE ── */
+    .wa-stat-grid {
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+    /* ── 32. CONTACTS PAGE ── */
+    .contacts-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* ── 33. HIDE wide label on small tables ── */
+    th.hide-mobile, td.hide-mobile {
+        display: none !important;
+    }
+
+    /* ── 34. PURCHASE HISTORY TABLE ── */
+    .purchase-history-table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* ── 35. LOADING OVERLAY ── */
+    #loadingOverlay {
+        padding: 20px !important;
+    }
+}
+
+/* ── SMALL PHONES (max 480px) ── */
+@media (max-width: 480px) {
+    .grid-cols-4, .md\:grid-cols-4 {
+        grid-template-columns: 1fr 1fr !important;
+    }
+    .stat-gem {
+        min-width: 110px;
+    }
+    .action-grid {
+        grid-template-columns: 1fr !important;
+    }
+    .meta-bar {
+        grid-template-columns: 1fr !important;
+    }
+    .tax-badge {
+        font-size: 11px !important;
+        padding: 6px 10px !important;
+    }
+    .amount-box .amount-row {
+        font-size: 12px !important;
+    }
+    nav.nav-gold h1, nav.nav-gold .shop-name {
+        font-size: 14px !important;
+    }
+}
+
+/* ── PRINT — never show sidebar/nav ── */
+@media print {
+    .sidebar, .sidebar-overlay, nav.nav-gold,
+    .mobile-burger, .no-print, .print-actions {
+        display: none !important;
+    }
+    .page-wrapper {
+        margin-left: 0 !important;
+    }
+    .invoice-card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+}

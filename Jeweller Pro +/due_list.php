@@ -716,6 +716,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
     font-family: 'Poppins', sans-serif;
 }
 </style>
+    <link rel="stylesheet" href="mobile.css">
 </head>
 <body class="<?php echo $theme == 'light' ? 'light-theme' : 'dark-theme'; ?>" style="background:#F5F5F5; margin:0; padding:0;">
 

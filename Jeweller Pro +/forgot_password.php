@@ -259,6 +259,7 @@ $step = $_SESSION['fp_step'] ?? $step;
         }
         .toggle-eye { cursor: pointer; }
     </style>
+    <link rel="stylesheet" href="mobile.css">
 </head>
 <body class="bg-gray-50">
 <div class="min-h-screen flex items-center justify-center py-8 px-4">

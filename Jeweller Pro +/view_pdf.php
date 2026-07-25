@@ -282,6 +282,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
     .inv-table tbody tr:nth-child(even) { background:#fcf8ee !important; }
 }
 </style>
+    <link rel="stylesheet" href="mobile.css">
 </head>
 <body>
 

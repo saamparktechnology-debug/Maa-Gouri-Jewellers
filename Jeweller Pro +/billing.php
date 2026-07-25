@@ -706,6 +706,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
             .sidebar, .sidebar-overlay, nav.nav-gold { display: none !important; }
         }
     </style>
+    <link rel="stylesheet" href="mobile.css">
 </head>
 <body class="<?php echo $theme == 'light' ? 'light-theme' : 'dark-theme'; ?>">
 

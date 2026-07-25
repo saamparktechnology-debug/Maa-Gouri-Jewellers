@@ -755,6 +755,7 @@ if($is_logged_in) {
 
         @media print { body * { visibility: visible; } }
     </style>
+    <link rel="stylesheet" href="mobile.css">
 </head>
 <body class="<?php echo $theme == 'light' ? 'light-theme' : 'dark-theme'; ?>" style="background: radial-gradient(circle at 10% 10%, #fffbf5 0%, #faf5e6 50%, #f6eccf 100%); margin:0; padding:0; min-height:100vh;">
 
