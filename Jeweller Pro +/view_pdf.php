@@ -418,6 +418,10 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                         </div>
                     </div>
                 </div>
+                <!-- Developer Footer -->
+                <div style="margin-top:16px;padding-top:10px;border-top:1px solid #e8d5a8;text-align:center;font-size:9.5px;color:#7a4e0a;font-family:'Poppins',sans-serif;">
+                    Design &amp; Developed by <strong>Saampark Technology &amp; Research Private Limited</strong>
+                </div>
             </div>
         <?php else: ?>
             <!-- ==================== FULL INVOICE TEMPLATE ==================== -->
@@ -666,6 +670,10 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                     <div class="signature-stamp-frame">
                         <div class="stamp-label-text">Signature &amp; Stamp<br>Authorised Signatory</div>
                     </div>
+                </div>
+                <!-- Developer Footer -->
+                <div style="margin-top:16px;padding-top:10px;border-top:1px solid #e8d5a8;text-align:center;font-size:9.5px;color:#7a4e0a;font-family:'Poppins',sans-serif;">
+                    Design &amp; Developed by <strong>Saampark Technology &amp; Research Private Limited</strong>
                 </div>
             </div>
         <?php endif; ?>

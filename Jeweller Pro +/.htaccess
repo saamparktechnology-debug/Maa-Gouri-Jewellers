@@ -1,10 +1,11 @@
 RewriteEngine On
 
-# 1. Redirect external requests with .php to clean extensionless URLs
+# 1. Redirect GET requests with .php extension to clean extensionless URLs
+RewriteCond %{REQUEST_METHOD} !POST
 RewriteCond %{THE_REQUEST} \s/([^.\s]+)\.php[\s?] [NC]
 RewriteRule ^ %1 [R=301,L]
 
-# 2. Internally rewrite clean URLs to .php files if they exist
+# 2. Internally map extensionless URLs to .php files if they exist
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME}\.php -f
 RewriteRule ^(.*)$ $1.php [L,QSA]
