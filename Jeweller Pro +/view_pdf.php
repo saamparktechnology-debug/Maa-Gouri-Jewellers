@@ -93,13 +93,19 @@ if($prev_res && $pr = mysqli_fetch_assoc($prev_res)) {
 $current_balance = $prev_balance + $balance;
 
 // Total Quantity & Weight calculations
+$total_pcs = 0;
 $total_gross_wt = 0;
 $total_net_wt = 0;
 foreach($items as $it) {
-    $g = floatval($it['quantity']);
-    $n = floatval($it['quantity']);
-    $total_gross_wt += $g;
-    $total_net_wt   += $n;
+    $u = strtolower(trim($it['unit'] ?? 'g'));
+    $val = floatval($it['quantity']);
+    if (in_array($u, ['qty','pcs','piece','pieces'])) {
+        $total_pcs += intval($val > 0 ? $val : 1);
+    } else {
+        $total_pcs += intval($it['pcs'] ?? 1);
+        $total_gross_wt += floatval($it['gross_wt'] ?? $val);
+        $total_net_wt   += floatval($it['net_wt'] ?? $val);
+    }
 }
 
 // Number to words
@@ -476,23 +482,24 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                     </div>
                 </div>
 
-                <!-- 4. Items Table with Item Weights in Grams (Gross Wt & Net Wt) -->
+                <!-- 4. Items Table with Item Weights in Grams (Gross Wt & Net Wt) & Qty -->
                 <table class="inv-table">
                     <thead>
                         <tr>
-                            <th style="width:32px" class="center">No</th>
+                            <th style="width:28px" class="center">No</th>
                             <th>Items / Product Name</th>
-                            <th style="width:85px" class="right">Gross Wt / Qty</th>
-                            <th style="width:85px" class="right">Net Wt / Qty</th>
-                            <th style="width:95px" class="right">Rate (₹/g)</th>
-                            <th style="width:75px" class="right">Tax</th>
-                            <th style="width:110px" class="right">Total (₹)</th>
+                            <th style="width:50px" class="center">Qty</th>
+                            <th style="width:75px" class="right">Gross Wt</th>
+                            <th style="width:75px" class="right">Net Wt</th>
+                            <th style="width:90px" class="right">Rate (₹/g)</th>
+                            <th style="width:70px" class="right">Tax</th>
+                            <th style="width:105px" class="right">Total (₹)</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if(empty($items)): ?>
                         <tr>
-                            <td colspan="7" style="text-align:center;padding:16px;color:#94a3b8;">No items added to this invoice.</td>
+                            <td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">No items added to this invoice.</td>
                         </tr>
                         <?php else: foreach($items as $idx => $it):
                             $name     = htmlspecialchars($it['product_name'] ?? 'Item');
@@ -501,9 +508,12 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                             if(empty($huid) && !empty($inv['huid_code'])) {
                                 $huid = trim($inv['huid_code']);
                             }
-                            $unit     = trim($it['unit'] ?? 'g');
-                            $gross_wt = floatval($it['quantity']);
-                            $net_wt   = floatval($it['quantity']);
+                            $unit     = strtolower(trim($it['unit'] ?? 'g'));
+                            $is_piece = in_array($unit, ['qty','pcs','piece','pieces']);
+                            $item_val = floatval($it['quantity']);
+                            $item_pcs = $is_piece ? intval($item_val > 0 ? $item_val : 1) : intval($it['pcs'] ?? 1);
+                            $gross_wt = $is_piece ? 0 : floatval($it['gross_wt'] ?? $item_val);
+                            $net_wt   = $is_piece ? 0 : floatval($it['net_wt'] ?? $item_val);
                             $rate     = floatval($it['price']);
                             $amt      = floatval($it['total']);
                             $it_gst_type = $it['gst_type'] ?? 'non_gst';
@@ -538,8 +548,9 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                                 <div class="item-sub" style="color:#059669;font-weight:600;">Making Charge: ₹<?php echo number_format($it_mc_amt, 2); ?><?php echo $it_mc_pct > 0 ? ' ('.number_format($it_mc_pct, 1).'%)' : ''; ?></div>
                                 <?php endif; ?>
                             </td>
-                            <td class="right"><strong><?php echo (in_array(strtolower($unit), ['qty','pcs','piece','pieces'])) ? number_format($gross_wt, 0).' Pcs' : number_format($gross_wt, 3).' g'; ?></strong></td>
-                            <td class="right"><strong><?php echo (in_array(strtolower($unit), ['qty','pcs','piece','pieces'])) ? number_format($net_wt, 0).' Pcs' : number_format($net_wt, 3).' g'; ?></strong></td>
+                            <td class="center"><strong><?php echo $item_pcs; ?> Pcs</strong></td>
+                            <td class="right"><strong><?php echo ($gross_wt > 0) ? number_format($gross_wt, 3).' g' : '—'; ?></strong></td>
+                            <td class="right"><strong><?php echo ($net_wt > 0) ? number_format($net_wt, 3).' g' : '—'; ?></strong></td>
                             <td class="right">₹<?php echo number_format($rate, 2); ?></td>
                             <td class="right">
                                 <?php if($is_gst && $tax_amt > 0): ?>
@@ -553,9 +564,10 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                         <?php endforeach; ?>
                         <?php endif; ?>
 
-                        <!-- 5. Subtotal Row with Total Weights in Grams -->
+                        <!-- 5. Subtotal Row with Total Qty & Weights in Grams -->
                         <tr class="subtotal-row">
                             <td colspan="2" style="text-align:right;">SUBTOTAL WEIGHTS &amp; AMOUNT</td>
+                            <td class="center"><?php echo $total_pcs; ?> Pcs</td>
                             <td class="right"><?php echo number_format($total_gross_wt, 3); ?> g</td>
                             <td class="right"><?php echo number_format($total_net_wt, 3); ?> g</td>
                             <td></td>
