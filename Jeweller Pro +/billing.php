@@ -1734,7 +1734,7 @@ function submitPayment() {
                 <p class="text-xs mt-2 text-center" style="color:#9ca3af;" id="metalUpdateInfo">Fetching Indian market rates...</p>
             </div>
          <!-- EMI Calculator -->
-            <div class="jewel-card p-4 sm:p-6">
+            <div class="jewel-card p-4 sm:p-6 mt-6">
                 <h3 class="text-lg font-bold mb-4" style="color:#800020;font-family:'Poppins',serif;">
                     <i class="fas fa-calculator mr-2" style="color:#d68b16;"></i> EMI Calculator
                 </h3>
