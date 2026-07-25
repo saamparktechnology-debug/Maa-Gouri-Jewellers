@@ -1441,7 +1441,7 @@ function submitReceivePayment() {
     if (!faLoaded()) {
         var map = {
             'fa-user': '', 'fa-user-circle':'', 'fa-sign-out-alt':'', 'fa-sign-in-alt':'',
-            'fa-list':'', 'fa-arrow-left':'&larr;', 'fa-check-circle':'', 'fa-save':'',
+            'fa-list':'', 'fa-arrow-left':'\u2190', 'fa-check-circle':'', 'fa-save':'',
             'fa-trash-alt':'', 'fa-spinner':'', 'fa-check':'', 'fa-chart-bar':'',
             'fa-receipt':'','fa-chart-line':'','fa-boxes':'','fa-users':'','fa-gem':'',
             'fa-book':'','fa-weight-hanging':'','fa-coins':'','fa-search':'','fa-plus-circle':''
