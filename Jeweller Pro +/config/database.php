@@ -145,6 +145,13 @@ $create_contacts = "CREATE TABLE IF NOT EXISTS contacts (
 )";
 mysqli_query($conn, $create_contacts);
 
+// Ensure note column exists on contacts table
+$chk_note = mysqli_query($conn, "SHOW COLUMNS FROM contacts LIKE 'note'");
+if ($chk_note && mysqli_num_rows($chk_note) == 0) {
+    mysqli_query($conn, "ALTER TABLE contacts ADD COLUMN note TEXT");
+}
+
+
 
 $create_sanchari_customers = "CREATE TABLE IF NOT EXISTS sanchari_customers (
 id INT AUTO_INCREMENT PRIMARY KEY,
