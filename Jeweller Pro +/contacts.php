@@ -17,21 +17,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     $mobile  = trim($_POST['mobile'] ?? '');
     $email   = trim($_POST['email'] ?? '');
     $address = trim($_POST['address'] ?? '');
+    $note    = trim($_POST['note'] ?? '');
 
     if ($_POST['action'] === 'save' && $name !== '' && $mobile !== '') {
         $n = mysqli_real_escape_string($conn, $name);
         $m = mysqli_real_escape_string($conn, $mobile);
         $e = mysqli_real_escape_string($conn, $email);
         $a = mysqli_real_escape_string($conn, $address);
-        mysqli_query($conn, "INSERT INTO customers (name, mobile, address, email)
-                              VALUES ('$n', '$m', '$a', '$e')
-                              ON DUPLICATE KEY UPDATE name='$n', address='$a', email='$e'");
+        $nt = mysqli_real_escape_string($conn, $note);
+        mysqli_query($conn, "INSERT INTO contacts (name, mobile, address, email, note)
+                              VALUES ('$n', '$m', '$a', '$e', '$nt')
+                              ON DUPLICATE KEY UPDATE name='$n', address='$a', email='$e', note='$nt'");
         $msg = 'saved';
     }
 
     if ($_POST['action'] === 'delete' && !empty($_POST['mobile'])) {
         $m = mysqli_real_escape_string($conn, $_POST['mobile']);
-        mysqli_query($conn, "DELETE FROM customers WHERE mobile = '$m'");
+        mysqli_query($conn, "DELETE FROM contacts WHERE mobile = '$m'");
         $msg = 'deleted';
     }
 
@@ -44,11 +46,11 @@ $msg = $_GET['msg'] ?? '';
 $search = trim($_GET['search'] ?? '');
 if ($search !== '') {
     $s = mysqli_real_escape_string($conn, $search);
-    $sql = "SELECT name, mobile, email, address FROM customers
+    $sql = "SELECT name, mobile, email, address, note FROM contacts
             WHERE name LIKE '%$s%' OR mobile LIKE '%$s%' OR email LIKE '%$s%'
             ORDER BY name ASC";
 } else {
-    $sql = "SELECT name, mobile, email, address FROM customers ORDER BY name ASC";
+    $sql = "SELECT name, mobile, email, address, note FROM contacts ORDER BY name ASC";
 }
 $res = mysqli_query($conn, $sql);
 if (!$res) die("Query Error: " . mysqli_error($conn));
@@ -412,6 +414,10 @@ h1, h2, h3, .gold-font { font-family: 'Poppins', sans-serif; font-weight: 700; }
                 <label class="block text-xs font-bold text-amber-900 mb-1">Billing Address</label>
                 <textarea name="address" id="fAddress" rows="3" placeholder="Enter customer address..." class="w-full px-3.5 py-2 text-xs rounded-xl border border-amber-300 bg-amber-50/50 text-gray-900 outline-none focus:ring-2 focus:ring-amber-500"></textarea>
             </div>
+            <div>
+                <label class="block text-xs font-bold text-amber-900 mb-1">Note</label>
+                <textarea name="note" id="fNote" rows="2" placeholder="Add a note..." class="w-full px-3.5 py-2 text-xs rounded-xl border border-amber-300 bg-amber-50/50 text-gray-900 outline-none focus:ring-2 focus:ring-amber-500"></textarea>
+            </div>
             <div class="flex gap-3 pt-2">
                 <button type="button" onclick="closeModal()" class="flex-1 py-2.5 text-xs font-bold text-gray-600 bg-gray-100 rounded-xl hover:bg-gray-200 transition">
                     Cancel
@@ -447,6 +453,7 @@ function openModal() {
     document.getElementById('fMobile').value = '';
     document.getElementById('fEmail').value = '';
     document.getElementById('fAddress').value = '';
+    document.getElementById('fNote').value = '';
     document.getElementById('modalOverlay').classList.add('show');
 }
 function editModal(c) {
@@ -455,6 +462,7 @@ function editModal(c) {
     document.getElementById('fMobile').value = c.mobile || '';
     document.getElementById('fEmail').value = c.email || '';
     document.getElementById('fAddress').value = c.address || '';
+    document.getElementById('fNote').value = c.note || '';
     document.getElementById('modalOverlay').classList.add('show');
 }
 function closeModal() {

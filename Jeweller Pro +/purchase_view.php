@@ -218,8 +218,8 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
                 <th class="p-3 text-center">HSN</th>
                 <th class="p-3 text-center">Qty</th>
                 <th class="p-3 text-right">Rate / Unit</th>
-                <th class="p-3 text-right">Tax (GST)</th>
-                <th class="p-3 text-right">Total Amount</th>
+                <th class="p-3 text-right" style="padding-right: 20px;">Tax (GST)</th>
+                <th class="p-3 text-right" style="padding-right: 20px;">Total Amount</th>
             </tr>
         </thead>
         <tbody>
@@ -234,8 +234,8 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
                 <td class="p-3 text-center text-gray-600"><?php echo htmlspecialchars($purchase['hsn_sac'] ?? '—'); ?></td>
                 <td class="p-3 text-center font-bold text-gray-800"><?php echo rtrim(rtrim(number_format((float)$purchase['qty'], 4), '0'), '.'); ?> <?php echo htmlspecialchars($purchase['unit']); ?></td>
                 <td class="p-3 text-right">₹ <?php echo fmt($purchase['rate_per_unit']); ?></td>
-                <td class="p-3 text-right">₹ <?php echo fmt($purchase['gst_total']); ?></td>
-                <td class="p-3 text-right font-bold text-amber-900 text-sm">₹ <?php echo fmt($purchase['total_amount']); ?></td>
+                <td class="p-3 text-right" style="padding-right: 20px;">₹ <?php echo fmt($purchase['gst_total']); ?></td>
+                <td class="p-3 text-right font-bold text-amber-900 text-sm" style="padding-right: 20px;">₹ <?php echo fmt($purchase['total_amount']); ?></td>
             </tr>
         </tbody>
     </table>
@@ -251,7 +251,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
 <footer style="background:linear-gradient(0deg,#f5e6c8,#fdf6e3);border-top:2px solid #d68b16;padding:20px;margin-top:40px;text-align:center;" class="no-print">
     <p class="text-xs" style="color:#7a4e0a;">
         &copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars($COMPANY['name']); ?> &nbsp;|&nbsp; CRAFTED WITH ELEGANCE &nbsp;|&nbsp;
-        Design & Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology & Research Private Limited</a>
+        Printed on: <?php echo date("d-M-Y h:i A"); ?>
     </p>
 </footer>
 </div><!-- /page-wrapper -->
