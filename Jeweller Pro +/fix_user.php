@@ -12,7 +12,7 @@ mysqli_query($conn, "INSERT INTO users (name, mobile, email, password) VALUES
 ('Supriya', '9876543210', 'hiisupriya@gmail.com', '$pass2')");
 
 echo "<div style='font-family:sans-serif;padding:30px;background:#f0fdf4;color:#166534;border:2px solid #86efac;border-radius:12px;max-width:500px;margin:50px auto;text-align:center;'>";
-echo "<h2 style='margin-top:0;'>✅ Admin Users Fixed Successfully!</h2>";
+echo "<h2 style='margin-top:0;'> Admin Users Fixed Successfully!</h2>";
 echo "<p>The following accounts are ready in your live database:</p>";
 echo "<div style='text-align:left;background:#fff;padding:15px;border-radius:8px;margin:15px 0;line-height:1.8;'>";
 echo "<strong>1) Subha Patra:</strong><br>Email: <code>subhapatra169@gmail.com</code><br>Pass: <code>radhe#123</code><br><br>";

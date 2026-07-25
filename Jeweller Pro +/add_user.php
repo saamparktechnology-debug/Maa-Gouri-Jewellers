@@ -15,9 +15,9 @@ if ($res && $res->num_rows > 0) {
     $stmt = $conn->prepare("UPDATE users SET password = ?, name = ?, mobile = ? WHERE email = ?");
     $stmt->bind_param("ssss", $hash, $name, $mobile, $email);
     if ($stmt->execute()) {
-        echo "<h3>✅ User $email password updated to $password successfully!</h3>";
+        echo "<h3> User $email password updated to $password successfully!</h3>";
     } else {
-        echo "<h3>❌ Error updating user: " . $conn->error . "</h3>";
+        echo "<h3> Error updating user: " . $conn->error . "</h3>";
     }
 } else {
     // Ensure no mobile conflicts
@@ -27,13 +27,13 @@ if ($res && $res->num_rows > 0) {
     $stmt = $conn->prepare("INSERT INTO users (name, mobile, email, password) VALUES (?, ?, ?, ?)");
     $stmt->bind_param("ssss", $name, $mobile, $email, $hash);
     if ($stmt->execute()) {
-        echo "<h3>✅ User $email registered with password $password successfully!</h3>";
+        echo "<h3> User $email registered with password $password successfully!</h3>";
     } else {
-        echo "<h3>❌ Error inserting user: " . $conn->error . "</h3>";
+        echo "<h3> Error inserting user: " . $conn->error . "</h3>";
     }
 }
 
-echo "<p>⚠️ <strong>Important:</strong> Please delete this <code>add_user.php</code> file from your server after running it for security reasons.</p>";
+echo "<p> <strong>Important:</strong> Please delete this <code>add_user.php</code> file from your server after running it for security reasons.</p>";
 ?>
 
 

@@ -478,7 +478,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
     $inv_exec = mysqli_query($conn, $invoice_query);
     if(!$inv_exec) {
         die("<div style='padding:30px;font-family:sans-serif;background:#fff1f2;color:#991b1b;border:2px solid #f87171;border-radius:12px;margin:40px auto;max-width:650px;'>
-            <h3 style='margin-top:0;'>❌ Invoice Creation Failed</h3>
+            <h3 style='margin-top:0;'> Invoice Creation Failed</h3>
             <p><strong>MySQL Error:</strong> " . htmlspecialchars(mysqli_error($conn)) . "</p>
             <p><a href='billing.php' style='color:#991b1b;font-weight:bold;text-decoration:underline;'>← Back to Billing</a></p>
         </div>");
@@ -1148,7 +1148,7 @@ function submitPayment() {
     btn.textContent = 'Confirm Payment';
     if (data.success) {
       closePaymentModal();
-      showNotif('✅ ' + data.message, 'success');
+      showNotif(' ' + data.message, 'success');
       if (data.fully_paid) {
         const card = document.getElementById('duecard-' + currentPaymentData.invoice_no);
         if (card) {
@@ -1283,7 +1283,7 @@ function submitPayment() {
                                 <p class="text-xs mb-2 text-gray-400">Search stock by name, SKU, or serial number.</p>
                                 <div class="flex gap-2 mb-2 relative">
                                     <div class="relative flex-1">
-                                        <input type="text" id="gramStockSearch" placeholder="🔍 Search stock..." class="jewel-input w-full rounded-lg px-3 py-2 text-sm" oninput="filterGramStock(this.value)" autocomplete="off">
+                                        <input type="text" id="gramStockSearch" placeholder=" Search stock..." class="jewel-input w-full rounded-lg px-3 py-2 text-sm" oninput="filterGramStock(this.value)" autocomplete="off">
                                         <div id="gramStockSuggestions" class="autocomplete-suggestions hidden"></div>
                                     </div>
                                     <button type="button" onclick="clearGramStockSearch()" class="px-3 py-2 rounded-lg text-sm bg-white border border-yellow-300 text-yellow-800">↩</button>
@@ -1633,7 +1633,7 @@ function submitPayment() {
                 <p class="text-xs mb-3" style="color:#9ca3af;">Enter price <strong>per 10 grams</strong> (as shown in market). Billing auto-converts to per gram.</p>
                 <button onclick="autoFillShopFromLive()" class="w-full py-2 rounded-lg text-xs font-bold mb-3"
                     style="background:linear-gradient(135deg,#059669,#34d399);color:#fff;border:none;cursor:pointer;">
-                    ⚡ Auto-fill from Live Market Rates
+                     Auto-fill from Live Market Rates
                 </button>
                 <?php
                 $shopFields = [
@@ -1863,7 +1863,7 @@ function switchSource(tab, source) {
     resetItemCharges();
 }
 
-// ==================== ⚖️ GRAM FORM LOGIC ====================
+// ====================  GRAM FORM LOGIC ====================
 
 // Stock search & filter with floating suggestions
 function filterGramStock(query) {
@@ -1964,7 +1964,7 @@ function onGramStockChange() {
     if (qty <= 0) {
         rateInput.value = '';
         weightInput.value = '';
-        infoDiv.innerHTML = '<strong style="color:#dc2626;">' + name + '</strong> | <strong style="color:#dc2626;">❌ OUT OF STOCK (0 pcs available)</strong>';
+        infoDiv.innerHTML = '<strong style="color:#dc2626;">' + name + '</strong> | <strong style="color:#dc2626;"> OUT OF STOCK (0 pcs available)</strong>';
     } else if (shopRate10g > 0) {
         rateInput.value = shopRate10g.toFixed(0);
         const hint = document.getElementById('gramRatePerGramHint');
@@ -2066,9 +2066,9 @@ function onGramItemTypeChange() {
     const stockQty = parseFloat(opt.dataset.stockQty) || 0;
 
     if (inStock && stockQty > 0) {
-        statusDiv.innerHTML = '<span class="px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800 border border-green-300">✅ In Stock (' + stockQty + ' pcs available in inventory)</span>';
+        statusDiv.innerHTML = '<span class="px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800 border border-green-300"> In Stock (' + stockQty + ' pcs available in inventory)</span>';
     } else {
-        statusDiv.innerHTML = '<span class="px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800 border border-red-300">❌ Out of Stock (0 items available in inventory)</span>';
+        statusDiv.innerHTML = '<span class="px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800 border border-red-300"> Out of Stock (0 items available in inventory)</span>';
     }
     statusDiv.classList.remove('hidden');
 }
@@ -2215,11 +2215,11 @@ function submitGramItem() {
         });
         const totalReqPcs = existingPcs + qty;
         if (stockQty <= 0) {
-            alert('❌ Out of Stock!\n"' + name + '" is currently out of stock (0 pcs available).');
+            alert(' Out of Stock!\n"' + name + '" is currently out of stock (0 pcs available).');
             return;
         }
         if (totalReqPcs > stockQty) {
-            alert('❌ Exceeds Available Stock!\nOnly ' + stockQty + ' pcs available in stock for "' + name + '", but ' + totalReqPcs + ' pcs requested.');
+            alert(' Exceeds Available Stock!\nOnly ' + stockQty + ' pcs available in stock for "' + name + '", but ' + totalReqPcs + ' pcs requested.');
             return;
         }
     } else if (source === 'category') {
@@ -2234,7 +2234,7 @@ function submitGramItem() {
         const stockQty = opt ? (parseFloat(opt.dataset.stockQty) || 0) : 0;
 
         if (!inStock || stockQty <= 0) {
-            alert('❌ Item Out of Stock!\n"' + type + '" is currently not available in your stock inventory.');
+            alert(' Item Out of Stock!\n"' + type + '" is currently not available in your stock inventory.');
             return;
         }
 
@@ -2331,10 +2331,10 @@ function submitGramItem() {
         document.getElementById('gramManualName').value = '';
     }
     document.getElementById('gramTotalPreviewRow').style.display = 'none';
-    showNotif('✅ Added Item: ' + name, 'success');
+    showNotif(' Added Item: ' + name, 'success');
 }
 
-// ==================== 📜¦ QTY FORM LOGIC ====================
+// ==================== ¦ QTY FORM LOGIC ====================
 
 // Stock search & filter with floating suggestions
 function filterQtyStock(query) {
@@ -2424,7 +2424,7 @@ function onQtyStockChange() {
     qtyInput.value = 1;
     
     if (qty <= 0) {
-        infoDiv.innerHTML = '<strong style="color:#dc2626;">' + name + '</strong> | <strong style="color:#dc2626;">❌ OUT OF STOCK (0 pcs available)</strong>';
+        infoDiv.innerHTML = '<strong style="color:#dc2626;">' + name + '</strong> | <strong style="color:#dc2626;"> OUT OF STOCK (0 pcs available)</strong>';
     } else {
         infoDiv.innerHTML = '<strong>' + name + '</strong> Selected. Price per Piece: ₹' + price.toFixed(2) + ' | Available Stock: <strong style="color:#059669;">' + qty + ' pcs</strong>';
     }
@@ -2509,11 +2509,11 @@ function submitQtyItem() {
         });
         const totalReqPcs = existingPcs + qty;
         if (stockQty <= 0) {
-            alert('❌ Out of Stock!\n"' + name + '" is currently out of stock (0 pcs available).');
+            alert(' Out of Stock!\n"' + name + '" is currently out of stock (0 pcs available).');
             return;
         }
         if (totalReqPcs > stockQty) {
-            alert('❌ Exceeds Available Stock!\nOnly ' + stockQty + ' pcs available in stock for "' + name + '", but ' + totalReqPcs + ' pcs requested.');
+            alert(' Exceeds Available Stock!\nOnly ' + stockQty + ' pcs available in stock for "' + name + '", but ' + totalReqPcs + ' pcs requested.');
             return;
         }
     } else if (source === 'category') {
@@ -2587,7 +2587,7 @@ function submitQtyItem() {
         document.getElementById('qtyManualName').value = '';
     }
     document.getElementById('qtyTotalPreviewRow').style.display = 'none';
-    showNotif('✅ Added Qty Item: ' + name, 'success');
+    showNotif(' Added Qty Item: ' + name, 'success');
 }
 
 function populateStockSelects() {
@@ -2782,7 +2782,7 @@ function calculateTotal() {
     }
     const submitBtn = document.getElementById('submitBtn');
     if (submitBtn) {
-        submitBtn.innerHTML = (cgst + sgst > 0) ? '✨ Generate Tax Invoice ✨' : '✨ Generate Cash Memo ✨';
+        submitBtn.innerHTML = (cgst + sgst > 0) ? ' Generate Tax Invoice ' : ' Generate Cash Memo ';
     }
     updateBalanceFromPart();
 }
@@ -2897,7 +2897,7 @@ function saveShopRate(key) {
     if (inputEl && inputEl.nextElementSibling) {
         const saveBtn = inputEl.nextElementSibling;
         const origText = saveBtn.textContent;
-        saveBtn.textContent = '✅ Saved';
+        saveBtn.textContent = ' Saved';
         saveBtn.style.background = '#059669';
         saveBtn.style.color = '#ffffff';
         setTimeout(() => {
@@ -2907,7 +2907,7 @@ function saveShopRate(key) {
         }, 2000);
     }
     
-    showNotif('✅ ' + label + ' shop rate saved: \u20B9' + val.toLocaleString('en-IN') + ' / 10g', 'success');
+    showNotif(' ' + label + ' shop rate saved: \u20B9' + val.toLocaleString('en-IN') + ' / 10g', 'success');
     calcShopValue();
     refreshActiveBillingRate();
 }
@@ -2929,7 +2929,7 @@ function saveAllShopRates() {
     localStorage.setItem('shopRateSavedAt', now);
     document.getElementById('shopRateSaveStatus').textContent = '\u2714 All Saved';
     document.getElementById('shopRateLastSaved').textContent  = 'Last saved: ' + now;
-    showNotif('✅ All Shop Rates Saved Successfully!', 'success');
+    showNotif(' All Shop Rates Saved Successfully!', 'success');
     calcShopValue();
     refreshActiveBillingRate();
 }

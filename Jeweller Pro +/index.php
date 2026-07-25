@@ -1079,39 +1079,39 @@ if($is_logged_in) {
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                 <!-- Total Sales -->
                 <div class="dark-glass-card glass-gold text-center p-2.5 rounded-xl">
-                    <div class="text-lg mb-0.5">💰</div>
+                    <div class="text-lg mb-0.5"></div>
                     <div class="text-base font-bold" style="color:#f5c842;">₹<?php echo number_format($total_sales, 0); ?></div>
                     <div class="text-[10px] font-semibold mt-0.5" style="color:rgba(255,255,255,0.85);">TOTAL SALES</div>
                 </div>
                 <!-- Today's Sales -->
                 <div class="dark-glass-card glass-emerald text-center p-2.5 rounded-xl">
-                    <div class="text-lg mb-0.5">📊</div>
+                    <div class="text-lg mb-0.5"></div>
                     <div class="text-base font-bold" style="color:#86efac;">₹<?php echo number_format($today_sales_amt, 0); ?></div>
                     <div class="text-[10px] font-semibold mt-0.5" style="color:rgba(255,255,255,0.85);">TODAY'S SALES</div>
                     <div class="text-[9px]" style="color:rgba(255,255,255,0.6);"><?php echo $today_invoice_count; ?> invoice<?php echo $today_invoice_count != 1 ? 's' : ''; ?></div>
                 </div>
                 <!-- Total Purchases -->
                 <div class="dark-glass-card glass-rose text-center p-2.5 rounded-xl">
-                    <div class="text-lg mb-0.5">🛒</div>
+                    <div class="text-lg mb-0.5"></div>
                     <div class="text-base font-bold" style="color:#fda4af;">₹<?php echo number_format($total_purchases, 0); ?></div>
                     <div class="text-[10px] font-semibold mt-0.5" style="color:rgba(255,255,255,0.85);">TOTAL PURCHASES</div>
                 </div>
                 <!-- Today's Purchases -->
                 <div class="dark-glass-card glass-purple text-center p-2.5 rounded-xl">
-                    <div class="text-lg mb-0.5">🏷️</div>
+                    <div class="text-lg mb-0.5"></div>
                     <div class="text-base font-bold" style="color:#c4b5fd;">₹<?php echo number_format($today_purchases, 0); ?></div>
                     <div class="text-[10px] font-semibold mt-0.5" style="color:rgba(255,255,255,0.85);">TODAY'S PURCHASES</div>
                 </div>
                 <!-- Outstanding Due -->
                 <div class="dark-glass-card glass-orange text-center p-2.5 rounded-xl">
-                    <div class="text-lg mb-0.5">⏳</div>
+                    <div class="text-lg mb-0.5"></div>
                     <div class="text-base font-bold" style="color:#fb923c;">₹<?php echo number_format($total_due, 0); ?></div>
                     <div class="text-[10px] font-semibold mt-0.5" style="color:rgba(255,255,255,0.85);">OUTSTANDING DUE</div>
                 </div>
                 <!-- Net Profit -->
                 <?php $net_profit = $total_sales - $total_purchases - $total_expense; ?>
                 <div class="dark-glass-card glass-teal text-center p-2.5 rounded-xl">
-                    <div class="text-lg mb-0.5"><?php echo $net_profit >= 0 ? '📈' : '📉'; ?></div>
+                    <div class="text-lg mb-0.5"><?php echo $net_profit >= 0 ? '' : ''; ?></div>
                     <div class="text-base font-bold" style="color:<?php echo $net_profit >= 0 ? '#86efac' : '#fca5a5'; ?>;">₹<?php echo number_format(abs($net_profit), 0); ?></div>
                     <div class="text-[10px] font-semibold mt-0.5" style="color:rgba(255,255,255,0.85);"><?php echo $net_profit >= 0 ? 'NET PROFIT' : 'NET LOSS'; ?></div>
                 </div>
@@ -1335,7 +1335,7 @@ if($is_logged_in) {
 <section class="py-12 md:py-20" style="background:#fdf6e3;">
     <div class="container mx-auto px-4 sm:px-6">
         <h2 class="text-3xl sm:text-4xl font-bold text-center mb-12" style="color:#800020;">
-            ✅ EXCLUSIVE FEATURES ✅
+             EXCLUSIVE FEATURES 
         </h2>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div class="gem-card p-8 text-center">

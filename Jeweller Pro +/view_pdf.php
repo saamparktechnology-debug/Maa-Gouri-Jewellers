@@ -288,9 +288,9 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
 <div class="print-actions">
     <div style="display:flex;gap:10px;">
         <a href="billing.php" class="btn-back">← Back to Billing</a>
-        <a href="reports.php" class="btn-back">📊 Reports</a>
+        <a href="reports.php" class="btn-back"> Reports</a>
     </div>
-    <button onclick="window.print()" class="btn-print">🖨️ Print / Download PDF (A4)</button>
+    <button onclick="window.print()" class="btn-print"> Print / Download PDF (A4)</button>
 </div>
 
 <div class="invoice-card">
@@ -301,7 +301,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
 
     <div class="invoice-content">
         <?php if($is_receipt): ?>
-            <!-- ==================== 🧾 DUE PAYMENT RECEIPT TEMPLATE ==================== -->
+            <!-- ====================  DUE PAYMENT RECEIPT TEMPLATE ==================== -->
             <div>
                 <!-- Top Header -->
                 <div class="top-header">
@@ -315,7 +315,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                     </div>
                     <div class="header-right">
                         <div class="tax-invoice-tag" style="color:#059669;font-size:17px;">PAYMENT RECEIPT</div>
-                        <span class="payment-status-pill pill-paid">✅ PAYMENT RECEIVED</span>
+                        <span class="payment-status-pill pill-paid"> PAYMENT RECEIVED</span>
                     </div>
                 </div>
 
@@ -347,13 +347,13 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                         <div class="bill-to-title">Received From</div>
                         <div class="customer-name-big"><?php echo htmlspecialchars($inv['customer_name']); ?></div>
                         <?php if(!empty($inv['customer_address'])): ?>
-                        <div class="customer-address-text">📜 Address: <?php echo htmlspecialchars($inv['customer_address']); ?></div>
+                        <div class="customer-address-text"> Address: <?php echo htmlspecialchars($inv['customer_address']); ?></div>
                         <?php endif; ?>
                     </div>
                     <div class="bill-to-right">
-                        📞 Ph No: <strong>+91-<?php echo htmlspecialchars($inv['customer_mobile'] ?? '—'); ?></strong><br>
+                         Ph No: <strong>+91-<?php echo htmlspecialchars($inv['customer_mobile'] ?? '—'); ?></strong><br>
                         <?php if(!empty($inv['customer_gstin'])): ?>
-                        🏛️ GSTIN: <strong><?php echo htmlspecialchars($inv['customer_gstin']); ?></strong><br>
+                         GSTIN: <strong><?php echo htmlspecialchars($inv['customer_gstin']); ?></strong><br>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -380,14 +380,14 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                             <td class="right" style="color:#b91c1c;font-weight:700;">₹<?php echo number_format($rec_prev_balance, 2); ?></td>
                         </tr>
                         <tr style="background:rgba(209,250,229,0.7) !important;font-weight:bold;">
-                            <td style="color:#065f46;font-size:13px;">✅ PAYMENT RECEIVED NOW (Date: <?php echo $rec_payment_date; ?>)</td>
+                            <td style="color:#065f46;font-size:13px;"> PAYMENT RECEIVED NOW (Date: <?php echo $rec_payment_date; ?>)</td>
                             <td class="right" style="color:#065f46;font-size:16px;font-weight:800;">₹<?php echo number_format($rec_paid_amount, 2); ?></td>
                         </tr>
                         <tr class="subtotal-row">
                             <td style="font-size:12.5px;color:<?php echo $rec_new_balance > 0 ? '#b91c1c' : '#065f46'; ?>;">
                                 REMAINING OUTSTANDING BALANCE DUE
                                 <?php if($rec_new_balance > 0 && !empty($next_due_date_display)): ?>
-                                    <br><span style="font-size:10.5px;font-weight:normal;color:#b91c1c;">🗓️ Next Payment Due Date: <strong><?php echo $next_due_date_display; ?></strong></span>
+                                    <br><span style="font-size:10.5px;font-weight:normal;color:#b91c1c;"> Next Payment Due Date: <strong><?php echo $next_due_date_display; ?></strong></span>
                                 <?php endif; ?>
                             </td>
                             <td class="right" style="font-size:16px;font-weight:800;color:<?php echo $rec_new_balance > 0 ? '#b91c1c' : '#065f46'; ?>;">₹<?php echo number_format($rec_new_balance, 2); ?></td>
@@ -441,7 +441,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                         <span class="payment-status-pill <?php echo 'pill-'.$inv['payment_status']; ?>">
                             <?php
                             $ps = $inv['payment_status'];
-                            echo ($ps==='paid') ? '✅ PAID' : (($ps==='part') ? 'PART PAID' : (($ps==='unpaid') ? 'UNPAID' : strtoupper($ps)));
+                            echo ($ps==='paid') ? ' PAID' : (($ps==='part') ? 'PART PAID' : (($ps==='unpaid') ? 'UNPAID' : strtoupper($ps)));
                             ?>
                         </span>
                     </div>
@@ -469,15 +469,15 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                         <div class="bill-to-title"><?php echo $bill_to_label; ?></div>
                         <div class="customer-name-big"><?php echo htmlspecialchars($inv['customer_name']); ?></div>
                         <?php if(!empty($inv['customer_address'])): ?>
-                        <div class="customer-address-text">📜 Address: <?php echo htmlspecialchars($inv['customer_address']); ?></div>
+                        <div class="customer-address-text"> Address: <?php echo htmlspecialchars($inv['customer_address']); ?></div>
                         <?php endif; ?>
                     </div>
                     <div class="bill-to-right">
-                        📞 Ph No: <strong>+91-<?php echo htmlspecialchars($inv['customer_mobile'] ?? '—'); ?></strong><br>
+                         Ph No: <strong>+91-<?php echo htmlspecialchars($inv['customer_mobile'] ?? '—'); ?></strong><br>
                         <?php if(!empty($inv['customer_gstin'])): ?>
-                        🏛️ GSTIN: <strong><?php echo htmlspecialchars($inv['customer_gstin']); ?></strong><br>
+                         GSTIN: <strong><?php echo htmlspecialchars($inv['customer_gstin']); ?></strong><br>
                         <?php endif; ?>
-                        📜 <strong>Place of Supply:</strong><br>
+                         <strong>Place of Supply:</strong><br>
                         <div style="margin-top:2px;font-size:11.5px;color:#334155;line-height:1.4;">
                             <?php echo $COMPANY['address_line1']; ?><br>
                             <?php echo $COMPANY['address_line2']; ?><br>
@@ -652,7 +652,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
 
                             <?php if($current_balance > 0 && !empty($next_due_date_display)): ?>
                             <div class="calc-line" style="color:#b91c1c;font-size:11px;margin-top:2px;">
-                                <span>🗓️ Next Due Date</span>
+                                <span> Next Due Date</span>
                                 <strong style="color:#b91c1c;"><?php echo $next_due_date_display; ?></strong>
                             </div>
                             <?php endif; ?>

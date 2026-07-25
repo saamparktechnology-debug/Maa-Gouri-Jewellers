@@ -276,11 +276,11 @@ $step = $_SESSION['fp_step'] ?? $step;
         <?php if ($step !== 'done'): ?>
         <div class="flex items-center justify-center gap-2 px-6 pt-5 pb-2">
             <div class="step-dot <?php echo in_array($step,['otp','reset']) ? 'step-done' : ($step==='email' ? 'step-active' : 'step-idle'); ?>">
-                <?php echo in_array($step,['otp','reset']) ? '✓' : '1'; ?>
+                <?php echo in_array($step,['otp','reset']) ? '' : '1'; ?>
             </div>
             <div class="h-0.5 w-10 <?php echo in_array($step,['otp','reset','done']) ? 'bg-green-500' : 'bg-gray-200'; ?>"></div>
             <div class="step-dot <?php echo $step==='reset' ? 'step-done' : ($step==='otp' ? 'step-active' : 'step-idle'); ?>">
-                <?php echo $step==='reset' ? '✓' : '2'; ?>
+                <?php echo $step==='reset' ? '' : '2'; ?>
             </div>
             <div class="h-0.5 w-10 <?php echo $step==='reset' ? 'bg-green-500' : 'bg-gray-200'; ?>"></div>
             <div class="step-dot <?php echo $step==='reset' ? 'step-active' : 'step-idle'; ?>">3</div>

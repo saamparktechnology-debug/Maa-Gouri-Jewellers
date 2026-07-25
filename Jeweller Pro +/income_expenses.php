@@ -19,9 +19,9 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_income'])) {
     $invoice_no     = mysqli_real_escape_string($conn, $_POST['invoice_no'] ?? '');
     $created_by     = $_SESSION['user_id'];
     if(mysqli_query($conn, "INSERT INTO income (income_date, source, category, amount, description, payment_method, invoice_no, created_by) VALUES ('$income_date', '$source', '$category', $amount, '$description', '$payment_method', '$invoice_no', $created_by)")) {
-        $success_income = "✅ Income added successfully!";
+        $success_income = " Income added successfully!";
     } else {
-        $error_income = "❌ Error: " . mysqli_error($conn);
+        $error_income = " Error: " . mysqli_error($conn);
     }
 }
 
@@ -36,9 +36,9 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_expense'])) {
     $vendor_name    = mysqli_real_escape_string($conn, $_POST['vendor_name'] ?? '');
     $created_by     = $_SESSION['user_id'];
     if(mysqli_query($conn, "INSERT INTO expenses (expense_date, category, amount, description, payment_method, bill_no, vendor_name, created_by) VALUES ('$expense_date', '$category', $amount, '$description', '$payment_method', '$bill_no', '$vendor_name', $created_by)")) {
-        $success_expense = "✅ Expense added successfully!";
+        $success_expense = " Expense added successfully!";
     } else {
-        $error_expense = "❌ Error: " . mysqli_error($conn);
+        $error_expense = " Error: " . mysqli_error($conn);
     }
 }
 
@@ -455,7 +455,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             <div class="stat-card stat-income">
                 <div class="flex justify-between items-start">
                     <div>
-                        <p class="stat-lbl">💰 Total Income</p>
+                        <p class="stat-lbl"> Total Income</p>
                         <p class="stat-val">₹<?php echo number_format($total_income, 2); ?></p>
                     </div>
                     <i class="fas fa-arrow-up"></i>
@@ -464,7 +464,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             <div class="stat-card stat-expense">
                 <div class="flex justify-between items-start">
                     <div>
-                        <p class="stat-lbl">💸 Total Expenses</p>
+                        <p class="stat-lbl"> Total Expenses</p>
                         <p class="stat-val">₹<?php echo number_format($total_expense, 2); ?></p>
                     </div>
                     <i class="fas fa-arrow-down"></i>
@@ -473,7 +473,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             <div class="stat-card stat-sales">
                 <div class="flex justify-between items-start">
                     <div>
-                        <p class="stat-lbl">📈 Total Sales</p>
+                        <p class="stat-lbl"> Total Sales</p>
                         <p class="stat-val">₹<?php echo number_format($total_sales, 2); ?></p>
                         <p class="stat-sub"><?php echo $total_sales_count; ?> invoices</p>
                     </div>
@@ -483,7 +483,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             <div class="stat-card stat-profit">
                 <div class="flex justify-between items-start">
                     <div>
-                        <p class="stat-lbl">👑 Net Profit/Loss</p>
+                        <p class="stat-lbl"> Net Profit/Loss</p>
                         <p class="stat-val" style="color:<?php echo $net_profit>=0?'#86efac':'#fca5a5'; ?>">₹<?php echo number_format($net_profit, 2); ?></p>
                     </div>
                     <i class="fas fa-chart-line"></i>
@@ -492,7 +492,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             <div class="stat-card stat-count">
                 <div class="flex justify-between items-start">
                     <div>
-                        <p class="stat-lbl">✨ Transactions</p>
+                        <p class="stat-lbl"> Transactions</p>
                         <p class="stat-val"><?php echo count($income_records) + count($expense_records); ?></p>
                     </div>
                     <i class="fas fa-exchange-alt"></i>
@@ -504,11 +504,11 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         <div class="filter-card mb-6">
             <form method="GET" class="flex flex-wrap items-end gap-4">
                 <div>
-                    <label class="field-label">📅 From Date</label>
+                    <label class="field-label"> From Date</label>
                     <input type="date" name="date_from" value="<?php echo $date_from; ?>" class="jewel-input">
                 </div>
                 <div>
-                    <label class="field-label">📅 To Date</label>
+                    <label class="field-label"> To Date</label>
                     <input type="date" name="date_to" value="<?php echo $date_to; ?>" class="jewel-input">
                 </div>
                 <div class="flex gap-2">
@@ -527,41 +527,41 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 <form method="POST">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label class="field-label">📅 Date *</label>
+                            <label class="field-label"> Date *</label>
                             <input type="date" name="income_date" value="<?php echo date('Y-m-d'); ?>" required class="jewel-input">
                         </div>
                         <div>
-                            <label class="field-label">🏷️ Source *</label>
+                            <label class="field-label"> Source *</label>
                             <input type="text" name="source" required placeholder="e.g. Customer Name" class="jewel-input">
                         </div>
                         <div>
-                            <label class="field-label">📜‚ Category *</label>
+                            <label class="field-label">‚ Category *</label>
                             <select name="category" required class="jewel-input">
                                 <option value="">— Select Category —</option>
                                 <?php mysqli_data_seek($income_categories, 0); while($cat = mysqli_fetch_assoc($income_categories)): ?>
-                                    <option value="<?php echo htmlspecialchars($cat['category_name']); ?>">💰 <?php echo htmlspecialchars($cat['category_name']); ?></option>
+                                    <option value="<?php echo htmlspecialchars($cat['category_name']); ?>"> <?php echo htmlspecialchars($cat['category_name']); ?></option>
                                 <?php endwhile; ?>
                             </select>
                         </div>
                         <div>
-                            <label class="field-label">💵 Amount (₹) *</label>
+                            <label class="field-label"> Amount (₹) *</label>
                             <input type="number" step="0.01" name="amount" required placeholder="0.00" class="jewel-input">
                         </div>
                         <div>
-                            <label class="field-label">💳 Payment Method</label>
+                            <label class="field-label"> Payment Method</label>
                             <select name="payment_method" class="jewel-input">
-                                <option value="cash">💵 Cash</option>
-                                <option value="card">💳 Card</option>
-                                <option value="upi">📱 UPI</option>
+                                <option value="cash"> Cash</option>
+                                <option value="card"> Card</option>
+                                <option value="upi"> UPI</option>
                                 <option value="bank"> Bank Transfer</option>
                             </select>
                         </div>
                         <div>
-                            <label class="field-label">📜„ Invoice No</label>
+                            <label class="field-label">„ Invoice No</label>
                             <input type="text" name="invoice_no" placeholder="INV-001" class="jewel-input">
                         </div>
                         <div class="sm:col-span-2">
-                            <label class="field-label">📜 Description</label>
+                            <label class="field-label"> Description</label>
                             <textarea name="description" rows="2" placeholder="Additional details..." class="jewel-input"></textarea>
                         </div>
                     </div>
@@ -577,33 +577,33 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 <form method="POST">
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
-                            <label class="field-label">📅 Date *</label>
+                            <label class="field-label"> Date *</label>
                             <input type="date" name="expense_date" value="<?php echo date('Y-m-d'); ?>" required class="jewel-input">
                         </div>
                         <div>
-                            <label class="field-label">📜‚ Category *</label>
+                            <label class="field-label">‚ Category *</label>
                             <select name="category" required class="jewel-input">
                                 <option value="">— Select Category —</option>
                                 <?php mysqli_data_seek($expense_categories, 0); while($cat = mysqli_fetch_assoc($expense_categories)): ?>
-                                    <option value="<?php echo htmlspecialchars($cat['category_name']); ?>">💸 <?php echo htmlspecialchars($cat['category_name']); ?></option>
+                                    <option value="<?php echo htmlspecialchars($cat['category_name']); ?>"> <?php echo htmlspecialchars($cat['category_name']); ?></option>
                                 <?php endwhile; ?>
                             </select>
                         </div>
                         <div>
-                            <label class="field-label">💵 Amount (₹) *</label>
+                            <label class="field-label"> Amount (₹) *</label>
                             <input type="number" step="0.01" name="amount" required placeholder="0.00" class="jewel-input">
                         </div>
                         <div>
-                            <label class="field-label">💳 Payment Method</label>
+                            <label class="field-label"> Payment Method</label>
                             <select name="payment_method" class="jewel-input">
-                                <option value="cash">💵 Cash</option>
-                                <option value="card">💳 Card</option>
-                                <option value="upi">📱 UPI</option>
+                                <option value="cash"> Cash</option>
+                                <option value="card"> Card</option>
+                                <option value="upi"> UPI</option>
                                 <option value="bank"> Bank Transfer</option>
                             </select>
                         </div>
                         <div>
-                            <label class="field-label">📜„ Bill No</label>
+                            <label class="field-label">„ Bill No</label>
                             <input type="text" name="bill_no" placeholder="BILL-001" class="jewel-input">
                         </div>
                         <div>
@@ -611,7 +611,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             <input type="text" name="vendor_name" placeholder="Supplier/Vendor" class="jewel-input">
                         </div>
                         <div class="sm:col-span-2">
-                            <label class="field-label">📜 Description</label>
+                            <label class="field-label"> Description</label>
                             <textarea name="description" rows="2" placeholder="Additional details..." class="jewel-input"></textarea>
                         </div>
                     </div>

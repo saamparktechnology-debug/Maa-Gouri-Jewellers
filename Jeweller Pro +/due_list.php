@@ -1132,19 +1132,19 @@ function sendWhatsAppReminder(name, mobile, invoiceNo, due, total) {
         // Fully paid
         msg = ' Dear ' + name + ',';
         msg += '\n\nThank you for your *complete payment* for Invoice *' + invoiceNo + '*.';
-        msg += '\n💰 Total Paid: ₹' + total.toFixed(2);
-        msg += '\n✅ Your account is fully cleared.';
-        msg += '\n\nThank you for trusting *MAA GOURI JEWELLERS*! 🌟\n📞 +91-8617536679';
+        msg += '\n Total Paid: ₹' + total.toFixed(2);
+        msg += '\n Your account is fully cleared.';
+        msg += '\n\nThank you for trusting *MAA GOURI JEWELLERS*! \n +91-8617536679';
     } else {
         // Part paid / still due
         var paid = total - due;
         msg = ' Dear ' + name + ',';
         msg += '\n\nThis is a gentle reminder regarding your pending due for Invoice *' + invoiceNo + '*.';
-        msg += '\n\n💳 Invoice Total: ₹' + total.toFixed(2);
-        msg += '\n✅ Amount Paid: ₹' + paid.toFixed(2);
-        msg += '\n🔴 *Remaining Due: ₹' + due.toFixed(2) + '*';
+        msg += '\n\n Invoice Total: ₹' + total.toFixed(2);
+        msg += '\n Amount Paid: ₹' + paid.toFixed(2);
+        msg += '\n *Remaining Due: ₹' + due.toFixed(2) + '*';
         msg += '\n\nKindly clear the pending amount at your earliest convenience.';
-        msg += '\n\nThank you,\n*MAA GOURI JEWELLERS*\n📞 +91-8617536679';
+        msg += '\n\nThank you,\n*MAA GOURI JEWELLERS*\n +91-8617536679';
     }
 
     var url = 'https://wa.me/' + cleaned + '?text=' + encodeURIComponent(msg);
@@ -1195,7 +1195,7 @@ function openHistoryModal(invoiceId, customerName) {
                 '<td style="padding:10px;border-bottom:1px solid #e5e7eb;color:#b91c1c;">₹' + parseFloat(row.previous_balance).toFixed(2) + '</td>' +
                 '<td style="padding:10px;border-bottom:1px solid #e5e7eb;font-weight:700;">₹' + parseFloat(row.new_balance).toFixed(2) + '</td>' +
                 '<td style="padding:10px;border-bottom:1px solid #e5e7eb;text-align:center;">' +
-                '<a href="' + receiptUrl + '" target="_blank" style="background:linear-gradient(135deg,#059669,#047857);color:#fff;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:bold;text-decoration:none;display:inline-block;box-shadow:0 2px 6px rgba(5,150,105,0.3);">🧾 Print Receipt</a>' +
+                '<a href="' + receiptUrl + '" target="_blank" style="background:linear-gradient(135deg,#059669,#047857);color:#fff;padding:5px 12px;border-radius:6px;font-size:11px;font-weight:bold;text-decoration:none;display:inline-block;box-shadow:0 2px 6px rgba(5,150,105,0.3);"> Print Receipt</a>' +
                 '</td>' +
                 '</tr>';
         });
@@ -1255,7 +1255,7 @@ function calcReceivePreview() {
     const box  = document.getElementById('rcvPendingBox');
     
     if (rcvAmt >= rawDue && rawDue > 0) {
-        disp.textContent = '₹0.00 (Fully Cleared! ✅)';
+        disp.textContent = '₹0.00 (Fully Cleared! )';
         disp.style.color = '#15803d';
         box.style.background = '#f0fdf4';
         box.style.borderColor = '#86efac';
@@ -1299,7 +1299,7 @@ function submitReceivePayment() {
     .then(res => {
         if (res.success) {
             closeReceiveModal();
-            showToast('✅ Payment received (₹' + amt.toFixed(2) + ' ' + mode + ')!');
+            showToast(' Payment received (₹' + amt.toFixed(2) + ' ' + mode + ')!');
             
             // Open printable invoice / payment receipt PDF (uses invoice_no to avoid "Invoice number missing" error)
             var printUrl = 'view_pdf.php?invoice_no=' + encodeURIComponent(res.invoice_no) + '&receipt=1&history_id=' + res.history_id;
@@ -1346,7 +1346,7 @@ function submitReceivePayment() {
     <div style="background:#fff;border-radius:12px;max-width:720px;width:100%;max-height:calc(100vh - 48px);box-shadow:0 18px 50px rgba(0,0,0,0.18);overflow:hidden;">
         <div style="padding:18px 22px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;">
             <h2 id="historyModalTitle" style="font-size:18px;margin:0;color:#111827;">History</h2>
-            <button type="button" onclick="closeHistoryModal()" style="border:none;background:none;font-size:18px;color:#6b7280;cursor:pointer;">✅</button>
+            <button type="button" onclick="closeHistoryModal()" style="border:none;background:none;font-size:18px;color:#6b7280;cursor:pointer;"></button>
         </div>
         <div id="historyModalBody" style="max-height:70vh;overflow:auto;padding:18px 22px;">Loading history...</div>
     </div>
@@ -1359,7 +1359,7 @@ function submitReceivePayment() {
             <div style="font-size:16px;font-weight:700;display:flex;align-items:center;gap:8px;">
                 <i class="fas fa-hand-holding-usd"></i> Receive Due Payment
             </div>
-            <button onclick="closeReceiveModal()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;">✅</button>
+            <button onclick="closeReceiveModal()" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer;"></button>
         </div>
         <div style="padding:20px;display:flex;flex-direction:column;gap:14px;">
             <!-- Customer & Inv Card -->
@@ -1389,11 +1389,11 @@ function submitReceivePayment() {
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                     <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #d68b16;border-radius:10px;cursor:pointer;background:#fff9ee;" id="lblModeCash">
                         <input type="radio" name="rcv_mode" value="Cash" checked onclick="selectRcvMode('Cash')">
-                        <span style="font-size:12px;font-weight:700;color:#7a4e0a;">💵 Cash</span>
+                        <span style="font-size:12px;font-weight:700;color:#7a4e0a;"> Cash</span>
                     </label>
                     <label style="display:flex;align-items:center;gap:8px;padding:10px;border:1.5px solid #cbd5e1;border-radius:10px;cursor:pointer;background:#fff;" id="lblModeUpi">
                         <input type="radio" name="rcv_mode" value="UPI" onclick="selectRcvMode('UPI')">
-                        <span style="font-size:12px;font-weight:700;color:#800020;">📱 UPI / Digital</span>
+                        <span style="font-size:12px;font-weight:700;color:#800020;"> UPI / Digital</span>
                     </label>
                 </div>
             </div>
@@ -1414,7 +1414,7 @@ function submitReceivePayment() {
             <div style="display:flex;gap:10px;margin-top:6px;">
                 <button type="button" onclick="closeReceiveModal()" style="flex:1;padding:10px;border-radius:10px;border:1px solid #cbd5e1;background:#f1f5f9;color:#475569;font-size:12px;font-weight:600;cursor:pointer;">Cancel</button>
                 <button type="button" onclick="submitReceivePayment()" style="flex:1.5;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg, #7a4e0a, #d68b16);color:#fff;font-size:12px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(214,139,22,0.3);">
-                    💾 Save &amp; Print Invoice
+                     Save &amp; Print Invoice
                 </button>
             </div>
         </div>
@@ -1440,11 +1440,11 @@ function submitReceivePayment() {
 
     if (!faLoaded()) {
         var map = {
-            'fa-user': '👤', 'fa-user-circle':'👤', 'fa-sign-out-alt':'🔓', 'fa-sign-in-alt':'🔍',
-            'fa-list':'📋', 'fa-arrow-left':'←', 'fa-check-circle':'✅', 'fa-save':'💾',
-            'fa-trash-alt':'🗑️', 'fa-spinner':'⏳', 'fa-check':'✅', 'fa-chart-bar':'📊',
-            'fa-receipt':'🧾','fa-chart-line':'📈','fa-boxes':'📜¦','fa-users':'👥','fa-gem':'💎',
-            'fa-book':'📜–','fa-weight-hanging':'⚖️','fa-coins':'🪙','fa-search':'🔍','fa-plus-circle':'➕'
+            'fa-user': '', 'fa-user-circle':'', 'fa-sign-out-alt':'', 'fa-sign-in-alt':'',
+            'fa-list':'', 'fa-arrow-left':'←', 'fa-check-circle':'', 'fa-save':'',
+            'fa-trash-alt':'', 'fa-spinner':'', 'fa-check':'', 'fa-chart-bar':'',
+            'fa-receipt':'','fa-chart-line':'','fa-boxes':'¦','fa-users':'','fa-gem':'',
+            'fa-book':'–','fa-weight-hanging':'','fa-coins':'','fa-search':'','fa-plus-circle':''
         };
 
         document.querySelectorAll('i[class*="fa-"]').forEach(function(i){

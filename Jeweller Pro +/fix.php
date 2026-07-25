@@ -25,7 +25,7 @@ mysqli_query($conn, "INSERT INTO users (name, mobile, email, password) VALUES
 </head>
 <body>
     <div class="card">
-        <h2>✅ Users Activated!</h2>
+        <h2> Users Activated!</h2>
         <div class="box">
             <strong>Subha Patra:</strong><br>
             subhapatra169@gmail.com / radhe#123<br><br>

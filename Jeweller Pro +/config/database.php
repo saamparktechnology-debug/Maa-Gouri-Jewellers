@@ -65,7 +65,7 @@ mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 if (!$conn) {
     $err_details = !empty($errors) ? implode(' | ', array_unique($errors)) : 'MySQL service unreachable';
     die("<div style='font-family:sans-serif;padding:30px;background:#fff5f5;border:1px solid #feb2b2;color:#9b2c2c;margin:40px auto;max-width:640px;border-radius:8px;'>"
-        . "<h3 style='margin-top:0;'>⚠️ Database Connection Failed</h3>"
+        . "<h3 style='margin-top:0;'> Database Connection Failed</h3>"
         . "<p><strong>Diagnostic details:</strong><br><code style='background:#edf2f7;padding:4px 8px;border-radius:4px;font-size:12px;'>" . htmlspecialchars($err_details) . "</code></p>"
         . "</div>");
 }

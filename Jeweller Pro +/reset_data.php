@@ -250,7 +250,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_reset']) && $
         <?php if ($success): ?>
         <!-- SUCCESS -->
         <div class="success-card">
-            <div style="font-size:64px;margin-bottom:16px;">✅</div>
+            <div style="font-size:64px;margin-bottom:16px;"></div>
             <h2 style="color:#065f46;font-size:22px;font-weight:700;margin-bottom:8px;">Data Reset Complete</h2>
             <p style="color:#047857;font-size:14px;margin-bottom:24px;"><?php echo htmlspecialchars($message); ?></p>
             <p style="color:#065f46;font-size:13px;margin-bottom:24px;">All counters now show ₹0.00 · All records cleared · User login preserved.</p>
@@ -268,7 +268,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_reset']) && $
         <!-- RESET FORM -->
         <div class="danger-card">
             <div style="text-align:center;margin-bottom:28px;">
-                <div style="font-size:56px;margin-bottom:12px;">⚠️</div>
+                <div style="font-size:56px;margin-bottom:12px;"></div>
                 <h2 style="color:#7f1d1d;font-size:24px;font-weight:700;margin-bottom:6px;">Reset All Business Data</h2>
                 <p style="color:#6b7280;font-size:14px;">This will permanently erase all records listed below and cannot be undone.</p>
             </div>
@@ -337,7 +337,7 @@ function validateReset() {
         alert('Please type RESET exactly to confirm.');
         return false;
     }
-    return confirm('⚠️ FINAL WARNING: This will delete ALL business data permanently. This CANNOT be undone.\n\nAre you absolutely sure?');
+    return confirm(' FINAL WARNING: This will delete ALL business data permanently. This CANNOT be undone.\n\nAre you absolutely sure?');
 }
 </script>
 

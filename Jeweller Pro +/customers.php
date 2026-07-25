@@ -60,7 +60,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_customer'])) {
 
     $chk = mysqli_query($conn, "SELECT id FROM customers WHERE mobile = '$mobile'");
     if(mysqli_num_rows($chk) > 0) {
-        echo "<script>alert('⚠️ Customer with this mobile number already exists!'); window.location.href='customers.php';<\/script>";
+        echo "<script>alert(' Customer with this mobile number already exists!'); window.location.href='customers.php';<\/script>";
         exit();
     }
 
@@ -72,7 +72,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_customer'])) {
     }
 
     if(mysqli_query($conn, "INSERT INTO customers (name, mobile, email, address, gst_number, created_at) VALUES ('$name', '$mobile', '$email', '$address', '$gst', NOW())")) {
-        echo "<script>alert('✅ Customer added successfully!'); window.location.href='customers.php';<\/script>";
+        echo "<script>alert(' Customer added successfully!'); window.location.href='customers.php';<\/script>";
         exit();
     } else {
         $error_msg = "Error adding customer: " . mysqli_error($conn);
@@ -89,7 +89,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_customer'])) {
     $gst     = mysqli_real_escape_string($conn, strtoupper(trim($_POST['gst'] ?? '')));
 
     if(mysqli_query($conn, "UPDATE customers SET name='$name', mobile='$mobile', email='$email', address='$address', gst_number='$gst' WHERE id=$id")) {
-        echo "<script>alert('✅ Customer updated successfully!'); window.location.href='customers.php';</script>";
+        echo "<script>alert(' Customer updated successfully!'); window.location.href='customers.php';</script>";
         exit();
     } else {
         $error_msg = "Error updating customer: " . mysqli_error($conn);
@@ -105,7 +105,7 @@ if(isset($_GET['delete_id'])) {
         mysqli_query($conn, "DELETE FROM invoices WHERE customer_mobile = '{$customer['mobile']}'");
     }
     mysqli_query($conn, "DELETE FROM customers WHERE id = $delete_id");
-    echo "<script>alert('🗑️ Customer deleted successfully!'); window.location.href='customers.php';</script>";
+    echo "<script>alert(' Customer deleted successfully!'); window.location.href='customers.php';</script>";
     exit();
 }
 
@@ -467,10 +467,10 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(214,139,22,0.015) 3px,rgba(214,139,22,0.015) 4px);pointer-events:none;z-index:1;"></div>
 
     <!-- Corner ornaments -->
-    <!-- <div style="position:absolute;top:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite;">✅</div>
-    <div style="position:absolute;top:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 1s;">✅</div>
-    <div style="position:absolute;bottom:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 2s;">✅</div>
-    <div style="position:absolute;bottom:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 3s;">✅</div> -->
+    <!-- <div style="position:absolute;top:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite;"></div>
+    <div style="position:absolute;top:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 1s;"></div>
+    <div style="position:absolute;bottom:28px;left:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 2s;"></div>
+    <div style="position:absolute;bottom:28px;right:28px;color:rgba(214,139,22,0.18);font-size:72px;animation:ornFloat 4s ease-in-out infinite 3s;"></div> -->
 
     <!-- Stars / sparkles container -->
     <div id="loaderStars" style="position:absolute;inset:0;pointer-events:none;z-index:2;"></div>
@@ -606,9 +606,9 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             <div class="filter-wrap flex flex-col md:flex-row justify-between items-center gap-4">
                 <!-- Filter buttons -->
                 <div class="flex flex-wrap gap-2">
-                    <a href="?filter=all"        class="btn-filter <?php echo $filter=='all'        ? 'active' : ''; ?>">👑 All Customers</a>
-                    <a href="?filter=this_month" class="btn-filter <?php echo $filter=='this_month' ? 'active' : ''; ?>">📅 This Month</a>
-                    <a href="?filter=this_year"  class="btn-filter <?php echo $filter=='this_year'  ? 'active' : ''; ?>">🎯 This Year</a>
+                    <a href="?filter=all"        class="btn-filter <?php echo $filter=='all'        ? 'active' : ''; ?>"> All Customers</a>
+                    <a href="?filter=this_month" class="btn-filter <?php echo $filter=='this_month' ? 'active' : ''; ?>"> This Month</a>
+                    <a href="?filter=this_year"  class="btn-filter <?php echo $filter=='this_year'  ? 'active' : ''; ?>"> This Year</a>
                 </div>
 
                 <!-- Search -->
@@ -670,16 +670,16 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             <td class="text-sm font-semibold" style="color:#d68b16;">#<?php echo $customer['id']; ?></td>
                             <td>
                                 <div class="font-semibold" style="color:#800020;cursor:pointer;" onclick="openOrderHistory('<?php echo htmlspecialchars($mob, ENT_QUOTES); ?>', '<?php echo htmlspecialchars($customer['name'], ENT_QUOTES); ?>')">
-                                    💎 <span style="text-decoration:underline dotted;text-underline-offset:3px;"><?php echo htmlspecialchars($customer['name']); ?></span>
+                                     <span style="text-decoration:underline dotted;text-underline-offset:3px;"><?php echo htmlspecialchars($customer['name']); ?></span>
                                     <i class="fas fa-receipt ml-1" style="font-size:10px;color:#d68b16;" title="View Orders"></i>
                                 </div>
                                 <?php if(!empty($customer['gst_number'])): ?>
-                                    <div class="text-xs mt-0.5" style="color:#6d28d9;">🏛️ GST: <?php echo htmlspecialchars($customer['gst_number']); ?></div>
+                                    <div class="text-xs mt-0.5" style="color:#6d28d9;"> GST: <?php echo htmlspecialchars($customer['gst_number']); ?></div>
                                 <?php endif; ?>
                             </td>
-                            <td class="text-sm" style="color:#374151;">📱 <?php echo htmlspecialchars($mob); ?></td>
+                            <td class="text-sm" style="color:#374151;"> <?php echo htmlspecialchars($mob); ?></td>
                             <td class="text-sm hidden sm:table-cell" style="color:#6b7280;"><?php echo htmlspecialchars($customer['email'] ?? 'N/A'); ?></td>
-                            <td class="text-sm" style="color:#374151;">📅 <?php echo date('d M Y', strtotime($customer['created_at'])); ?></td>
+                            <td class="text-sm" style="color:#374151;"> <?php echo date('d M Y', strtotime($customer['created_at'])); ?></td>
                             <td class="text-center">
                                 <div class="font-bold text-sm" style="color:#800020;"><?php echo $order_count; ?> orders</div>
                                 <div class="text-xs" style="color:#059669;">₹<?php echo number_format($total_amt, 2); ?></div>
@@ -692,7 +692,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                     <button onclick='openEditModal(<?php echo htmlspecialchars(json_encode($customer), ENT_QUOTES, "UTF-8"); ?>)' class="btn-edit">
                                         <i class="fas fa-edit"></i> Edit
                                     </button>
-                                    <a href="?delete_id=<?php echo $customer['id']; ?>" onclick="return confirm('⚠️ Delete this customer?')" class="btn-delete">
+                                    <a href="?delete_id=<?php echo $customer['id']; ?>" onclick="return confirm(' Delete this customer?')" class="btn-delete">
                                         <i class="fas fa-trash"></i> Del
                                     </a>
                                 </div>
@@ -728,23 +728,23 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         <h3 class="text-xl font-bold gold-font"><i class="fas fa-user-plus mr-2" style="color:#d68b16;"></i> Add New Customer</h3>
         <form method="POST">
             <div class="mb-3">
-                <label>👑 Full Name <span style="color:#ef4444;">*</span></label>
+                <label> Full Name <span style="color:#ef4444;">*</span></label>
                 <input type="text" name="name" required placeholder="Customer name..." class="jewel-input">
             </div>
             <div class="mb-3">
-                <label>📱 Mobile Number <span style="color:#ef4444;">*</span></label>
+                <label> Mobile Number <span style="color:#ef4444;">*</span></label>
                 <input type="tel" name="mobile" required placeholder="10-digit mobile..." class="jewel-input">
             </div>
             <div class="mb-3">
-                <label>📜§ Email Address</label>
+                <label>§ Email Address</label>
                 <input type="email" name="email" placeholder="email@example.com" class="jewel-input">
             </div>
             <div class="mb-3">
-                <label>📜 Address</label>
+                <label> Address</label>
                 <textarea name="address" rows="2" placeholder="Customer address..." class="jewel-input"></textarea>
             </div>
             <div class="mb-4">
-                <label>🏛️ GST Number <span style="color:#9ca3af;font-weight:400;">(Optional)</span></label>
+                <label> GST Number <span style="color:#9ca3af;font-weight:400;">(Optional)</span></label>
                 <input type="text" name="gst" placeholder="e.g. 22AAAAA0000A1Z5" maxlength="15" class="jewel-input" oninput="this.value=this.value.toUpperCase()">
                 <p class="text-xs mt-1" style="color:#9ca3af;">15-character GST Identification Number</p>
             </div>
@@ -767,23 +767,23 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         <form method="POST">
             <input type="hidden" name="customer_id" id="editCustomerId">
             <div class="mb-3">
-                <label>👑 Full Name <span style="color:#ef4444;">*</span></label>
+                <label> Full Name <span style="color:#ef4444;">*</span></label>
                 <input type="text" name="name" id="editName" required class="jewel-input">
             </div>
             <div class="mb-3">
-                <label>📱 Mobile Number <span style="color:#ef4444;">*</span></label>
+                <label> Mobile Number <span style="color:#ef4444;">*</span></label>
                 <input type="tel" name="mobile" id="editMobile" required class="jewel-input">
             </div>
             <div class="mb-3">
-                <label>📜§ Email Address</label>
+                <label>§ Email Address</label>
                 <input type="email" name="email" id="editEmail" class="jewel-input">
             </div>
             <div class="mb-3">
-                <label>📜 Address</label>
+                <label> Address</label>
                 <textarea name="address" id="editAddress" rows="2" class="jewel-input"></textarea>
             </div>
             <div class="mb-4">
-                <label>🏛️ GST Number <span style="color:#9ca3af;font-weight:400;">(Optional)</span></label>
+                <label> GST Number <span style="color:#9ca3af;font-weight:400;">(Optional)</span></label>
                 <input type="text" name="gst" id="editGst" placeholder="e.g. 22AAAAA0000A1Z5" maxlength="15" class="jewel-input" oninput="this.value=this.value.toUpperCase()">
             </div>
             <div class="flex gap-3">
@@ -876,7 +876,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             <div style="display:flex;align-items:center;gap:8px;">
                 <div id="ohSummaryBadge" style="background:rgba(255,255,255,0.2);color:#fff;font-size:11px;font-weight:700;padding:4px 14px;border-radius:20px;"></div>
                 <button id="ohDownloadBtn" onclick="downloadStatementPDF()" style="display:none;background:rgba(255,255,255,0.22);border:1.5px solid rgba(255,255,255,0.5);color:#fff;font-size:11px;font-weight:700;padding:5px 13px;border-radius:20px;cursor:pointer;gap:5px;align-items:center;">
-                    ⬇️ PDF
+                     PDF
                 </button>
                 <button onclick="closeOrderHistory()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;font-size:16px;cursor:pointer;line-height:1;">&times;</button>
             </div>
@@ -928,8 +928,8 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 <script>
 function openOrderHistory(mobile, name) {
     document.getElementById('orderHistoryModal').style.display = 'block';
-    document.getElementById('ohCustomerName').textContent = '💎 ' + name;
-    document.getElementById('ohCustomerMobile').textContent = '📱 ' + mobile;
+    document.getElementById('ohCustomerName').textContent = ' ' + name;
+    document.getElementById('ohCustomerMobile').textContent = ' ' + mobile;
     document.getElementById('ohLoading').style.display = 'block';
     document.getElementById('ohOrdersList').style.display = 'none';
     document.getElementById('ohEmpty').style.display = 'none';
@@ -968,19 +968,19 @@ function openOrderHistory(mobile, name) {
             let html = '';
             data.orders.forEach(o => {
                 const statusClass = o.payment_status === 'paid' ? 'paid' : (o.payment_status === 'part' ? 'part' : 'unpaid');
-                const statusLabel = o.payment_status === 'paid' ? '✅ Paid' : (o.payment_status === 'part' ? '⚠️ Part Paid' : '❌ Unpaid');
+                const statusLabel = o.payment_status === 'paid' ? ' Paid' : (o.payment_status === 'part' ? ' Part Paid' : ' Unpaid');
                 const date = new Date(o.created_at).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'});
                 html += `<div class="oh-order-card">
                     <div class="oh-order-head">
                         <div>
                             <span style="font-weight:700;color:#7a4e0a;font-size:13px;">${o.invoice_no}</span>
-                            <span style="color:#9ca3af;font-size:11px;margin-left:8px;">📅 ${date}</span>
+                            <span style="color:#9ca3af;font-size:11px;margin-left:8px;"> ${date}</span>
                         </div>
                         <div style="display:flex;align-items:center;gap:8px;">
                             <span class="oh-badge ${statusClass}">${statusLabel}</span>
                             <a href="view_pdf.php?invoice_no=${encodeURIComponent(o.invoice_no)}" target="_blank"
                                style="background:linear-gradient(135deg,#800020,#d68b16);color:#fff;font-size:10px;font-weight:700;padding:3px 12px;border-radius:20px;text-decoration:none;">
-                               🖨️ Print
+                                Print
                             </a>
                         </div>
                     </div>`;
@@ -1003,7 +1003,7 @@ function openOrderHistory(mobile, name) {
 
                 // Footer
                 html += `<div style="background:#f9f5eb;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:4px;font-size:12px;">
-                    <span style="color:#6b7280;">💳 ${o.payment_method || 'Cash'}</span>
+                    <span style="color:#6b7280;"> ${o.payment_method || 'Cash'}</span>
                     <div style="display:flex;gap:16px;">
                         <span style="color:#059669;font-weight:700;">Total: ₹${parseFloat(o.total_amount).toLocaleString('en-IN',{minimumFractionDigits:2})}</span>
                         ${parseFloat(o.balance_amount) > 0 ? '<span style="color:#dc2626;font-weight:700;">Due: ₹'+parseFloat(o.balance_amount).toLocaleString('en-IN',{minimumFractionDigits:2})+'</span>' : ''}
@@ -1035,8 +1035,8 @@ document.addEventListener('keydown', function(e) {
 function downloadStatementPDF() {
     const d = window._ohData;
     if(!d) return;
-    const name   = document.getElementById('ohCustomerName').textContent.replace('💎 ','').trim();
-    const mobile = document.getElementById('ohCustomerMobile').textContent.replace('📱 ','').trim();
+    const name   = document.getElementById('ohCustomerName').textContent.replace(' ','').trim();
+    const mobile = document.getElementById('ohCustomerMobile').textContent.replace(' ','').trim();
 
     // Use jsPDF (loaded below)
     const { jsPDF } = window.jspdf;

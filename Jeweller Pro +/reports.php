@@ -174,7 +174,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_delete_invoice'
             echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($redirect_url) . '">';
             echo '<script>window.location.replace(' . json_encode($redirect_url) . ');<\/script>';
             echo '</head><body style="background:#fffbf4;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">';
-            echo '<p style="color:#7a4e0a;font-weight:600;">✅ Done! Redirecting...</p>';
+            echo '<p style="color:#7a4e0a;font-weight:600;"> Done! Redirecting...</p>';
             echo '</body></html>';
             exit();
         }
@@ -378,7 +378,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_reset_report'])
             echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($redirect_url) . '">';
             echo '<script>window.location.replace(' . json_encode($redirect_url) . ');<\/script>';
             echo '</head><body style="background:#fffbf4;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">';
-            echo '<p style="color:#7a4e0a;font-weight:600;">✅ Done! Redirecting...</p>';
+            echo '<p style="color:#7a4e0a;font-weight:600;"> Done! Redirecting...</p>';
             echo '</body></html>';
             exit();
         }
@@ -893,7 +893,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                     foreach($products_array as $product): ?>
                     <div>
                         <div class="flex justify-between mb-1">
-                            <span class="text-sm font-semibold" style="color:#800020;">💎 <?php echo htmlspecialchars($product['name']); ?></span>
+                            <span class="text-sm font-semibold" style="color:#800020;"> <?php echo htmlspecialchars($product['name']); ?></span>
                             <span class="text-sm font-bold" style="color:#d68b16;"><?php echo $product['sold']; ?> units</span>
                         </div>
                         <div class="progress-bar-bg">
@@ -918,38 +918,38 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 <!-- Paid -->
                 <div class="stat-card-paid p-4">
                     <div class="flex justify-between items-start mb-2">
-                        <span class="font-bold text-sm" style="color:#166534;">✅ Full Paid</span>
+                        <span class="font-bold text-sm" style="color:#166534;"> Full Paid</span>
                         <span class="text-2xl font-black" style="color:#166534;"><?php echo $pay_summary['paid_count']; ?></span>
                     </div>
                     <p class="font-bold text-lg" style="color:#166534;">₹<?php echo number_format($pay_summary['paid_amt'],2); ?></p>
                     <p class="text-xs mt-1" style="color:#15803d;">Total collected (full payment)</p>
-                    <button onclick="toggleDetail('detailPaid')" class="toggle-detail-btn">👁️ View Customers</button>
+                    <button onclick="toggleDetail('detailPaid')" class="toggle-detail-btn"> View Customers</button>
                 </div>
                 <!-- Part -->
                 <div class="stat-card-part p-4">
                     <div class="flex justify-between items-start mb-2">
-                        <span class="font-bold text-sm" style="color:#9a3412;">⏳ Part Payment</span>
+                        <span class="font-bold text-sm" style="color:#9a3412;"> Part Payment</span>
                         <span class="text-2xl font-black" style="color:#9a3412;"><?php echo $pay_summary['part_count']; ?></span>
                     </div>
                     <p class="font-bold text-lg" style="color:#9a3412;">₹<?php echo number_format($pay_summary['part_amt'],2); ?></p>
-                    <p class="text-xs mt-1" style="color:#c2410c;">⚠️ Balance: ₹<?php echo number_format($pay_summary['part_balance'],2); ?></p>
-                    <button onclick="toggleDetail('detailPart')" class="toggle-detail-btn">👁️ View Customers</button>
+                    <p class="text-xs mt-1" style="color:#c2410c;"> Balance: ₹<?php echo number_format($pay_summary['part_balance'],2); ?></p>
+                    <button onclick="toggleDetail('detailPart')" class="toggle-detail-btn"> View Customers</button>
                 </div>
                 <!-- Unpaid -->
                 <div class="stat-card-unpaid p-4">
                     <div class="flex justify-between items-start mb-2">
-                        <span class="font-bold text-sm" style="color:#9f1239;">❌ Advanced (Credit)</span>
+                        <span class="font-bold text-sm" style="color:#9f1239;"> Advanced (Credit)</span>
                         <span class="text-2xl font-black" style="color:#9f1239;"><?php echo $pay_summary['unpaid_count']; ?></span>
                     </div>
                     <p class="font-bold text-lg" style="color:#9f1239;">₹<?php echo number_format($pay_summary['unpaid_amt'],2); ?></p>
-                    <p class="text-xs mt-1" style="color:#be123c;">⚠️ Total due: ₹<?php echo number_format($pay_summary['unpaid_balance'],2); ?></p>
-                    <button onclick="toggleDetail('detailUnpaid')" class="toggle-detail-btn">👁️ View Customers</button>
+                    <p class="text-xs mt-1" style="color:#be123c;"> Total due: ₹<?php echo number_format($pay_summary['unpaid_balance'],2); ?></p>
+                    <button onclick="toggleDetail('detailUnpaid')" class="toggle-detail-btn"> View Customers</button>
                 </div>
             </div>
 
             <!-- Paid detail -->
             <div id="detailPaid" class="detail-collapse mb-3">
-                <h4 class="font-bold text-sm mb-3" style="color:#166534;">✅ Full Paid Customers</h4>
+                <h4 class="font-bold text-sm mb-3" style="color:#166534;"> Full Paid Customers</h4>
                 <?php if(empty($paid_rows)): ?>
                     <p class="text-sm" style="color:#7a4e0a;">No paid customers found.</p>
                 <?php else: ?>
@@ -976,14 +976,14 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
 
             <!-- Part detail -->
             <div id="detailPart" class="detail-collapse mb-3">
-                <h4 class="font-bold text-sm mb-3" style="color:#c2410c;">⏳ Part Payment — Balance Remaining</h4>
+                <h4 class="font-bold text-sm mb-3" style="color:#c2410c;"> Part Payment — Balance Remaining</h4>
                 <?php if(empty($part_rows)): ?>
                     <p class="text-sm" style="color:#7a4e0a;">No part payment customers found.</p>
                 <?php else: ?>
                 <div class="overflow-x-auto">
                     <table class="report-table">
                         <thead><tr>
-                            <th>Customer</th><th>Mobile</th><th class="text-right">Bill Total</th><th class="text-right">Paid</th><th class="text-right">⚠️ Balance</th><th class="text-center">Date</th><th class="text-center">Invoice</th><th class="text-center">Action</th>
+                            <th>Customer</th><th>Mobile</th><th class="text-right">Bill Total</th><th class="text-right">Paid</th><th class="text-right"> Balance</th><th class="text-center">Date</th><th class="text-center">Invoice</th><th class="text-center">Action</th>
                         </tr></thead>
                         <tbody>
                         <?php foreach($part_rows as $r): ?>
@@ -996,8 +996,8 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                                 <td class="text-center"><?php echo date('d M Y', strtotime($r['created_at'])); ?></td>
                                 <td class="text-center font-mono text-xs" style="color:#d68b16;"><?php echo htmlspecialchars($r['invoice_no']); ?></td>
                                 <td class="text-center">
-                                    <button onclick='sendReminder(<?php echo json_encode($r['invoice_no']); ?>, <?php echo json_encode($r['customer_name']); ?>, <?php echo json_encode($r['customer_mobile']); ?>, <?php echo floatval($r['balance_amount']); ?>, <?php echo json_encode($r['customer_email'] ?? ''); ?>)' class="btn-jewel" style="padding:5px 8px;font-size:11px;border-radius:16px;margin-right:6px;">🔔 Reminder</button>
-                                    <button onclick='markAsPaid(<?php echo json_encode($r['invoice_no']); ?>, <?php echo floatval($r['balance_amount']); ?>)' class="btn-jewel" style="background:linear-gradient(135deg,#16a34a,#15803d);padding:5px 8px;font-size:11px;border-radius:16px;">✅ Mark Paid</button>
+                                    <button onclick='sendReminder(<?php echo json_encode($r['invoice_no']); ?>, <?php echo json_encode($r['customer_name']); ?>, <?php echo json_encode($r['customer_mobile']); ?>, <?php echo floatval($r['balance_amount']); ?>, <?php echo json_encode($r['customer_email'] ?? ''); ?>)' class="btn-jewel" style="padding:5px 8px;font-size:11px;border-radius:16px;margin-right:6px;"> Reminder</button>
+                                    <button onclick='markAsPaid(<?php echo json_encode($r['invoice_no']); ?>, <?php echo floatval($r['balance_amount']); ?>)' class="btn-jewel" style="background:linear-gradient(135deg,#16a34a,#15803d);padding:5px 8px;font-size:11px;border-radius:16px;"> Mark Paid</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -1009,14 +1009,14 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
 
             <!-- Unpaid detail -->
             <div id="detailUnpaid" class="detail-collapse">
-                <h4 class="font-bold text-sm mb-3" style="color:#be123c;">❌ Unpaid — Full Payment Pending</h4>
+                <h4 class="font-bold text-sm mb-3" style="color:#be123c;"> Unpaid — Full Payment Pending</h4>
                 <?php if(empty($unpaid_rows)): ?>
-                    <p class="text-sm" style="color:#16a34a;">No unpaid customers! 🎉</p>
+                    <p class="text-sm" style="color:#16a34a;">No unpaid customers! </p>
                 <?php else: ?>
                 <div class="overflow-x-auto">
                     <table class="report-table">
                         <thead><tr>
-                            <th>Customer</th><th>Mobile</th><th class="text-right">Bill Total</th><th class="text-right">⚠️ Due</th><th class="text-center">Date</th><th class="text-center">Invoice</th>
+                            <th>Customer</th><th>Mobile</th><th class="text-right">Bill Total</th><th class="text-right"> Due</th><th class="text-center">Date</th><th class="text-center">Invoice</th>
                         </tr></thead>
                         <tbody>
                         <?php foreach($unpaid_rows as $r): ?>
@@ -1044,7 +1044,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                     <?php foreach(['filter_from','filter_to','filter_name','filter_status','filter_gst'] as $fk) {
                         if(!empty($_GET[$fk])) echo '<input type="hidden" name="'.$fk.'" value="'.htmlspecialchars($_GET[$fk]).'">';
                     } ?>
-                    <label class="filter-label whitespace-nowrap">📅 Month:</label>
+                    <label class="filter-label whitespace-nowrap"> Month:</label>
                     <input type="month" name="gst_month" value="<?php echo htmlspecialchars($gst_month); ?>" class="jewel-input" style="width:160px;">
                     <button type="submit" class="btn-jewel" style="padding:8px 16px;font-size:12px;">Go</button>
                     <a href="reports.php" class="btn-jewel" style="padding:8px 14px;font-size:12px;background:linear-gradient(135deg,#6b7280,#4b5563);">All Time</a>
@@ -1064,30 +1064,30 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
             $month_label = $gst_month ? date('F Y', strtotime($gst_month.'-01')) : 'All Time';
             ?>
 
-            <p class="text-xs mb-4" style="color:#7a4e0a;">📜Œ Showing data for: <strong style="color:#800020;"><?php echo $month_label; ?></strong></p>
+            <p class="text-xs mb-4" style="color:#7a4e0a;">Œ Showing data for: <strong style="color:#800020;"><?php echo $month_label; ?></strong></p>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                 <!-- GST Card -->
                 <div class="stat-card-gst p-5">
                     <div class="flex justify-between items-center mb-3">
-                        <span class="font-bold text-sm" style="color:#134e4a;">📜„ GST Bills</span>
+                        <span class="font-bold text-sm" style="color:#134e4a;">„ GST Bills</span>
                         <span class="text-2xl font-black" style="color:#0f766e;"><?php echo $gst_summary['gst_count']; ?> bills</span>
                     </div>
                     <div class="space-y-2 text-sm">
                         <div class="flex justify-between py-1" style="border-bottom:1px solid rgba(20,184,166,0.2);">
-                            <span style="color:#0d9488;">💰 Taxable Amount</span>
+                            <span style="color:#0d9488;"> Taxable Amount</span>
                             <strong style="color:#134e4a;">₹<?php echo number_format($taxable,2); ?></strong>
                         </div>
                         <div class="flex justify-between py-1" style="border-bottom:1px solid rgba(20,184,166,0.2);">
-                            <span style="color:#0d9488;">📊 CGST (1.5%)</span>
+                            <span style="color:#0d9488;"> CGST (1.5%)</span>
                             <strong style="color:#0f766e;">₹<?php echo number_format($cgst,2); ?></strong>
                         </div>
                         <div class="flex justify-between py-1" style="border-bottom:1px solid rgba(20,184,166,0.2);">
-                            <span style="color:#0d9488;">📊 SGST (1.5%)</span>
+                            <span style="color:#0d9488;"> SGST (1.5%)</span>
                             <strong style="color:#0f766e;">₹<?php echo number_format($sgst,2); ?></strong>
                         </div>
                         <div class="flex justify-between py-2 px-3 rounded-xl mt-1" style="background:rgba(52,211,153,0.15);">
-                            <span class="font-bold" style="color:#134e4a;">✅ Total GST</span>
+                            <span class="font-bold" style="color:#134e4a;"> Total GST</span>
                             <strong class="text-lg" style="color:#0f766e;">₹<?php echo number_format($actual_gst,2); ?></strong>
                         </div>
                     </div>
@@ -1095,20 +1095,20 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 <!-- Non-GST Card -->
                 <div class="stat-card-nongst p-5">
                     <div class="flex justify-between items-center mb-3">
-                        <span class="font-bold text-sm" style="color:#475569;">📋 Non-GST Bills</span>
+                        <span class="font-bold text-sm" style="color:#475569;"> Non-GST Bills</span>
                         <span class="text-2xl font-black" style="color:#334155;"><?php echo $gst_summary['nongst_count']; ?> bills</span>
                     </div>
                     <div class="space-y-2 text-sm">
                         <div class="flex justify-between py-1" style="border-bottom:1px solid #e2e8f0;">
-                            <span style="color:#64748b;">💰 Total Sale Amount</span>
+                            <span style="color:#64748b;"> Total Sale Amount</span>
                             <strong style="color:#334155;">₹<?php echo number_format($gst_summary['nongst_amt'],2); ?></strong>
                         </div>
                         <div class="flex justify-between py-1" style="border-bottom:1px solid #e2e8f0;">
-                            <span style="color:#64748b;">📊 Tax Rate</span>
+                            <span style="color:#64748b;"> Tax Rate</span>
                             <strong style="color:#475569;">0% (No GST)</strong>
                         </div>
                         <div class="flex justify-between py-2 px-3 rounded-xl mt-1" style="background:rgba(100,116,139,0.1);">
-                            <span class="font-bold" style="color:#475569;">❌ GST Collected</span>
+                            <span class="font-bold" style="color:#475569;"> GST Collected</span>
                             <strong class="text-lg" style="color:#334155;">₹0.00</strong>
                         </div>
                     </div>
@@ -1118,7 +1118,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
             <div class="gst-total-box">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div>
-                        <p class="font-bold text-sm" style="color:#0d9488;">🏛️ Total GST Payable to Govt — <?php echo $month_label; ?></p>
+                        <p class="font-bold text-sm" style="color:#0d9488;"> Total GST Payable to Govt — <?php echo $month_label; ?></p>
                         <p class="text-xs mt-1" style="color:#14b8a6;">CGST ₹<?php echo number_format($cgst,2); ?> + SGST ₹<?php echo number_format($sgst,2); ?></p>
                     </div>
                     <p class="text-2xl font-black" style="color:#0f766e;">₹<?php echo number_format($actual_gst,2); ?></p>
@@ -1138,36 +1138,36 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
             <!-- Filter bar -->
             <form method="GET" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-5 p-4 rounded-xl" style="background:#fdf6e3;border:1px solid rgba(181,115,14,0.15);">
                 <div>
-                    <label class="filter-label">📅 From Date</label>
+                    <label class="filter-label"> From Date</label>
                     <input type="date" name="filter_from" value="<?php echo htmlspecialchars($filter_from); ?>" class="jewel-input w-full">
                 </div>
                 <div>
-                    <label class="filter-label">📅 To Date</label>
+                    <label class="filter-label"> To Date</label>
                     <input type="date" name="filter_to" value="<?php echo htmlspecialchars($filter_to); ?>" class="jewel-input w-full">
                 </div>
                 <div>
-                    <label class="filter-label">🔍 Name / Mobile</label>
+                    <label class="filter-label"> Name / Mobile</label>
                     <input type="text" name="filter_name" value="<?php echo htmlspecialchars($filter_name); ?>" placeholder="Search..." class="jewel-input w-full">
                 </div>
                 <div>
-                    <label class="filter-label">💳 Payment</label>
+                    <label class="filter-label"> Payment</label>
                     <select name="filter_status" class="jewel-input w-full">
                         <option value="" <?php if(!$filter_status) echo 'selected'; ?>>All</option>
-                        <option value="paid"   <?php if($filter_status==='paid')   echo 'selected'; ?>>✅ Paid</option>
-                        <option value="part"   <?php if($filter_status==='part')   echo 'selected'; ?>>⏳ Part</option>
-                        <option value="unpaid" <?php if($filter_status==='unpaid') echo 'selected'; ?>>❌ Unpaid</option>
+                        <option value="paid"   <?php if($filter_status==='paid')   echo 'selected'; ?>> Paid</option>
+                        <option value="part"   <?php if($filter_status==='part')   echo 'selected'; ?>> Part</option>
+                        <option value="unpaid" <?php if($filter_status==='unpaid') echo 'selected'; ?>> Unpaid</option>
                     </select>
                 </div>
                 <div>
-                    <label class="filter-label">🧾 GST Type</label>
+                    <label class="filter-label"> GST Type</label>
                     <select name="filter_gst" class="jewel-input w-full">
                         <option value="" <?php if(!$filter_gst) echo 'selected'; ?>>All</option>
-                        <option value="gst"     <?php if($filter_gst==='gst')     echo 'selected'; ?>>📜„ GST (3%)</option>
-                        <option value="non_gst" <?php if($filter_gst==='non_gst') echo 'selected'; ?>>📋 Non-GST</option>
+                        <option value="gst"     <?php if($filter_gst==='gst')     echo 'selected'; ?>>„ GST (3%)</option>
+                        <option value="non_gst" <?php if($filter_gst==='non_gst') echo 'selected'; ?>> Non-GST</option>
                     </select>
                 </div>
                 <div class="col-span-2 sm:col-span-3 lg:col-span-5 flex gap-3">
-                    <button type="submit" class="btn-jewel" style="padding:8px 20px;font-size:12px;">🔍 Filter</button>
+                    <button type="submit" class="btn-jewel" style="padding:8px 20px;font-size:12px;"> Filter</button>
                     <a href="reports.php" class="btn-jewel" style="padding:8px 16px;font-size:12px;background:linear-gradient(135deg,#6b7280,#4b5563);">↩ Clear</a>
                 </div>
             </form>
@@ -1221,20 +1221,20 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                         $sgst_amt  = round($gst_amt/2, 2);
                         $gstin     = trim($bill['customer_gstin'] ?? '');
                         $ps = $bill['payment_status'];
-                        if ($ps === 'paid')        $status_badge = '<span class="badge-paid">✅ Paid</span>';
-                        elseif ($ps === 'part')    $status_badge = '<span class="badge-part">⏳ Part</span>';
-                        elseif ($ps === 'unpaid')  $status_badge = '<span class="badge-unpaid">❌ Unpaid</span>';
+                        if ($ps === 'paid')        $status_badge = '<span class="badge-paid"> Paid</span>';
+                        elseif ($ps === 'part')    $status_badge = '<span class="badge-part"> Part</span>';
+                        elseif ($ps === 'unpaid')  $status_badge = '<span class="badge-unpaid"> Unpaid</span>';
                         else                       $status_badge = htmlspecialchars($ps);
                     ?>
                     <tr>
                         <td style="color:#7a4e0a;"><?php echo $i+1; ?></td>
                         <td class="font-mono text-xs" style="color:#d68b16;"><?php echo htmlspecialchars($bill['invoice_no']); ?></td>
 
-                        <!-- ★ UPDATED: Customer name + GSTIN tag below -->
+                        <!--  UPDATED: Customer name + GSTIN tag below -->
                         <td>
                             <span class="font-semibold" style="color:#800020;"><?php echo htmlspecialchars($bill['customer_name']); ?></span>
                             <?php if($gstin !== ''): ?>
-                                <br><span class="gstin-tag">🧾 <?php echo htmlspecialchars($gstin); ?></span>
+                                <br><span class="gstin-tag"> <?php echo htmlspecialchars($gstin); ?></span>
                             <?php endif; ?>
                         </td>
 
@@ -1246,13 +1246,13 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                         </td>
                         <td class="text-center">
                             <?php if(strpos($bill['gst_type'], 'gst') === 0): ?>
-                                <span style="color:#0d9488;font-weight:700;font-size:11px;">📜„ GST</span>
+                                <span style="color:#0d9488;font-weight:700;font-size:11px;">„ GST</span>
                                 <?php if($gst_amt>0): ?>
                                     <div style="font-size:9px;color:#14b8a6;">Total: ₹<?php echo number_format($gst_amt,2); ?></div>
                                     <div style="font-size:9px;color:#14b8a6;">C+S: ₹<?php echo number_format($cgst_amt,2); ?> ea</div>
                                 <?php endif; ?>
                             <?php else: ?>
-                                <span style="color:#9ca3af;font-size:11px;">📋 Non-GST</span>
+                                <span style="color:#9ca3af;font-size:11px;"> Non-GST</span>
                             <?php endif; ?>
                         </td>
                         <td class="text-center"><?php echo $status_badge; ?></td>
@@ -1261,11 +1261,11 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                             <div class="flex justify-center gap-1.5">
                                 <a href="view_pdf.php?invoice_no=<?php echo urlencode($bill['invoice_no']); ?>" target="_blank"
                                    class="btn-jewel" style="padding:3px 10px;font-size:10px;border-radius:20px;white-space:nowrap;">
-                                   🖨️ Print
+                                    Print
                                 </a>
                                 <button onclick="confirmDeleteInvoice('<?php echo htmlspecialchars($bill['invoice_no']); ?>')"
                                         class="btn-jewel" style="background:linear-gradient(135deg,#7f1d1d,#ef4444);padding:3px 10px;font-size:10px;border-radius:20px;white-space:nowrap;">
-                                   🗑️ Delete
+                                    Delete
                                 </button>
                             </div>
                         </td>
@@ -1385,7 +1385,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 plugins: {
                     legend: { labels: { font: { size: 12, weight: 'bold' }, color: '#800020' } },
                     tooltip: { backgroundColor: '#fdf6e3', titleColor: '#800020', bodyColor: '#7a4e0a', borderColor: '#d68b16', borderWidth: 1,
-                        callbacks: { label: ctx => '💰 ₹ ' + ctx.raw.toLocaleString('en-IN') }
+                        callbacks: { label: ctx => ' ₹ ' + ctx.raw.toLocaleString('en-IN') }
                     }
                 },
                 scales: {
@@ -1426,20 +1426,20 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
 
         // Sheet 1 — All Bills
         const aoa1 = [];
-        aoa1.push(['💎 MAA GOURI JEWELLERS', '', '', '', '', '', '', '', '', '', '', '']);
+        aoa1.push([' MAA GOURI JEWELLERS', '', '', '', '', '', '', '', '', '', '', '']);
         aoa1.push(['All Bills Report — Generated: ' + today, '', '', '', '', '', '', '', '', '', '', '']);
         aoa1.push([]);
         aoa1.push(['Total Bills', billsData.length, '', 'Total Amount', inrFmt(totalAmt), '', 'Total GST Collected', inrFmt(totalGST), '', 'Balance Due', inrFmt(totalBalance), '']);
         aoa1.push(['Full Paid', paidBills, '', 'Part Payment', partBills, '', 'Unpaid', unpaidBills, '', 'GST Bills', gstBills, '']);
         aoa1.push([]);
-        // ★ UPDATED: Added GSTIN column header
+        //  UPDATED: Added GSTIN column header
         aoa1.push(['#', 'Invoice No', 'Customer Name', 'GSTIN', 'Mobile', 'Address', 'Total Amount (₹)', 'Paid Amount (₹)', 'Balance Due (₹)', 'GST Type', 'GST Amount (₹)', 'Payment Status', 'Date']);
         billsData.forEach((b, i) => {
             aoa1.push([
                 i + 1,
                 b.invoice_no,
                 b.customer_name,
-                b.customer_gstin || '',   // ★ GSTIN column
+                b.customer_gstin || '',   //  GSTIN column
                 b.customer_mobile,
                 b.customer_address || '',
                 parseFloat(b.total_amount||0),
@@ -1460,7 +1460,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
 
         // Sheet 2 — Payment Summary
         const aoa2 = [];
-        aoa2.push(['💎 MAA GOURI JEWELLERS — Payment Summary']);
+        aoa2.push([' MAA GOURI JEWELLERS — Payment Summary']);
         aoa2.push(['Generated: ' + today]);
         aoa2.push([]);
         aoa2.push(['Category', 'Count', 'Amount (₹)']);
@@ -1479,14 +1479,14 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
 
         // Sheet 3 — Pending
         const pendingData = billsData.filter(b => b.payment_status !== 'paid' && parseFloat(b.balance_amount||0) > 0);
-        // ★ UPDATED: Added GSTIN column in pending sheet too
+        //  UPDATED: Added GSTIN column in pending sheet too
         const aoa3 = [['#','Invoice No','Customer','GSTIN','Mobile','Bill Total (₹)','Paid (₹)','Balance Due (₹)','Status','Date']];
         pendingData.forEach((b,i) => aoa3.push([
             i+1, b.invoice_no, b.customer_name, b.customer_gstin||'', b.customer_mobile,
             parseFloat(b.total_amount||0), parseFloat(b.paid_amount||0), parseFloat(b.balance_amount||0),
             b.payment_status==='part'?'Part Payment':'Unpaid', fmtDate(b.created_at)
         ]));
-        if(!pendingData.length) aoa3.push(['','No pending payments! 🎉','','','','','','','','']);
+        if(!pendingData.length) aoa3.push(['','No pending payments! ','','','','','','','','']);
         const ws3 = XLSX.utils.aoa_to_sheet(aoa3);
         ws3['!cols'] = [{wch:5},{wch:20},{wch:22},{wch:20},{wch:14},{wch:18},{wch:16},{wch:18},{wch:14},{wch:14}];
         XLSX.utils.book_append_sheet(wb, ws3, 'Pending Payments');
@@ -1590,7 +1590,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
         
         let confirmMsg = '';
         if (currentDeleteMode === 'permanent') {
-            confirmMsg = "⚠️ FINAL WARNING: This action is permanent and CANNOT be undone.\nAre you sure you want to delete Invoice #" + currentDeleteInvoiceNo + " permanently (without restoring stock)?";
+            confirmMsg = " FINAL WARNING: This action is permanent and CANNOT be undone.\nAre you sure you want to delete Invoice #" + currentDeleteInvoiceNo + " permanently (without restoring stock)?";
         } else {
             confirmMsg = "Are you sure you want to delete Invoice #" + currentDeleteInvoiceNo + " and move the specified quantities back to stock?";
         }
@@ -1669,10 +1669,10 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
             
             <div class="flex gap-3">
                 <button type="button" onclick="selectDeleteMode('permanent')" id="btnDeletePerm" class="flex-1 py-3 px-4 rounded-xl border border-red-300 text-red-700 bg-red-50 hover:bg-red-100 font-semibold text-xs transition duration-200 text-center cursor-pointer">
-                    🗑️ Delete Permanently<br><span class="text-[9px] font-normal text-red-500">(Stock is NOT updated)</span>
+                     Delete Permanently<br><span class="text-[9px] font-normal text-red-500">(Stock is NOT updated)</span>
                 </button>
                 <button type="button" onclick="selectDeleteMode('restore_stock')" id="btnDeleteRestore" class="flex-1 py-3 px-4 rounded-xl border border-green-300 text-green-700 bg-green-50 hover:bg-green-100 font-semibold text-xs transition duration-200 text-center cursor-pointer">
-                    📜¦ Move to Stock<br><span class="text-[9px] font-normal text-green-500">(Add items to inventory)</span>
+                    ¦ Move to Stock<br><span class="text-[9px] font-normal text-green-500">(Add items to inventory)</span>
                 </button>
             </div>
             

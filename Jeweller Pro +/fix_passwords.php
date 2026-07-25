@@ -10,7 +10,7 @@ $fixes = [
 foreach ($fixes as $id => $plain_password) {
     $hash = password_hash($plain_password, PASSWORD_DEFAULT);
     mysqli_query($conn, "UPDATE users SET password = '$hash' WHERE id = $id");
-    echo "✅ User ID $id done.<br>";
+    echo " User ID $id done.<br>";
 }
 
 echo "<br><b>Delete this file now!</b>";
