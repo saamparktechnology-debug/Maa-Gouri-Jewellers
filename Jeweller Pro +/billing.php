@@ -104,7 +104,7 @@ if($chk_reminder && mysqli_num_rows($chk_reminder) == 0) {
     mysqli_query($conn, "ALTER TABLE invoices ADD COLUMN reminder_sent TINYINT(1) DEFAULT 0");
 }
 
-// â”€â”€ NEW: AJAX: Mark invoice as paid (partial or full custom amount) â”€â”€â”€â”€â”€â”€â”€
+// ── NEW: AJAX: Mark invoice as paid (partial or full custom amount) ───────
 if(isset($_GET['action']) && $_GET['action'] === 'mark_paid') {
     header('Content-Type: application/json');
     if($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -291,7 +291,7 @@ $itemTypeOptions['Diamond']  = array_unique(array_merge($itemTypeOptions['Diamon
 $itemTypeOptions['Others']   = array_unique(array_merge($itemTypeOptions['Others'],
   ['Shankha','Pala','Mala','Moti Mala','Trasel','Branch Fram','Braslate Pala',
   'Parl Mala','Gala','Reparing','Stamp Charg','Other']));
-// â”€â”€ NEW: Fetch due-today payments â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── NEW: Fetch due-today payments ─────────────────────────────────────────
 $today = date('Y-m-d');
 $due_today_result = mysqli_query($conn, "
     SELECT invoice_no, customer_name, customer_mobile, customer_address,
@@ -440,7 +440,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
         }
     }
 
-    // â”€â”€ STOCK VALIDATION: Pre-check available stock pieces before creating invoice â”€â”€
+    // ── STOCK VALIDATION: Pre-check available stock pieces before creating invoice ──
     $raw_items = json_decode($_POST['items'] ?? '[]', true);
     if (is_array($raw_items)) {
         $req_pcs_map = [];
@@ -3278,7 +3278,7 @@ function sendPaymentReminder() {
     .catch(error => { showNotif('\u26A0\uFE0F ' + (error?.message || 'Reminder email could not be sent.'), 'error'); });
 }
 
-// â”€â”€ NEW: Due Today — Send Reminder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── NEW: Due Today — Send Reminder ────────────────────────────────────────
 function sendDueReminder(invoiceNo, customerName, customerMobile, balanceAmount) {
     const btn = document.getElementById('remind-btn-' + invoiceNo);
     if(!btn) return;

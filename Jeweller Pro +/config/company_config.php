@@ -7,7 +7,7 @@
 $COMPANY = [
     'name'          => 'MAA GOURI JEWELLERS',
     'name_short'    => 'Gouri Jewellers',
-    'tagline'       => 'Trusted Tradition Â· Timeless Elegance',
+    'tagline'       => 'Trusted Tradition · Timeless Elegance',
     'sub_tagline'   => 'Precious Jewellery, Precious Relationships',
     'proprietor'    => 'Prop: Maa Gouri Jewellers',
     'address_line1' => 'Sabang, Paschim Medinipur',

@@ -125,7 +125,7 @@ $total_words = num2words($total) . ' Rupees Only';
 
 $logo_file = 'assets/images/moti-removebg-preview.png';
 
-// â”€â”€ DUE PAYMENT RECEIPT MODE LOGIC â”€â”€
+// ── DUE PAYMENT RECEIPT MODE LOGIC ──
 $is_receipt = (isset($_GET['receipt']) && $_GET['receipt'] == '1') || isset($_GET['history_id']);
 $history_id = intval($_GET['history_id'] ?? 0);
 

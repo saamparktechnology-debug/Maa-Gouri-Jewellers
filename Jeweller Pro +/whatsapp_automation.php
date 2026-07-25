@@ -836,7 +836,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         <?php if(isset($bulk_error)):             ?><div class="alert alert-error"><i class="fas fa-exclamation-circle"></i><?php echo $bulk_error; ?></div><?php endif; ?>
         <?php if(isset($advance_reminder_result)):?><div class="alert alert-purple"><i class="fas fa-bell"></i><?php echo $advance_reminder_result; ?></div><?php endif; ?>
 
-        <!-- â”€â”€ API Settings â”€â”€ -->
+        <!-- ── API Settings ── -->
         <div class="jewel-card api-card p-5 mb-6">
             <h2 class="gold-font text-lg font-bold mb-4 title-api"><i class="fas fa-plug mr-2"></i>WhatsApp API Settings</h2>
             <form method="POST">
@@ -880,7 +880,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             </div>
         </div>
 
-        <!-- â”€â”€ Single Message â”€â”€ -->
+        <!-- ── Single Message ── -->
         <div class="jewel-card wa-card p-5 mb-6">
             <h2 class="gold-font text-lg font-bold mb-4 title-wa"><i class="fab fa-whatsapp mr-2"></i>Send Single Message</h2>
             <form method="POST" enctype="multipart/form-data">
@@ -935,7 +935,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             </form>
         </div>
 
-        <!-- â”€â”€ Bulk Message â”€â”€ -->
+        <!-- ── Bulk Message ── -->
         <div class="jewel-card bulk-card p-5 mb-6">
             <h2 class="gold-font text-lg font-bold mb-4 title-bulk"><i class="fas fa-users mr-2"></i>Bulk Message
                 <span class="text-sm font-normal ml-2" style="color:#9ca3af;">(<?php echo $total_customers; ?> customers)</span>
@@ -981,7 +981,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             </form>
         </div>
 
-        <!-- â”€â”€ Advance Customers â”€â”€ -->
+        <!-- ── Advance Customers ── -->
         <div class="jewel-card adv-card p-5 mb-6">
             <h2 class="gold-font text-lg font-bold mb-4 title-adv"><i class="fas fa-star mr-2"></i>Advance Customers &amp; Reminders</h2>
 
@@ -1046,7 +1046,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             </div>
         </div>
 
-        <!-- â”€â”€ Message Logs â”€â”€ -->
+        <!-- ── Message Logs ── -->
         <div class="jewel-card log-card p-5">
             <h2 class="gold-font text-lg font-bold mb-4 title-log"><i class="fas fa-history mr-2"></i>Message Logs <span class="text-sm font-normal" style="color:#9ca3af;">(Last 30)</span></h2>
             <div class="table-wrap overflow-x-auto rounded-xl" style="border:1px solid rgba(37,99,235,0.15);">
@@ -1099,7 +1099,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 </style>
 
 <script>
-    /* â”€â”€ Sidebar â”€â”€ */
+    /* ── Sidebar ── */
     function toggleSidebar() {
         const sidebar = document.getElementById('mainSidebar');
         const overlay = document.getElementById('sidebarOverlay');
@@ -1117,25 +1117,25 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         document.body.style.overflow = '';
     }
 
-    /* â”€â”€ Media toggle â”€â”€ */
+    /* ── Media toggle ── */
     function toggleMedia(prefix) {
         const sel = document.getElementById(prefix + 'MediaType');
         const div = document.getElementById(prefix + 'MediaUploadDiv');
         if(sel && div) div.style.display = sel.value !== 'text' ? 'block' : 'none';
     }
 
-    /* â”€â”€ Single Message: template vs free-text toggle â”€â”€ */
+    /* ── Single Message: template vs free-text toggle ── */
     function toggleSingleTemplate() {
         const checked = document.getElementById('singleUseTemplate').checked;
         document.getElementById('singleTemplateFieldsDiv').style.display = checked ? 'grid' : 'none';
         document.getElementById('singleMessageDiv').style.display = checked ? 'none' : 'block';
     }
 
-    /* â”€â”€ Customer checkboxes â”€â”€ */
+    /* ── Customer checkboxes ── */
     function selectAll()   { document.querySelectorAll('input[name="selected_customers[]"]').forEach(c => c.checked = true); }
     function deselectAll() { document.querySelectorAll('input[name="selected_customers[]"]').forEach(c => c.checked = false); }
 
-    /* â”€â”€ Advance reminder link â”€â”€ */
+    /* ── Advance reminder link ── */
     const reminderBtn = document.getElementById('sendFilteredReminders');
     if(reminderBtn) {
         reminderBtn.addEventListener('click', function(e) {

@@ -737,7 +737,7 @@ footer { background: linear-gradient(0deg, #f5e6c8, #fdf6e3); border-top: 2px so
 </style>
 
 <script>
-    /* â”€â”€ Sidebar â”€â”€ */
+    /* ── Sidebar ── */
     function toggleSidebar() {
         const sidebar = document.getElementById('mainSidebar');
         const overlay = document.getElementById('sidebarOverlay');
@@ -755,7 +755,7 @@ footer { background: linear-gradient(0deg, #f5e6c8, #fdf6e3); border-top: 2px so
         document.body.style.overflow = '';
     }
 
-    /* â”€â”€ Charts â”€â”€ */
+    /* ── Charts ── */
     const incomeLabels  = <?php echo json_encode(array_keys($incom_by_cat)); ?>;
     const incomeData    = <?php echo json_encode(array_values($income_by_cat)); ?>;
     const expenseLabels = <?php echo json_encode(array_keys($expese_by_cat)); ?>;

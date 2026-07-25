@@ -10,7 +10,7 @@ if(!isset($_SESSION['user_id'])) {
 
 $is_logged_in = true;
 
-// â”€â”€ Ensure required columns & due_update_history table exist â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Ensure required columns & due_update_history table exist ────────────────
 $cols = ['cash_paid', 'upi_paid', 'account_paid', 'cheque_paid', 'old_gold_value'];
 foreach ($cols as $c) {
     $chk = mysqli_query($conn, "SHOW COLUMNS FROM invoices LIKE '$c'");
@@ -27,7 +27,7 @@ if ($chkHistoryTable && mysqli_num_rows($chkHistoryTable) > 0) {
     }
 }
 
-// â”€â”€ Month filter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Month filter ─────────────────────────────────────────────────────────
 $month = isset($_GET['month']) ? $_GET['month'] : date('Y-m');
 if (!preg_match('/^\d{4}-\d{2}$/', $month)) $month = date('Y-m');
 $monthStart = $month . '-01';
@@ -37,7 +37,7 @@ $monthLabel = date('F Y', strtotime($monthStart));
 $monthStartEsc = mysqli_real_escape_string($conn, $monthStart);
 $monthEndEsc   = mysqli_real_escape_string($conn, $monthEnd);
 
-// â”€â”€ 1. Fetch all paid/part invoices for the month â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── 1. Fetch all paid/part invoices for the month ────────────────────────────
 $sql = "
     SELECT
         DATE(created_at)               AS day,
@@ -90,7 +90,7 @@ while ($row = mysqli_fetch_assoc($res)) {
     $days[$d]['bills']   += 1;
 }
 
-// â”€â”€ 2. Fetch Due Payments Cleared Today / In Month (from due_update_history) â”€
+// ── 2. Fetch Due Payments Cleared Today / In Month (from due_update_history) ─
 if ($chkHistoryTable && mysqli_num_rows($chkHistoryTable) > 0) {
     $dueSql = "
         SELECT 
@@ -128,7 +128,7 @@ if ($chkHistoryTable && mysqli_num_rows($chkHistoryTable) > 0) {
 ksort($days);
 $days = array_reverse($days, true);
 
-// â”€â”€ Month totals â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Month totals ──────────────────────────────────────────────────────────
 $monthCash     = array_sum(array_column($days, 'cash'));
 $monthUpi      = array_sum(array_column($days, 'upi'));
 $monthCheque   = array_sum(array_column($days, 'cheque'));
@@ -137,7 +137,7 @@ $monthTotal    = array_sum(array_column($days, 'total'));
 $monthBills    = array_sum(array_column($days, 'bills'));
 $monthDueRec   = array_sum(array_column($days, 'due_collections'));
 
-// â”€â”€ Today highlight â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Today highlight ───────────────────────────────────────────────────────
 $today = date('Y-m-d');
 $todayCash      = $days[$today]['cash']      ?? 0;
 $todayUpi       = $days[$today]['upi']       ?? 0;

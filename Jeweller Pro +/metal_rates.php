@@ -10,7 +10,7 @@
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
-// â”€â”€ Cache file (stores last successful fetch for 30 min) â”€â”€
+// ── Cache file (stores last successful fetch for 30 min) ──
 $cache_file = sys_get_temp_dir() . '/radhe_shyam_metal_rates.json';
 $cache_ttl  = 1800; // 30 minutes
 
@@ -25,7 +25,7 @@ if(file_exists($cache_file)) {
     }
 }
 
-// â”€â”€ USD/INR rate fetch (needed to convert USD prices â†’ INR) â”€â”€
+// ── USD/INR rate fetch (needed to convert USD prices â†’ INR) ──
 function getUsdInr() {
     // Try exchangerate-api (free, no key needed for basic endpoint)
     $url = 'https://api.exchangerate-api.com/v4/latest/USD';
@@ -41,7 +41,7 @@ function getUsdInr() {
     return 96.26;
 }
 
-// â”€â”€ Method 1: Open Metals Data (free, no key) â”€â”€
+// ── Method 1: Open Metals Data (free, no key) ──
 function fetchFromOpenMetals($usdInr) {
     // XAU = Gold troy oz, XAG = Silver troy oz, XPT = Platinum troy oz
     // 1 troy oz = 31.1035 grams
@@ -50,7 +50,7 @@ function fetchFromOpenMetals($usdInr) {
     return null;
 }
 
-// â”€â”€ Method 2: gold-api.com (free, no key for spot price) â”€â”€
+// ── Method 2: gold-api.com (free, no key for spot price) ──
 function fetchFromGoldApi($usdInr) {
     $ctx = stream_context_create(['http' => ['timeout' => 6, 'ignore_errors' => true,
         'header' => "x-access-token: goldapi-free\r\n"]]);
@@ -88,7 +88,7 @@ function fetchFromGoldApi($usdInr) {
     ];
 }
 
-// â”€â”€ Method 3: metals-api free (limited calls) â”€â”€
+// ── Method 3: metals-api free (limited calls) ──
 function fetchFromMetalsApi($usdInr) {
     $url = 'https://metals-api.com/api/latest?access_key=free&base=INR&symbols=XAU,XAG,XPT';
     $ctx = stream_context_create(['http' => ['timeout' => 6, 'ignore_errors' => true]]);
@@ -125,7 +125,7 @@ function fetchFromMetalsApi($usdInr) {
     ];
 }
 
-// â”€â”€ Method 4: Fetch via free open exchange rates â”€â”€
+// ── Method 4: Fetch via free open exchange rates ──
 function fetchViaForexAndSpot($usdInr) {
     // Use api.gold-api.com free API (no key)
     $ctx = stream_context_create(['http' => ['timeout' => 6, 'ignore_errors' => true]]);
@@ -168,7 +168,7 @@ function fetchViaForexAndSpot($usdInr) {
     ];
 }
 
-// â”€â”€ Accurate Fallback (Updated: 28 May 2026) â”€â”€
+// ── Accurate Fallback (Updated: 28 May 2026) ──
 // Sources: GoodReturns, Candere, GoldPriceIndia
 function getAccurateFallback() {
     return [
@@ -182,7 +182,7 @@ function getAccurateFallback() {
     ];
 }
 
-// â”€â”€ Try each source â”€â”€
+// ── Try each source ──
 $usdInr = getUsdInr();
 $result = null;
 

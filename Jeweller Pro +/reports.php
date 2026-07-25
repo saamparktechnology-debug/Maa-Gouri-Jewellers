@@ -874,7 +874,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
             </div>
         <?php endif; ?>
 
-        <!-- â”€â”€ CHARTS ROW â”€â”€ -->
+        <!-- ── CHARTS ROW ── -->
         <div class="charts-grid grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
             <!-- Sales Chart
             <div class="chart-card">
@@ -910,7 +910,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
             </div> -->
         </div>
 
-        <!-- â”€â”€ PAYMENT STATUS OVERVIEW â”€â”€ -->
+        <!-- ── PAYMENT STATUS OVERVIEW ── -->
         <div class="jewel-card p-5 sm:p-6 mb-6">
             <h3 class="section-title mb-5"><i class="fas fa-wallet"></i> Payment Status Overview</h3>
 
@@ -1036,7 +1036,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
             </div>
         </div>
 
-        <!-- â”€â”€ GST SUMMARY â”€â”€ -->
+        <!-- ── GST SUMMARY ── -->
         <div class="jewel-card p-5 sm:p-6 mb-6">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-5 gap-3">
                 <h3 class="section-title"><i class="fas fa-receipt"></i> GST Summary</h3>
@@ -1126,7 +1126,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
             </div>
         </div>
 
-        <!-- â”€â”€ ALL BILLS TABLE â”€â”€ -->
+        <!-- ── ALL BILLS TABLE ── -->
         <div class="jewel-card p-5 sm:p-6">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-5 gap-3">
                 <h3 class="section-title"><i class="fas fa-file-invoice"></i> All Bills Record</h3>
@@ -1230,7 +1230,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                         <td style="color:#7a4e0a;"><?php echo $i+1; ?></td>
                         <td class="font-mono text-xs" style="color:#d68b16;"><?php echo htmlspecialchars($bill['invoice_no']); ?></td>
 
-                        <!-- â˜… UPDATED: Customer name + GSTIN tag below -->
+                        <!-- ★ UPDATED: Customer name + GSTIN tag below -->
                         <td>
                             <span class="font-semibold" style="color:#800020;"><?php echo htmlspecialchars($bill['customer_name']); ?></span>
                             <?php if($gstin !== ''): ?>
@@ -1292,7 +1292,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
 </style>
 
 <script>
-    /* â”€â”€ Sidebar â”€â”€ */
+    /* ── Sidebar ── */
     function toggleSidebar() {
         const sidebar = document.getElementById('mainSidebar');
         const overlay = document.getElementById('sidebarOverlay');
@@ -1310,12 +1310,12 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
         document.body.style.overflow = '';
     }
 
-    /* â”€â”€ Toggle detail tables â”€â”€ */
+    /* ── Toggle detail tables ── */
     function toggleDetail(id) {
         document.getElementById(id).classList.toggle('open');
     }
 
-    /* â”€â”€ Actions: Send Reminder & Mark Paid (uses billing.php AJAX endpoints) â”€â”€ */
+    /* ── Actions: Send Reminder & Mark Paid (uses billing.php AJAX endpoints) ── */
     function sendReminder(invoiceNo, customerName, customerMobile, balanceAmount, customerEmail) {
         console.log('sendReminder called', {invoiceNo, customerName, customerMobile, balanceAmount, customerEmail});
         if(!invoiceNo) return alert('Invoice number is missing');
@@ -1362,7 +1362,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
             }).catch(e => { console.error('markAsPaid fetch error', e); alert('Error: ' + e); });
     }
 
-    /* â”€â”€ Chart â”€â”€ */
+    /* ── Chart ── */
     const labels    = <?php echo json_encode(array_column($daily_sales,'date')); ?>;
     const salesData = <?php echo json_encode(array_column($daily_sales,'total')); ?>;
     const chartEl = document.getElementById('salesChart');
@@ -1398,7 +1398,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
         });
     }
 
-    /* â”€â”€ Excel Export â”€â”€ */
+    /* ── Excel Export ── */
     const billsData = <?php echo json_encode($bills_rows); ?>;
 
     function downloadExcel() {
@@ -1432,14 +1432,14 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
         aoa1.push(['Total Bills', billsData.length, '', 'Total Amount', inrFmt(totalAmt), '', 'Total GST Collected', inrFmt(totalGST), '', 'Balance Due', inrFmt(totalBalance), '']);
         aoa1.push(['Full Paid', paidBills, '', 'Part Payment', partBills, '', 'Unpaid', unpaidBills, '', 'GST Bills', gstBills, '']);
         aoa1.push([]);
-        // â˜… UPDATED: Added GSTIN column header
+        // ★ UPDATED: Added GSTIN column header
         aoa1.push(['#', 'Invoice No', 'Customer Name', 'GSTIN', 'Mobile', 'Address', 'Total Amount (₹)', 'Paid Amount (₹)', 'Balance Due (₹)', 'GST Type', 'GST Amount (₹)', 'Payment Status', 'Date']);
         billsData.forEach((b, i) => {
             aoa1.push([
                 i + 1,
                 b.invoice_no,
                 b.customer_name,
-                b.customer_gstin || '',   // â˜… GSTIN column
+                b.customer_gstin || '',   // ★ GSTIN column
                 b.customer_mobile,
                 b.customer_address || '',
                 parseFloat(b.total_amount||0),
@@ -1479,7 +1479,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
 
         // Sheet 3 — Pending
         const pendingData = billsData.filter(b => b.payment_status !== 'paid' && parseFloat(b.balance_amount||0) > 0);
-        // â˜… UPDATED: Added GSTIN column in pending sheet too
+        // ★ UPDATED: Added GSTIN column in pending sheet too
         const aoa3 = [['#','Invoice No','Customer','GSTIN','Mobile','Bill Total (₹)','Paid (₹)','Balance Due (₹)','Status','Date']];
         pendingData.forEach((b,i) => aoa3.push([
             i+1, b.invoice_no, b.customer_name, b.customer_gstin||'', b.customer_mobile,
