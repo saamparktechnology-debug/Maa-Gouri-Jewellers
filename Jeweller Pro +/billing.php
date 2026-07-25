@@ -74,13 +74,13 @@ if(isset($_GET['action']) && $_GET['action'] === 'send_reminder') {
         exit();
     }
 
-    $subject = 'Payment Reminder from MOTI JEWELLERS';
+    $subject = 'Payment Reminder from MAA GOURI JEWELLERS';
     $invoice_text = $invoice_no ? 'Invoice No: ' . htmlspecialchars($invoice_no) . '<br>' : '';
     $message = '<p>Dear ' . htmlspecialchars($customer_name) . ',</p>' .
                '<p>This is a reminder that an amount of <strong>&#8377;' . number_format($balance_amount, 2) . '</strong> is still due.' .
                ($invoice_no ? ' Please refer to ' . htmlspecialchars($invoice_no) . '.' : '') . '</p>' .
                '<p>Please make the remaining payment at your earliest convenience.</p>' .
-               '<p>Thank you,<br>MOTI JEWELLERS</p>';
+               '<p>Thank you,<br>MAA GOURI JEWELLERS</p>';
     $sendResult = sendSMTPMail($customer_email, $subject, $message);
     _sr_log(['after_sendSMTPMail','sendResult'=>$sendResult]);
     if(!empty($sendResult['success'])) {
@@ -788,7 +788,7 @@ window.addEventListener('load', function() {
             
             
             <div style="width:120px;height:120px;background:transparent;animation:gemGlowPulse 1.5s ease-in-out infinite;">
-                <img src="logo.png" alt="MOTI JEWELLERS Logo" style="width:100%;height:100%;object-fit:contain;display:block;">
+                <img src="logo.png" alt="MAA GOURI JEWELLERS Logo" style="width:100%;height:100%;object-fit:contain;display:block;">
             </div>
         </div>
         <div style="display:flex;gap:9px;justify-content:center;">
@@ -815,7 +815,7 @@ window.addEventListener('load', function() {
         if(!$logo_found) echo '<i class="fas fa-gem" style="color:#fff;font-size:30px;flex-shrink:0;"></i>';
         ?>
         <div class="sidebar-logo-text">
-            <h2>MOTI JEWELLERS</h2>
+            <h2>MAA GOURI JEWELLERS</h2>
             <p>Premium Since 2026</p>
         </div>
     </div>
@@ -1785,7 +1785,7 @@ function submitPayment() {
 </div><!-- /container -->
     <footer style="background:linear-gradient(0deg,#f5e6c8,#fdf6e3);border-top:2px solid #d68b16;padding:20px;margin-top:40px;text-align:center;">
         <p class="text-xs" style="color:#7a4e0a;">
-            &copy; 2026 MOTI JEWELLERS &nbsp;|&nbsp; CRAFTED WITH ELEGANCE &nbsp;|&nbsp;
+            &copy; 2026 MAA GOURI JEWELLERS &nbsp;|&nbsp; CRAFTED WITH ELEGANCE &nbsp;|&nbsp;
             Design & Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology & Research Private Limited</a>
         </p>
     </footer>
@@ -3493,6 +3493,7 @@ function convertNumberToWords($number) {
     return trim($result).' Rupees Only';
 }
 ?>
+
 
 
 

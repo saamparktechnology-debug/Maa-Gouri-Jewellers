@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS purchase_entries (
     supplier_email  VARCHAR(100),
 
     -- Buyer (auto-filled)
-    buyer_name      VARCHAR(200) DEFAULT 'MOTI JEWELLERS',
+    buyer_name      VARCHAR(200) DEFAULT 'MAA GOURI JEWELLERS',
     buyer_addr      VARCHAR(500),
     buyer_gstin     VARCHAR(20),
     buyer_pan       VARCHAR(20),
@@ -115,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_purchase'])) {
     $smob   = $conn->real_escape_string(trim($_POST['supplier_mobile'] ?? ''));
     $semail = $conn->real_escape_string(trim($_POST['supplier_email'] ?? ''));
 
-    $bname  = $conn->real_escape_string(trim($_POST['buyer_name'] ?? 'MOTI JEWELLERS'));
+    $bname  = $conn->real_escape_string(trim($_POST['buyer_name'] ?? 'MAA GOURI JEWELLERS'));
     $baddr  = $conn->real_escape_string(trim($_POST['buyer_addr'] ?? ''));
     $bgstin = $conn->real_escape_string(trim($_POST['buyer_gstin'] ?? ''));
     $bpan   = $conn->real_escape_string(trim($_POST['buyer_pan'] ?? ''));
@@ -252,7 +252,7 @@ $unit_defaults = ['Gold'=>'gm','Silver'=>'gm','Diamond'=>'ct','Platinum'=>'gm'];
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <meta name="author" content="MANU GUPTA">
-<title>Purchase Entry | MOTI JEWELLERS</title>
+<title>Purchase Entry | MAA GOURI JEWELLERS</title>
 <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -343,7 +343,7 @@ nav.nav-gold span{color:#fff!important;}
         foreach($logo_paths as $p){if(file_exists($p)){echo '<img src="'.$p.'" alt="Logo">';$found=true;break;}}
         if(!$found) echo '<i class="fas fa-gem" style="color:#fff;font-size:30px;"></i>';
         ?>
-        <div class="sidebar-logo-text"><h2>MOTI JEWELLERS</h2><p>Premium Since 2026</p></div>
+        <div class="sidebar-logo-text"><h2>MAA GOURI JEWELLERS</h2><p>Premium Since 2026</p></div>
     </div>
     <nav class="sidebar-nav">
         <div class="sidebar-section-label">Main Menu</div>
@@ -502,7 +502,7 @@ nav.nav-gold span{color:#fff!important;}
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div>
             <label class="field-label">Buyer Name</label>
-            <input name="buyer_name" class="form-input" value=" MOTI JEWELLERS">
+            <input name="buyer_name" class="form-input" value=" MAA GOURI JEWELLERS">
         </div>
         <div>
             <label class="field-label">GSTIN</label>
@@ -725,7 +725,7 @@ nav.nav-gold span{color:#fff!important;}
 </div><!-- /container -->
 <footer style="background:linear-gradient(0deg,#f5e6c8,#fdf6e3);border-top:2px solid #d68b16;padding:20px;margin-top:40px;text-align:center;">
     <p class="text-xs" style="color:#7a4e0a;">
-        &copy; 2026 MOTI JEWELLERS &nbsp;|&nbsp; CRAFTED WITH ELEGANCE &nbsp;|&nbsp;
+        &copy; 2026 MAA GOURI JEWELLERS &nbsp;|&nbsp; CRAFTED WITH ELEGANCE &nbsp;|&nbsp;
         Design & Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology & Research Private Limited</a>
     </p>
 </footer>
@@ -1207,7 +1207,7 @@ function generatePDF(){
     // Signature
     doc.setFillColor(...lgray);doc.rect(pw-ml-55,y,55,20,'F');
     doc.setTextColor(...dark);doc.setFont('helvetica','bold');doc.setFontSize(8);
-    doc.text('For MOTI JEWELLERS',pw-ml-52,y+7);
+    doc.text('For MAA GOURI JEWELLERS',pw-ml-52,y+7);
     doc.setFont('helvetica','normal');doc.setFontSize(7);
     doc.text('Authorised Signatory',pw-ml-48,y+17);
 
@@ -1225,6 +1225,7 @@ function triggerPDF(){ generatePDF(); }
 </script>
 </body>
 </html>
+
 
 
 

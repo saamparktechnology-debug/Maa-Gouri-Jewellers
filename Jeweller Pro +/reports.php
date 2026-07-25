@@ -1278,7 +1278,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
 
     <footer>
         <p class="text-xs" style="color:#7a4e0a;">
-            &copy; 2026 MOTI JEWELLERS &nbsp;|&nbsp; CRAFTED WITH ELEGANCE &nbsp;|&nbsp;
+            &copy; 2026 MAA GOURI JEWELLERS &nbsp;|&nbsp; CRAFTED WITH ELEGANCE &nbsp;|&nbsp;
             Design & Developed by <a href="https://saamparktechnology.com/" target="_blank" style="text-decoration:underline;color:#800020;font-weight:700;">Saampark Technology & Research Private Limited</a>
         </p>
     </footer>
@@ -1423,7 +1423,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
 
         // Sheet 1 â€” All Bills
         const aoa1 = [];
-        aoa1.push(['ðŸ’Ž MOTI JEWELLERS', '', '', '', '', '', '', '', '', '', '', '']);
+        aoa1.push(['ðŸ’Ž MAA GOURI JEWELLERS', '', '', '', '', '', '', '', '', '', '', '']);
         aoa1.push(['All Bills Report â€” Generated: ' + today, '', '', '', '', '', '', '', '', '', '', '']);
         aoa1.push([]);
         aoa1.push(['Total Bills', billsData.length, '', 'Total Amount', inrFmt(totalAmt), '', 'Total GST Collected', inrFmt(totalGST), '', 'Balance Due', inrFmt(totalBalance), '']);
@@ -1457,7 +1457,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
 
         // Sheet 2 â€” Payment Summary
         const aoa2 = [];
-        aoa2.push(['ðŸ’Ž MOTI JEWELLERS â€” Payment Summary']);
+        aoa2.push(['ðŸ’Ž MAA GOURI JEWELLERS â€” Payment Summary']);
         aoa2.push(['Generated: ' + today]);
         aoa2.push([]);
         aoa2.push(['Category', 'Count', 'Amount (â‚¹)']);
@@ -1695,6 +1695,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
 </div>
 </body>
 </html>
+
 
 
 
