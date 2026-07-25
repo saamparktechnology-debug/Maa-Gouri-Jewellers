@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // 
 // COMPANY CONFIGURATION — Maa Gouri Jewellers
 // Update this file only when details change.
@@ -10,8 +10,8 @@ $COMPANY = [
     'tagline'       => 'Trusted Tradition · Timeless Elegance',
     'sub_tagline'   => 'Precious Jewellery, Precious Relationships',
     'proprietor'    => 'Prop: Maa Gouri Jewellers',
-    'address_line1' => 'Jamna, Pingla.',
-    'address_line2' => '',
+    'address_line1' => 'Jamna, Pingla',
+    'address_line2' => 'Pachim Mednipur',
     'state'         => 'West Bengal',
     'state_code'    => '19',
     'mobile'        => '9647291299',
