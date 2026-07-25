@@ -564,7 +564,7 @@ nav.nav-gold span{color:#fff!important;}
             <input type="number" name="qty" id="qty" class="form-input" placeholder="e.g. 30" step="0.0001" min="0">
         </div>
         <div>
-            <label class="field-label">Rate per Unit (Ã¢â€šÂ¹) <span class="req">*</span></label>
+            <label class="field-label">Rate per Unit (₹) <span class="req">*</span></label>
             <input type="number" name="rate_per_unit" id="rate" class="form-input" placeholder="e.g. 15762.14" step="0.01" min="0">
         </div>
         <div class="md:col-span-2">
@@ -634,9 +634,9 @@ nav.nav-gold span{color:#fff!important;}
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
             <div>Items Count: <strong id="confirmItemCount">0</strong></div>
-            <div>Subtotal: <strong id="confirmSubtotal">Ã¢â€šÂ¹0.00</strong></div>
-            <div>Total GST: <strong id="confirmTotalGst">Ã¢â€šÂ¹0.00</strong></div>
-            <div>Grand Total: <strong id="confirmGrandTotal" class="text-sm text-green-900 font-extrabold">Ã¢â€šÂ¹0.00</strong></div>
+            <div>Subtotal: <strong id="confirmSubtotal">₹0.00</strong></div>
+            <div>Total GST: <strong id="confirmTotalGst">₹0.00</strong></div>
+            <div>Grand Total: <strong id="confirmGrandTotal" class="text-sm text-green-900 font-extrabold">₹0.00</strong></div>
         </div>
     </div>
 
@@ -691,12 +691,12 @@ nav.nav-gold span{color:#fff!important;}
 <div class="form-card mb-6">
     <div class="section-heading"><i class="fas fa-rupee-sign mr-2"></i>Amount Summary</div>
     <div class="amount-box">
-        <div class="amount-row"><span style="color:#555;">Subtotal (Qty Ãƒ— Rate)</span><span id="disp_subtotal" style="font-weight:600;">Ã¢â€šÂ¹ 0.00</span></div>
-        <div class="amount-row" id="disp_cgst_row"><span style="color:#555;">CGST</span><span id="disp_cgst">Ã¢â€šÂ¹ 0.00</span></div>
-        <div class="amount-row" id="disp_sgst_row"><span style="color:#555;">SGST</span><span id="disp_sgst">Ã¢â€šÂ¹ 0.00</span></div>
-        <div class="amount-row hidden" id="disp_igst_row"><span style="color:#555;">IGST</span><span id="disp_igst">Ã¢â€šÂ¹ 0.00</span></div>
-        <div class="amount-row"><span style="color:#555;">GST Total</span><span id="disp_gst_total" style="font-weight:600;">Ã¢â€šÂ¹ 0.00</span></div>
-        <div class="amount-row total"><span>TOTAL AMOUNT</span><span id="disp_total">Ã¢â€šÂ¹ 0.00</span></div>
+        <div class="amount-row"><span style="color:#555;">Subtotal (Qty Ãƒ— Rate)</span><span id="disp_subtotal" style="font-weight:600;">₹ 0.00</span></div>
+        <div class="amount-row" id="disp_cgst_row"><span style="color:#555;">CGST</span><span id="disp_cgst">₹ 0.00</span></div>
+        <div class="amount-row" id="disp_sgst_row"><span style="color:#555;">SGST</span><span id="disp_sgst">₹ 0.00</span></div>
+        <div class="amount-row hidden" id="disp_igst_row"><span style="color:#555;">IGST</span><span id="disp_igst">₹ 0.00</span></div>
+        <div class="amount-row"><span style="color:#555;">GST Total</span><span id="disp_gst_total" style="font-weight:600;">₹ 0.00</span></div>
+        <div class="amount-row total"><span>TOTAL AMOUNT</span><span id="disp_total">₹ 0.00</span></div>
         <div class="mt-3 pt-3 border-t" style="border-color:rgba(214,139,22,0.2);">
             <span style="color:#7a4e0a;font-size:12px;font-weight:600;">In Words: </span>
             <span id="disp_words" style="color:#334155;font-size:12px;font-style:italic;">Zero Rupees Only</span>
@@ -916,9 +916,9 @@ function confirmAllPurchaseItems() {
 
     if(countEl) countEl.textContent = purchaseItems.length;
     if(badgeEl) badgeEl.textContent = purchaseItems.length + ' Items Confirmed';
-    if(subEl)   subEl.textContent   = 'Ã¢â€šÂ¹ ' + fmt(sub);
-    if(gstEl)   gstEl.textContent   = 'Ã¢â€šÂ¹ ' + fmt(gst);
-    if(grandEl) grandEl.textContent = 'Ã¢â€šÂ¹ ' + fmt(grand);
+    if(subEl)   subEl.textContent   = '₹ ' + fmt(sub);
+    if(gstEl)   gstEl.textContent   = '₹ ' + fmt(gst);
+    if(grandEl) grandEl.textContent = '₹ ' + fmt(grand);
 
     const box = document.getElementById('confirmSummaryBox');
     if (box) {
@@ -970,12 +970,12 @@ function calcAmounts(){
     const gstTotal = cgst + sgst + igst;
     const total    = Math.round((sub + gstTotal) * 100) / 100;
 
-    document.getElementById('disp_subtotal').textContent = 'Ã¢â€šÂ¹ ' + fmt(sub);
-    document.getElementById('disp_cgst').textContent     = 'Ã¢â€šÂ¹ ' + fmt(cgst);
-    document.getElementById('disp_sgst').textContent     = 'Ã¢â€šÂ¹ ' + fmt(sgst);
-    document.getElementById('disp_igst').textContent     = 'Ã¢â€šÂ¹ ' + fmt(igst);
-    document.getElementById('disp_gst_total').textContent= 'Ã¢â€šÂ¹ ' + fmt(gstTotal);
-    document.getElementById('disp_total').textContent    = 'Ã¢â€šÂ¹ ' + fmt(total);
+    document.getElementById('disp_subtotal').textContent = '₹ ' + fmt(sub);
+    document.getElementById('disp_cgst').textContent     = '₹ ' + fmt(cgst);
+    document.getElementById('disp_sgst').textContent     = '₹ ' + fmt(sgst);
+    document.getElementById('disp_igst').textContent     = '₹ ' + fmt(igst);
+    document.getElementById('disp_gst_total').textContent= '₹ ' + fmt(gstTotal);
+    document.getElementById('disp_total').textContent    = '₹ ' + fmt(total);
     document.getElementById('cgst_amt_display').value    = fmt(cgst);
     document.getElementById('sgst_amt_display').value    = fmt(sgst);
     document.getElementById('igst_amt_display').value    = fmt(igst);
@@ -1173,9 +1173,9 @@ function generatePDF(){
     // Subtotal/Total rows
     y+=2;
     const summaryRows=[
-        ['SUBTOTAL','Ã¢â€šÂ¹ '+fmt(sub)],
-        ['GST TOTAL','Ã¢â€šÂ¹ '+fmt(gstTot)],
-        ['TOTAL AMOUNT','Ã¢â€šÂ¹ '+fmt(total)],
+        ['SUBTOTAL','₹ '+fmt(sub)],
+        ['GST TOTAL','₹ '+fmt(gstTot)],
+        ['TOTAL AMOUNT','₹ '+fmt(total)],
     ];
     summaryRows.forEach(([label,val],i)=>{
         if(i===2){doc.setFillColor(...gold);doc.rect(ml,y,cw,9,'F');doc.setTextColor(...white);}
