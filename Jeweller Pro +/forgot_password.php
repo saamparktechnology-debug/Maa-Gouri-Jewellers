@@ -41,7 +41,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'resend') {
         $expires_at = date('Y-m-d H:i:s', strtotime('+10 minutes'));
 
         $email_esc = mysqli_real_escape_string($conn, $email);
-        mysqli_query($conn, "DELETE FROM otp_logins WHERE email = '$email_esc' AND is_used = 0");
+        // mysqli_query($conn, "DELETE FROM otp_logins WHERE email = '$email_esc' AND is_used = 0");
         $ins = "INSERT INTO otp_logins (email, otp, expires_at) VALUES ('$email_esc', '$otp', '$expires_at')";
 
         if (mysqli_query($conn, $ins)) {
@@ -102,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['send_otp'])) {
         $expires_at = date('Y-m-d H:i:s', strtotime('+10 minutes'));
 
         $email_esc = mysqli_real_escape_string($conn, $email);
-        mysqli_query($conn, "DELETE FROM otp_logins WHERE email = '$email_esc' AND is_used = 0");
+        // mysqli_query($conn, "DELETE FROM otp_logins WHERE email = '$email_esc' AND is_used = 0");
         $ins = "INSERT INTO otp_logins (email, otp, expires_at) VALUES ('$email_esc', '$otp', '$expires_at')";
 
         if (mysqli_query($conn, $ins)) {
