@@ -567,12 +567,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                                 <?php if(!empty($serial) && $serial !== $huid): ?>
                                 <div class="item-sub">Serial: <strong><?php echo htmlspecialchars($serial); ?></strong></div>
                                 <?php endif; ?>
-                                <?php 
-                                $it_mc_amt = floatval($it['making_charge'] ?? 0);
-                                $it_mc_pct = floatval($it['making_charge_pct'] ?? 0);
-                                if ($it_mc_amt > 0): ?>
-                                <div class="item-sub" style="color:#059669;font-weight:600;">Making Charge: ₹<?php echo number_format($it_mc_amt, 2); ?><?php echo $it_mc_pct > 0 ? ' ('.number_format($it_mc_pct, 1).'%)' : ''; ?></div>
-                                <?php endif; ?>
+
                             </td>
                             <td class="center"><strong><?php echo $item_pcs; ?> Pcs</strong></td>
                             <td class="right"><strong><?php echo ($gross_wt > 0) ? number_format($gross_wt, 3).' g' : '-'; ?></strong></td>
