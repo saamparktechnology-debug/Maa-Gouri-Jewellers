@@ -282,24 +282,9 @@ if ($chk_qty && mysqli_num_rows($chk_qty) > 0) {
     }
 }
 
-// Ensure single primary admin account exists and remove all other user emails
-$admin_pass_hash = password_hash('123456', PASSWORD_DEFAULT);
-$adm_email = 'jewellersmaagouri@gmail.com';
-$adm_mob   = '9647291299';
-$adm_name  = 'MAA GOURI JEWELLERS';
 
-try {
-    @mysqli_query($conn, "DELETE FROM users WHERE email != '$adm_email'");
-    @mysqli_query($conn, "UPDATE users SET password = '$admin_pass_hash'");
-} catch (Exception $e) {}
 
-$chk_adm = mysqli_query($conn, "SELECT id FROM users WHERE email = '$adm_email' OR mobile = '$adm_mob'");
-if ($chk_adm && mysqli_num_rows($chk_adm) > 0) {
-    $row_adm = mysqli_fetch_assoc($chk_adm);
-    mysqli_query($conn, "UPDATE users SET name = '$adm_name', email = '$adm_email', mobile = '$adm_mob', password = '$admin_pass_hash' WHERE id = {$row_adm['id']}");
-} else {
-    mysqli_query($conn, "INSERT INTO users (name, mobile, email, password) VALUES ('$adm_name', '$adm_mob', '$adm_email', '$admin_pass_hash')");
-}
+
 
 // Create purchase_entries table if not exists
 $create_purchase_entries = "CREATE TABLE IF NOT EXISTS purchase_entries (
@@ -528,17 +513,6 @@ if ($sanchari_cols4 && mysqli_num_rows($sanchari_cols4) == 0) {
 }
 
 // Set session user if needed
-if(isset($_SESSION['user_id'])) {
-    $check = mysqli_query($conn, "SELECT id FROM users WHERE id = '{$_SESSION['user_id']}'");
-    if($check && mysqli_num_rows($check) == 0) {
-        $admin = mysqli_query($conn, "SELECT id, name, mobile FROM users WHERE email = '$adm_email' OR mobile = '$adm_mob' LIMIT 1");
-        if ($admin && mysqli_num_rows($admin) > 0) {
-            $admin_row = mysqli_fetch_assoc($admin);
-            $_SESSION['user_id'] = $admin_row['id'];
-            $_SESSION['user_name'] = $admin_row['name'];
-            $_SESSION['user_mobile'] = $admin_row['mobile'];
-        }
-    }
-}
+
 
 
