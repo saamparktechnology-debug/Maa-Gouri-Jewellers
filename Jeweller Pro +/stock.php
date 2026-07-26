@@ -8,6 +8,12 @@ if(!isset($_SESSION['user_id'])) {
     exit();
 }
 
+// Drop unique index on serial_no to allow multiple empty entries
+$idx_chk = mysqli_query($conn, "SHOW INDEX FROM products WHERE Key_name = 'serial_no'");
+if ($idx_chk && mysqli_num_rows($idx_chk) > 0) {
+    mysqli_query($conn, "ALTER TABLE products DROP INDEX serial_no");
+}
+
 // Handle add/edit/delete product
 if($_SERVER['REQUEST_METHOD'] == 'POST') {
     if(isset($_POST['add_product'])) {
