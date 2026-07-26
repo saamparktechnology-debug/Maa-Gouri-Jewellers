@@ -486,6 +486,56 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
 </head>
 <body>
 
+<?php
+$logo_paths = [
+    'assets/images/maa_gouri_logo.png',
+    'assets/images/moti_logo.png',
+    'assets/images/radhey_shyam_logo.png',
+    'logo.png'
+];
+$logo_file = 'logo.png';
+foreach($logo_paths as $lp) {
+    if(file_exists($lp)) { $logo_file = $lp; break; }
+}
+?>
+<!-- Loading Overlay -->
+<div id="loadingOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:999999;display:flex;justify-content:center;align-items:center;overflow:hidden;transition:opacity 0.6s ease,visibility 0.6s ease;background:radial-gradient(ellipse at 50% 60%, #1a0a00 0%, #0d0500 100%);">
+    <div style="position:absolute;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(214,139,22,0.015) 3px,rgba(214,139,22,0.015) 4px);pointer-events:none;z-index:1;"></div>
+    <div style="position:relative;z-index:10;text-align:center;">
+        <div style="position:relative;width:120px;height:120px;margin:0 auto 24px;display:flex;align-items:center;justify-content:center;">
+            <div style="width:120px;height:120px;background:transparent;display:flex;align-items:center;justify-content:center;animation:gemGlowPulse 1.5s ease-in-out infinite;">
+                <img src="<?php echo $logo_file; ?>" alt="Logo" style="width:100%;height:100%;object-fit:contain;display:block;">
+            </div>
+        </div>
+        <div style="color:#d68b16;font-size:22px;letter-spacing:6px;font-family:'Poppins',serif;margin-bottom:6px;animation:titleGold 2s ease infinite alternate;text-transform:uppercase;"><?php echo htmlspecialchars($COMPANY['name']); ?></div>
+        <p style="color:rgba(201,169,110,0.7);font-size:10px;letter-spacing:4px;text-transform:uppercase;margin-bottom:24px;">Authenticating Environment</p>
+        <div style="width:200px;height:3px;background:rgba(255,255,255,0.08);border-radius:3px;margin:0 auto 16px;overflow:hidden;">
+            <div style="height:100%;width:35%;background:linear-gradient(90deg,#7a4e0a,#d68b16,#f5c842);border-radius:3px;animation:barSlide 1.8s ease-in-out infinite;"></div>
+        </div>
+    </div>
+    <style>
+        @keyframes gemGlowPulse { 0%,100%{filter:drop-shadow(0 0 8px #d68b16)} 50%{filter:drop-shadow(0 0 22px #ff9900)} }
+        @keyframes titleGold { from{color:#d68b16} to{color:#f5c842} }
+        @keyframes barSlide { 0%{transform:translateX(-100%)} 100%{transform:translateX(480%)} }
+    </style>
+</div>
+<script>
+window.addEventListener('load', function() {
+    const isReload = performance.getEntriesByType("navigation")[0]?.type === "reload";
+    const hasVisited = sessionStorage.getItem('login_visited');
+    if (!hasVisited || isReload) {
+        sessionStorage.setItem('login_visited', 'true');
+        setTimeout(function() {
+            const ov = document.getElementById('loadingOverlay');
+            if(ov) { ov.style.opacity = '0'; ov.style.visibility = 'hidden'; setTimeout(()=>ov.style.display='none', 600); }
+        }, 3000);
+    } else {
+        const ov = document.getElementById('loadingOverlay');
+        if(ov) { ov.style.display = 'none'; }
+    }
+});
+</script>
+
 <div class="login-card">
 
     <!--  LEFT PANEL  -->
@@ -749,6 +799,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
 </script>
 </body>
 </html>
+
 
 
 
