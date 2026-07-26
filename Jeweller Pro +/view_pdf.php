@@ -586,15 +586,14 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                 </table>
 
                 
-                <!-- 7. Total Amount in Words -->
-                <div class="amount-words-bar" style="margin-top:0px; margin-bottom:10px;">
-                    <strong>Total Amount in Words:</strong> <em><?php echo $total_words; ?></em>
-                </div>
-                <!-- 6. Bottom Split Section -->
-                <div class="bottom-section">
-                                        <!-- Left Side: Complete Terms & Conditions & Stamp -->
+                                <!-- 6. Bottom Split Section -->
+                <div class="bottom-section" style="margin-top:16px;">
+                    <!-- Left Side: Amount in Words, Terms & Stamp -->
                     <div class="bottom-left" style="display:flex; flex-direction:column; justify-content:space-between;">
-                        <div>
+                        <div style="margin-bottom:12px;">
+                            <div class="amount-words-bar" style="margin-top:0; margin-bottom:12px;">
+                                <strong>Total Amount in Words:</strong><br><em><?php echo $total_words; ?></em>
+                            </div>
                             <div class="terms-box-title">Terms and Conditions</div>
                             <div class="terms-text-content">
                                 1. Goods once sold will not be taken back or exchanged without original bill receipt.<br>
@@ -608,7 +607,6 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                                 <div class="stamp-label-text">Signature &amp; Stamp<br>Authorised Signatory</div>
                             </div>
                         </div>
-                    </div>
                     </div>
 
                     <!-- Right Side: Taxable Amount, CGST 1.5%, SGST 1.5% (Actual GST Divided in Two), Total Amount, Received Amount, Previous Balance, Current Balance -->
