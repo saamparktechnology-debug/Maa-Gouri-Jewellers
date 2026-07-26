@@ -19,6 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_reset']) && $
     $tables = [
         'invoice_items',
         'invoices',
+        'due_update_history',
         'products',
         'customers',
         'purchase_entries',
