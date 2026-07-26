@@ -586,7 +586,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
 
                             </td>
                             <?php if($is_gst): ?>
-                            <td class="center" style="font-weight:600; color:#475569;"><?php echo !empty($it['hsn_code']) ? htmlspecialchars($it['hsn_code']) : '7113'; ?></td>
+                            <td class="center" style="font-weight:600; color:#475569;">7113</td>
                             <?php endif; ?>
                             <td class="center"><strong><?php echo $item_pcs; ?> Pcs</strong></td>
                             <td class="right"><strong><?php echo ($gross_wt > 0) ? number_format($gross_wt, 3).' g' : '-'; ?></strong></td>
