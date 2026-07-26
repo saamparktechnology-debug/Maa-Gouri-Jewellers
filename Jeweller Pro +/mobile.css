@@ -126,3 +126,43 @@ html, body {
     .top-header img, .very-left-logo { width: 45px !important; height: 45px !important; }
     .shop-title { font-size: 13px !important; }
 }
+
+/* ===== LOGIN PAGE MOBILE FIXES ===== */
+@media screen and (max-width: 768px) {
+    .jewel-field {
+        padding: 11px 42px 11px 38px !important;
+        font-size: 16px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    .input-wrap {
+        position: relative !important;
+        display: block !important;
+        width: 100% !important;
+    }
+    .input-icon {
+        position: absolute !important;
+        left: 12px !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        z-index: 3 !important;
+        pointer-events: none !important;
+    }
+    .eye-btn {
+        position: absolute !important;
+        right: 10px !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        width: auto !important;
+        min-height: unset !important;
+        height: auto !important;
+        padding: 4px 6px !important;
+        z-index: 5 !important;
+        background: none !important;
+        border: none !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 14px !important;
+    }
+}
