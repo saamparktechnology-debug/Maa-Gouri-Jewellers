@@ -527,13 +527,13 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                             $it_gst_type = $it['gst_type'] ?? 'non_gst';
                             if ($it_gst_type === 'gst_18') {
                                 $item_tax_rate = 18;
-                                $tax_amt = round($amt * 0.18, 2);
+                                $tax_amt = round(floatval($it['quantity']) * floatval($it['price']) * 0.18, 2);
                             } else if ($it_gst_type === 'gst_3') {
                                 $item_tax_rate = 3;
-                                $tax_amt = round($amt * 0.03, 2);
+                                $tax_amt = round(floatval($it['quantity']) * floatval($it['price']) * 0.03, 2);
                             } else if ($is_gst && $effective_gst_pct > 0) {
                                 $item_tax_rate = $effective_gst_pct;
-                                $tax_amt = round($amt * ($effective_gst_pct / 100), 2);
+                                $tax_amt = round(floatval($it['quantity']) * floatval($it['price']) * ($effective_gst_pct / 100), 2);
                             } else {
                                 $item_tax_rate = 0;
                                 $tax_amt = 0;

@@ -2740,11 +2740,11 @@ function calculateTotal() {
     let cgst = 0, sgst = 0;
     items.forEach(item => {
         if (item.gst_type === 'gst_3') {
-            cgst += item.total * 0.015;
-            sgst += item.total * 0.015;
+            cgst += (item.base_amount !== undefined ? item.base_amount : item.price * item.quantity) * 0.015;
+            sgst += (item.base_amount !== undefined ? item.base_amount : item.price * item.quantity) * 0.015;
         } else if (item.gst_type === 'gst_18') {
-            cgst += item.total * 0.09;
-            sgst += item.total * 0.09;
+            cgst += (item.base_amount !== undefined ? item.base_amount : item.price * item.quantity) * 0.09;
+            sgst += (item.base_amount !== undefined ? item.base_amount : item.price * item.quantity) * 0.09;
         }
     });
 
