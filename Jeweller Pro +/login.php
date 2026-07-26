@@ -37,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['send_otp'])) {
     $check = mysqli_query($conn, "SELECT * FROM users WHERE email = '$email' OR mobile = '$email' OR LOWER(email) = LOWER('$email')");
     if (mysqli_num_rows($check) > 0) {
         $row = mysqli_fetch_assoc($check);
-        if (password_verify($password, $row['password']) || $row['password'] === $password || $password === '123456') {
+        if (password_verify($password, $row['password']) || $row['password'] === $password) {
             $_SESSION['user_id']     = $row['id'];
             $_SESSION['user_name']   = $row['name'];
             $_SESSION['user_mobile'] = $row['mobile'];
@@ -45,10 +45,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['send_otp'])) {
             header('Location: ' . $base_url . 'index.php');
             exit();
         } else {
-            $error = "Email or Password is incorrect!";
+            $error = "Email or Password is incorrect! DEBUG: db=" . (isset($conn) ? mysqli_error($conn) : "noconn") . " rows=" . (isset($check) ? mysqli_num_rows($check) : "0");
         }
     } else {
-        $error = "Email or Password is incorrect!";
+        $error = "Email or Password is incorrect! DEBUG: db=" . (isset($conn) ? mysqli_error($conn) : "noconn") . " rows=" . (isset($check) ? mysqli_num_rows($check) : "0");
     }
 }
 
@@ -749,6 +749,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
 </script>
 </body>
 </html>
+
 
 
 
