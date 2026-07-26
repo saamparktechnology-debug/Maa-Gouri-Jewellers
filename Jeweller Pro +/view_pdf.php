@@ -104,9 +104,11 @@ $total_gross_wt = 0;
 $total_net_wt = 0;
 $total_making_charge = 0;
 $total_hallmark = 0;
+$total_item_discount = 0;
 foreach($items as $it) {
     $total_making_charge += floatval($it['making_charge'] ?? 0);
     $total_hallmark += floatval($it['hallmark'] ?? 0);
+    $total_item_discount += floatval($it['discount'] ?? 0);
     $u = strtolower(trim($it['unit'] ?? 'g'));
     $val = floatval($it['quantity']);
     if (in_array($u, ['qty','pcs','piece','pieces'])) {
@@ -625,7 +627,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                         <div class="calc-card">
                             <div class="calc-line">
                                 <span>Total Items Value</span>
-                                <span>₹<?php echo number_format($subtotal - $total_making_charge - $total_hallmark, 2); ?></span>
+                                <span>₹<?php echo number_format($subtotal - $total_making_charge - $total_hallmark + $total_item_discount, 2); ?></span>
                             </div>
                             <?php if($total_making_charge > 0): ?>
                             <div class="calc-line">
@@ -637,6 +639,12 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                             <div class="calc-line">
                                 <span>Total Hallmark Charge</span>
                                 <span>₹<?php echo number_format($total_hallmark, 2); ?></span>
+                            </div>
+                            <?php endif; ?>
+                            <?php if($total_item_discount > 0): ?>
+                            <div class="calc-line" style="color:#b91c1c;">
+                                <span>Less: Item Discounts</span>
+                                <span>(-) ₹<?php echo number_format($total_item_discount, 2); ?></span>
                             </div>
                             <?php endif; ?>
                             <div class="calc-line" style="border-top:1px dashed #cbd5e1;padding-top:4px;margin-top:2px;">
