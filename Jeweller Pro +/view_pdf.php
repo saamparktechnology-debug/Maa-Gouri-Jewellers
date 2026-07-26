@@ -529,6 +529,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                         <tr>
                             <th style="width:28px" class="center">No</th>
                             <th>Items / Product Name</th>
+                            <?php if($is_gst): ?><th style="width:65px" class="center">HSN</th><?php endif; ?>
                             <th style="width:50px" class="center">Qty</th>
                             <th style="width:75px" class="right">Gross Wt</th>
                             <th style="width:75px" class="right">Net Wt</th>
@@ -584,6 +585,9 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                                 <?php endif; ?>
 
                             </td>
+                            <?php if($is_gst): ?>
+                            <td class="center" style="font-weight:600; color:#475569;"><?php echo !empty($it['hsn_code']) ? htmlspecialchars($it['hsn_code']) : '7113'; ?></td>
+                            <?php endif; ?>
                             <td class="center"><strong><?php echo $item_pcs; ?> Pcs</strong></td>
                             <td class="right"><strong><?php echo ($gross_wt > 0) ? number_format($gross_wt, 3).' g' : '-'; ?></strong></td>
                             <td class="right"><strong><?php echo ($net_wt > 0) ? number_format($net_wt, 3).' g' : '-'; ?></strong></td>
@@ -602,7 +606,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
 
                         <!-- 5. Subtotal Row with Total Qty & Weights in Grams -->
                         <tr class="subtotal-row">
-                            <td colspan="2" style="text-align:right;">SUBTOTAL WEIGHTS &amp; AMOUNT</td>
+                            <td colspan="<?php echo $is_gst ? '3' : '2'; ?>" style="text-align:right;">SUBTOTAL WEIGHTS &amp; AMOUNT</td>
                             <td class="center"><?php echo $total_pcs; ?> Pcs</td>
                             <td class="right"><?php echo number_format($total_gross_wt, 3); ?> g</td>
                             <td class="right"><?php echo number_format($total_net_wt, 3); ?> g</td>
