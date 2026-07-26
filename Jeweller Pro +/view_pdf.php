@@ -179,7 +179,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
 .btn-print { background:linear-gradient(135deg,#7a4e0a,#d68b16); color:#fff; padding:10px 24px; border-radius:8px; font-size:13px; font-weight:700; text-decoration:none; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 12px rgba(214,139,22,0.3); }
 .btn-back { background:#fff; color:#475569; padding:10px 18px; border-radius:8px; font-size:13px; font-weight:600; text-decoration:none; border:1px solid #cbd5e1; }
 
-.invoice-card {
+.invoice-card { min-height: 275mm !important; 
     width:210mm; max-width:820px; min-height:285mm; margin:0 auto; background:#fffbf4; border:3px solid #d68b16; border-radius:14px; padding:28px 32px; box-shadow:0 12px 36px rgba(0,0,0,0.18); position:relative; overflow:hidden;
 }
 
@@ -198,7 +198,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
 .shop-details-line { font-size:11.5px; color:#523e2b; line-height:1.5; }
 .shop-details-line strong { color:#7a4e0a; }
 
-.header-right { text-align:right; flex-shrink:0; }
+.header-right { text-align:right; flex-shrink:0; margin-left: auto;  }
 .tax-invoice-tag { font-size:18px; font-weight:700; color:#7a4e0a; font-family:'Poppins', sans-serif; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:4px; }
 .payment-status-pill { display:inline-block; padding:4px 14px; border-radius:20px; font-size:10.5px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; }
 .pill-paid { background:#dcfce7; color:#15803d; border:1px solid #86efac; }
@@ -222,10 +222,10 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
 /* Items Table */
 .inv-table { width:100%; border-collapse:collapse; margin-bottom:0; background:rgba(255,255,255,0.75); border-radius:8px; overflow:hidden; border:1.5px solid #d68b16; }
 .inv-table thead tr { background:linear-gradient(135deg, #7a4e0a, #d68b16); color:#fff; }
-.inv-table th { padding:8px 10px; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; text-align:left; border-right:1px solid rgba(255,255,255,0.15); }
+.inv-table th { padding:6px 8px; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; text-align:left; border-right:1px solid rgba(255,255,255,0.15); }
 .inv-table th.right { text-align:right; }
 .inv-table th.center { text-align:center; }
-.inv-table td { padding:8px 10px; font-size:11.5px; color:#334155; border-bottom:1px solid #f1e5cd; border-right:1px solid #f1e5cd; vertical-align:top; background:rgba(255,255,255,0.65); }
+.inv-table td { padding:6px 8px; font-size:11.5px; color:#334155; border-bottom:1px solid #f1e5cd; border-right:1px solid #f1e5cd; vertical-align:top; background:rgba(255,255,255,0.65); }
 .inv-table td.right { text-align:right; }
 .inv-table td.center { text-align:center; }
 .inv-table tbody tr:nth-child(even) td { background:rgba(250,245,232,0.65); }
@@ -236,7 +236,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
 .subtotal-row td { background:rgba(243,232,206,0.85) !important; font-weight:700; color:#2b1b17; border-top:2px solid #d68b16; border-bottom: 2.5px solid #ffd700; box-shadow: 0 0 12px rgba(255, 215, 0, 0.5); padding:8px 10px; }
 
 /* Bottom Section */
-.bottom-section { display:grid; grid-template-columns:1.15fr 1fr; gap:20px; margin-top:16px; }
+.bottom-section { display:grid; grid-template-columns:1.3fr 1fr; gap:16px; margin-top:0; align-items: stretch; }
 .bottom-left { display:flex; flex-direction:column; gap:12px; }
 .terms-box-title { font-size:11px; font-weight:700; color:#7a4e0a; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px; }
 .terms-text-content { font-size:10px; color:#475569; line-height:1.55; background:rgba(255,255,255,0.65); padding:8px 12px; border-radius:6px; border:1px solid #f1e5cd; }
@@ -267,7 +267,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
         margin: 0 !important;
     }
     .print-actions { display:none !important; }
-    .invoice-card {
+    .invoice-card { min-height: 275mm !important; 
         width: 100% !important;
         max-width: 100% !important;
         min-height: 285mm !important;
@@ -402,8 +402,8 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                 </div>
 
                 <!-- Terms & Signature Stamp Box -->
-                <div class="bottom-section" style="margin-top:16px;">
-                    <div class="bottom-left">
+                <div class="bottom-section" style="margin-top:16px; grid-template-columns:1.3fr 1fr; gap:16px; align-items: stretch;">
+                    <div class="bottom-left" style="display:flex; flex-direction:column; justify-content:space-between;">
                         <div>
                             <div class="terms-box-title">Terms &amp; Declaration</div>
                             <div class="terms-text-content">
@@ -412,11 +412,14 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                                 3. This is a computer generated official payment receipt.
                             </div>
                         </div>
-                    </div>
-                    <div class="bottom-right" style="display:flex;justify-content:flex-end;align-items:flex-end;">
-                        <div class="signature-stamp-frame">
-                            <div class="stamp-label-text">Signature &amp; Stamp<br>Authorised Signatory</div>
+                        <div class="stamp-space-box" style="margin-top:auto; padding-top:15px; margin-bottom:10px;">
+                            <div class="signature-stamp-frame">
+                                <div class="stamp-label-text">Signature &amp; Stamp<br>Authorised Signatory</div>
+                            </div>
                         </div>
+                    </div>
+                    <div class="bottom-right">
+                         <!-- Empty space or other calculations if needed -->
                     </div>
                 </div>
                 <!-- Developer Footer -->
@@ -582,6 +585,11 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                     </tbody>
                 </table>
 
+                
+                <!-- 7. Total Amount in Words -->
+                <div class="amount-words-bar" style="margin-top:0px; margin-bottom:10px;">
+                    <strong>Total Amount in Words:</strong> <em><?php echo $total_words; ?></em>
+                </div>
                 <!-- 6. Bottom Split Section -->
                 <div class="bottom-section">
                     <!-- Left Side: Complete Terms & Conditions -->
@@ -661,17 +669,6 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                     </div>
                 </div>
 
-                <!-- 7. Total Amount in Words -->
-                <div class="amount-words-bar">
-                    <strong>Total Amount in Words:</strong> <em><?php echo $total_words; ?></em>
-                </div>
-
-                <!-- 8. Signature & Stamp Space (Right below Amount in Words) -->
-                <div class="stamp-space-box">
-                    <div class="signature-stamp-frame">
-                        <div class="stamp-label-text">Signature &amp; Stamp<br>Authorised Signatory</div>
-                    </div>
-                </div>
                 <!-- Developer Footer -->
                 <div style="margin-top:16px;padding-top:10px;border-top:1px solid #e8d5a8;text-align:center;font-size:9.5px;color:#7a4e0a;font-family:'Poppins',sans-serif;">
                     Printed on: <?php echo date("d-M-Y h:i A"); ?>
