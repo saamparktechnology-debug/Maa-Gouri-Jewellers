@@ -418,18 +418,8 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                     </div>
                 </div>
 
-                <!-- NEW ALIGNED SIGNATURE ROW -->
-                <div style="display:flex; justify-content:space-between; margin-top:24px; padding:0 10px;">
-                    <div class="signature-stamp-frame" style="border-color:#94a3b8; background:rgba(241,245,249,0.5);">
-                        <div class="stamp-label-text" style="color:#64748b;">Customer Signature</div>
-                    </div>
-                    <div class="signature-stamp-frame">
-                        <div class="stamp-label-text">Signature &amp; Stamp<br>Authorised Signatory</div>
-                    </div>
-                </div>
-
-                <!-- NEW ALIGNED SIGNATURE ROW -->
-                <div style="display:flex; justify-content:space-between; margin-top:24px; padding:0 10px;">
+                                <!-- NEW ALIGNED SIGNATURE ROW -->
+                <div style="display:flex; justify-content:space-between; margin-top:24px; padding:0 10px; margin-bottom: 20px;">
                     <div class="signature-stamp-frame" style="border-color:#94a3b8; background:rgba(241,245,249,0.5); width:165px; height:75px; border:1.5px dashed #d68b16; border-radius:8px; display:inline-flex; flex-direction:column; align-items:center; justify-content:center;">
                         <div class="stamp-label-text" style="color:#64748b; font-size:9.5px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-top:auto; padding-bottom:5px; text-align:center;">Customer Signature</div>
                     </div>
@@ -681,6 +671,16 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                             </div>
                             <?php endif; ?>
                         </div>
+                    </div>
+                </div>
+
+                                <!-- NEW ALIGNED SIGNATURE ROW -->
+                <div style="display:flex; justify-content:space-between; margin-top:24px; padding:0 10px; margin-bottom: 20px;">
+                    <div class="signature-stamp-frame" style="border-color:#94a3b8; background:rgba(241,245,249,0.5); width:165px; height:75px; border:1.5px dashed #d68b16; border-radius:8px; display:inline-flex; flex-direction:column; align-items:center; justify-content:center;">
+                        <div class="stamp-label-text" style="color:#64748b; font-size:9.5px; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-top:auto; padding-bottom:5px; text-align:center;">Customer Signature</div>
+                    </div>
+                    <div class="signature-stamp-frame" style="width:165px; height:75px; border:1.5px dashed #d68b16; border-radius:8px; display:inline-flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(248,243,230,0.5);">
+                        <div class="stamp-label-text" style="font-size:9.5px; color:#7a4e0a; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-top:auto; padding-bottom:5px; text-align:center;">Signature &amp; Stamp<br>Authorised Signatory</div>
                     </div>
                 </div>
 

@@ -48,13 +48,7 @@ html { -webkit-text-size-adjust: 100%; }
     .action-btn { padding: 6px 10px !important; font-size: 12px !important; }
     
     /* ── 7. Single Column Grid enforcement ── */
-    /* Target grids that squish too much */
-    .grid { grid-template-columns: 1fr !important; }
-    .grid-cols-2, .grid-cols-3, .grid-cols-4, .md\:grid-cols-2, .md\:grid-cols-3, .md\:grid-cols-4, .lg\:grid-cols-3 { grid-template-columns: 1fr !important; }
-    
-    /* Special exceptions for grids that SHOULD stay inline on mobile */
-    .wa-stat-grid { grid-template-columns: 1fr 1fr !important; }
-    .meta-bar { grid-template-columns: 1fr 1fr !important; font-size: 10px !important; }
+    /* Removed aggressive global overrides. Let Tailwind handle native responsiveness via md: and lg: prefixes! */
     
     /* ── 8. Split Payment Progress ── */
     .split-legend { flex-direction: column; align-items: flex-start; gap: 4px; }
