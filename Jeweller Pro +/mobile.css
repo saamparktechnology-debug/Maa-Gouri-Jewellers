@@ -80,8 +80,3 @@ html { -webkit-text-size-adjust: 100%; }
 
 @media print {
     .sidebar, .sidebar-overlay, nav.nav-gold, .mobile-burger, .no-print, .print-actions { display: none !important; }
-    .page-wrapper { margin-left: 0 !important; padding: 0 !important; }
-    table { min-width: 100% !important; }
-    th, td { white-space: normal !important; }
-    .invoice-card { border: none !important; box-shadow: none !important; }
-}
