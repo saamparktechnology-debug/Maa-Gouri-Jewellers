@@ -1476,10 +1476,10 @@ function submitPayment() {
                                     <span>Old Gold Deduction</span><span id="oldGoldDisplayAmount">- &#8377;0.00</span>
                                 </div>
                                 <div class="flex justify-between text-sm" style="color:#2563eb;" id="cgstRow">
-                                    <span>CGST Total</span><span id="cgstAmount">&#8377;0.00</span>
+                                    <span>CGST (on Gold)</span><span id="cgstAmount">&#8377;0.00</span>
                                 </div>
                                 <div class="flex justify-between text-sm" style="color:#2563eb;" id="sgstRow">
-                                    <span>SGST Total</span><span id="sgstAmount">&#8377;0.00</span>
+                                    <span>SGST (on Gold)</span><span id="sgstAmount">&#8377;0.00</span>
                                 </div>
                                 <div style="height:1px;background:rgba(181,115,14,0.25);margin:8px 0;"></div>
                                 <div class="flex justify-between font-bold text-xl" style="color:#800020;">
