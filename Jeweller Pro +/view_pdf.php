@@ -412,20 +412,22 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                                 3. This is a computer generated official payment receipt.
                             </div>
                         </div>
-                        <div class="stamp-space-box" style="margin-top:auto; padding-top:15px; margin-bottom:10px;">
-                            <div class="signature-stamp-frame" style="border-color:#94a3b8; background:rgba(241,245,249,0.5);">
-                                <div class="stamp-label-text" style="color:#64748b;">Customer Signature</div>
-                            </div>
-                        </div>
                     </div>
-                    <div class="bottom-right" style="display:flex; flex-direction:column; justify-content:flex-end; align-items:flex-end;">
-                        <div class="stamp-space-box" style="margin-top:auto; padding-top:15px; margin-bottom:10px;">
-                            <div class="signature-stamp-frame">
-                                <div class="stamp-label-text">Signature &amp; Stamp<br>Authorised Signatory</div>
-                            </div>
-                        </div>
+                    <div class="bottom-right">
+                         <!-- Empty space or other calculations if needed -->
                     </div>
                 </div>
+
+                <!-- NEW ALIGNED SIGNATURE ROW -->
+                <div style="display:flex; justify-content:space-between; margin-top:24px; padding:0 10px;">
+                    <div class="signature-stamp-frame" style="border-color:#94a3b8; background:rgba(241,245,249,0.5);">
+                        <div class="stamp-label-text" style="color:#64748b;">Customer Signature</div>
+                    </div>
+                    <div class="signature-stamp-frame">
+                        <div class="stamp-label-text">Signature &amp; Stamp<br>Authorised Signatory</div>
+                    </div>
+                </div>
+
                 <!-- Developer Footer -->
                 <div style="margin-top:16px;padding-top:10px;border-top:1px solid #e8d5a8;text-align:center;font-size:9.5px;color:#7a4e0a;font-family:'Poppins',sans-serif;">
                     Printed on: <?php echo date("d-M-Y h:i A"); ?>
@@ -604,11 +606,6 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                                 2. Guarantee / Warranty applies strictly as per manufacturer and BIS Hallmark standards.<br>
                                 3. All disputes are subject to Paschim Medinipur Jurisdiction.<br>
                                 4. We declare that this <?php echo $doc_term_name; ?> shows the actual price of the goods described and all particulars are true and correct.
-                            </div>
-                        </div>
-                        <div class="stamp-space-box" style="margin-top:auto; padding-top:15px; margin-bottom:10px;">
-                            <div class="signature-stamp-frame" style="border-color:#94a3b8; background:rgba(241,245,249,0.5);">
-                                <div class="stamp-label-text" style="color:#64748b;">Customer Signature</div>
                             </div>
                         </div>
                     </div>
