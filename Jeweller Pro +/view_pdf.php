@@ -592,8 +592,8 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                 </div>
                 <!-- 6. Bottom Split Section -->
                 <div class="bottom-section">
-                    <!-- Left Side: Complete Terms & Conditions -->
-                    <div class="bottom-left">
+                                        <!-- Left Side: Complete Terms & Conditions & Stamp -->
+                    <div class="bottom-left" style="display:flex; flex-direction:column; justify-content:space-between;">
                         <div>
                             <div class="terms-box-title">Terms and Conditions</div>
                             <div class="terms-text-content">
@@ -603,6 +603,12 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                                 4. We declare that this <?php echo $doc_term_name; ?> shows the actual price of the goods described and all particulars are true and correct.
                             </div>
                         </div>
+                        <div class="stamp-space-box" style="margin-top:auto; padding-top:15px; margin-bottom:10px;">
+                            <div class="signature-stamp-frame">
+                                <div class="stamp-label-text">Signature &amp; Stamp<br>Authorised Signatory</div>
+                            </div>
+                        </div>
+                    </div>
                     </div>
 
                     <!-- Right Side: Taxable Amount, CGST 1.5%, SGST 1.5% (Actual GST Divided in Two), Total Amount, Received Amount, Previous Balance, Current Balance -->
