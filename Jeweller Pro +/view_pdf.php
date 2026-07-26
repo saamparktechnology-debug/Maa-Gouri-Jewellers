@@ -580,9 +580,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                                 <?php if(!empty($huid)): ?>
                                 <div class="item-sub" style="color:#7a4e0a;font-weight:600;">HUID: <strong><?php echo htmlspecialchars($huid); ?></strong></div>
                                 <?php endif; ?>
-                                <?php if(!empty($serial) && $serial !== $huid): ?>
-                                <div class="item-sub">Serial: <strong><?php echo htmlspecialchars($serial); ?></strong></div>
-                                <?php endif; ?>
+                                <!-- Serial number hidden for Maa Gouri -->
 
                             </td>
                             <?php if($is_gst): ?>
