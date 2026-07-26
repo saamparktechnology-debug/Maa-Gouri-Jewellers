@@ -148,7 +148,7 @@ html, body {
         z-index: 3 !important;
         pointer-events: none !important;
     }
-    .eye-btn {
+    button[type="button"].eye-btn {
         position: absolute !important;
         right: 10px !important;
         top: 50% !important;
@@ -166,3 +166,4 @@ html, body {
         font-size: 14px !important;
     }
 }
+

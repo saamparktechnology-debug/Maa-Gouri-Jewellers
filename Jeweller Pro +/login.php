@@ -331,7 +331,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
         }
         .jewel-field::placeholder { color: rgba(122,78,10,0.4); }
 
-        .eye-btn {
+        button[type="button"].eye-btn {
             position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
             background: none; border: none; cursor: pointer; z-index: 5;
             color: rgba(122,78,10,0.5); font-size: 14px;
@@ -508,7 +508,7 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
                 position: relative;
                 z-index: 1;
             }
-            .eye-btn {
+            button[type="button"].eye-btn {
                 position: absolute;
                 right: 10px;
                 top: 50%;
@@ -588,7 +588,7 @@ foreach($logo_paths as $lp) {
                 position: relative;
                 z-index: 1;
             }
-            .eye-btn {
+            button[type="button"].eye-btn {
                 position: absolute;
                 right: 10px;
                 top: 50%;
@@ -888,6 +888,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
