@@ -1,82 +1,100 @@
 /* ===================================================
-   JEWELLERY PRO+ — PERFECT MOBILE RESPONSIVE
+   JEWELLERY PRO+ - PERFECT MOBILE RESPONSIVE
    =================================================== */
-*, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+*, *::before, *::after { box-sizing: border-box !important; overflow-wrap: break-word; word-wrap: break-word; }
+html, body { -webkit-text-size-adjust: 100%; max-width: 100vw !important; overflow-x: hidden !important; width: 100% !important; margin: 0; padding: 0; }
 
-@media (max-width: 768px) {
-    /* ── 1. Navbar & Page wrapper ── */
-    nav.nav-gold { margin-left: 0 !important; padding: 10px 16px !important; }
-    .page-wrapper { margin-left: 0 !important; padding: 10px !important; width: 100% !important; overflow-x: hidden; }
+@media screen and (max-width: 768px) {
+    /* 1. Navbar & Page wrapper */
+    nav.nav-gold { margin-left: 0 !important; padding: 10px 16px !important; width: 100vw !important; max-width: 100% !important; }
+    .page-wrapper { margin-left: 0 !important; padding: 10px !important; width: 100vw !important; max-width: 100% !important; overflow-x: hidden !important; box-sizing: border-box !important; }
     
-    /* ── 2. Sidebar ── */
+    /* 2. Sidebar */
     .sidebar { transform: translateX(-100%) !important; z-index: 1050; }
     .sidebar.open { transform: translateX(0) !important; }
     .mobile-burger { display: block !important; }
     
-    /* ── 3. Login Page ── */
-    .login-box, .login-card, form.login-form { width: 92vw !important; max-width: 420px !important; margin: 2vh auto !important; padding: 20px !important; }
+    /* 3. Login Page */
+    .login-box, .login-card, form.login-form { width: 92vw !important; max-width: 420px !important; margin: 2vh auto !important; padding: 20px !important; box-sizing: border-box !important; }
 
-    /* ── 4. Dashboard Charts & Cards ── */
-    .dashboard-chart, .top-products-card { padding: 16px !important; }
-    .gem-card { padding: 16px !important; }
+    /* 4. Dashboard Charts & Cards */
+    .dashboard-chart, .top-products-card { padding: 16px !important; width: 100% !important; box-sizing: border-box !important; overflow: hidden; }
+    .gem-card { padding: 16px !important; width: 100% !important; box-sizing: border-box !important; overflow: hidden; }
 
-    /* ── 5. Billing Form fixes ── */
-    .form-card, .jewel-card { padding: 14px !important; border-radius: 12px !important; }
+    /* 5. Billing Form fixes */
+    .form-card, .jewel-card, .border { padding: 14px !important; border-radius: 12px !important; width: 100% !important; max-width: 100vw !important; box-sizing: border-box !important; overflow-x: hidden !important; }
     input[type="date"], input[type="text"], input[type="number"], input[type="email"], select, textarea { 
-        min-height: 44px; font-size: 16px !important; 
+        min-height: 44px; font-size: 16px !important; width: 100% !important; max-width: 100% !important; box-sizing: border-box !important;
     }
     
     /* Better Add-Item Mode Tabs */
-    .add-mode-tabs { flex-direction: column; gap: 4px; border: none; }
-    .add-mode-tab { border: 1.5px solid rgba(181,115,14,0.3); border-radius: 8px; margin-bottom: 4px; padding: 12px !important; }
+    .add-mode-tabs { flex-direction: column; gap: 4px; border: none; width: 100%; box-sizing: border-box; }
+    .add-mode-tab { border: 1.5px solid rgba(181,115,14,0.3); border-radius: 8px; margin-bottom: 4px; padding: 12px !important; width: 100%; text-align: center; }
     
-    /* ── 6. Data Tables Horizontal Scrolling ── */
+    /* 6. Data Tables Horizontal Scrolling */
     .due-table-wrap, .table-responsive, .inv-table-wrap, .overflow-x-auto, 
     .accounts-table-wrap, .income-table-wrap, .sanchari-card, .sanchari-table,
-    #purchaseItemsList, table#purchaseItemsList, .purchase-history-table {
-        display: block !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch; width: 100%; margin-bottom: 15px; border-radius: 8px;
+    #purchaseItemsList, table#purchaseItemsList, .purchase-history-table, .jewel-table-wrap {
+        display: block !important; overflow-x: auto !important; -webkit-overflow-scrolling: touch; width: 100% !important; max-width: 100vw !important; margin-bottom: 15px; border-radius: 8px; box-sizing: border-box !important;
     }
     
     /* Wrap raw tables */
-    .due-table, .jewel-table, .inv-table, .purchase-table { display: block; overflow-x: auto; white-space: nowrap; }
-    table { min-width: max-content !important; width: 100%; }
+    .due-table, .jewel-table, .inv-table, .purchase-table { display: block !important; overflow-x: auto !important; white-space: nowrap !important; width: 100% !important; }
+    table { min-width: max-content !important; width: 100% !important; box-sizing: border-box !important; }
     th, td { white-space: nowrap !important; padding: 10px 12px !important; font-size: 13px !important; }
     
     /* Action Buttons in tables */
     .action-grid { display: flex; gap: 6px; flex-wrap: wrap; }
     .action-btn { padding: 6px 10px !important; font-size: 12px !important; }
     
-    /* ── 7. Single Column Grid enforcement ── */
-    /* Removed aggressive global overrides. Let Tailwind handle native responsiveness via md: and lg: prefixes! */
-    
-    /* ── 8. Split Payment Progress ── */
+    /* 7. Split Payment Progress */
     .split-legend { flex-direction: column; align-items: flex-start; gap: 4px; }
     .split-legend-item { width: 100%; justify-content: space-between; }
     
-    /* ── 9. Bottom Actions ── */
+    /* 8. Bottom Actions */
     .flex.flex-wrap.gap-4.justify-center.mb-10 {
-        flex-direction: column !important; align-items: stretch !important; padding: 0 10px;
+        flex-direction: column !important; align-items: stretch !important; padding: 0 10px; box-sizing: border-box !important; width: 100% !important;
     }
     .btn-save, .btn-pdf, .btn-gold {
-        width: 100% !important; margin-bottom: 10px; min-height: 44px; display: flex; justify-content: center; align-items: center;
+        width: 100% !important; margin-bottom: 10px; min-height: 44px; display: flex; justify-content: center; align-items: center; box-sizing: border-box !important;
     }
     
-    /* ── 10. Modals full width ── */
-    [id$="Modal"] > div { max-width: 96vw !important; width: 96vw !important; max-height: 90vh !important; margin: 2vh auto !important; }
+    /* 9. Modals full width */
+    [id$="Modal"] > div, .modal-content { max-width: 96vw !important; width: 96vw !important; max-height: 90vh !important; margin: 2vh auto !important; box-sizing: border-box !important; overflow-x: hidden; }
     
-    /* ── 11. Invoice / PDF Print Layout resets ── */
-    .invoice-card { width: 100% !important; max-width: 100% !important; border-radius: 0 !important; padding: 16px !important; }
-    .print-actions { flex-direction: column !important; gap: 8px !important; padding: 10px !important; }
-    .top-header { flex-direction: column !important; text-align: center !important; gap: 10px !important; }
-    .header-right { text-align: center !important; }
-    .shop-title { font-size: 18px !important; }
+    /* 10. Invoice / PDF Print Layout resets */
+    .invoice-card { width: 100% !important; max-width: 100vw !important; border-radius: 0 !important; padding: 12px !important; box-sizing: border-box !important; overflow-x: hidden !important; }
+    .print-actions { flex-direction: column !important; gap: 8px !important; padding: 10px !important; width: 100% !important; box-sizing: border-box !important; }
+    
+    /* Fix: Logo constantly on left side on mobile invoice */
+    .top-header { 
+        flex-direction: row !important; 
+        text-align: left !important; 
+        gap: 12px !important; 
+        align-items: flex-start !important; 
+        justify-content: flex-start !important;
+        flex-wrap: wrap !important;
+    }
+    .top-header img, .very-left-logo { 
+        width: 65px !important; 
+        height: 65px !important; 
+        margin-right: 0 !important;
+    }
+    .shop-branding-text {
+        text-align: left !important;
+        flex: 1;
+    }
+    .header-right { 
+        text-align: left !important; 
+        margin-top: 10px !important;
+        width: 100% !important;
+    }
+    .shop-title { font-size: 16px !important; }
 }
 
-@media (max-width: 480px) {
+@media screen and (max-width: 480px) {
     h1 { font-size: 18px !important; }
     h2 { font-size: 16px !important; }
+    .top-header img, .very-left-logo { width: 55px !important; height: 55px !important; }
+    .shop-title { font-size: 14px !important; }
 }
-
-@media print {
-    .sidebar, .sidebar-overlay, nav.nav-gold, .mobile-burger, .no-print, .print-actions { display: none !important; }
