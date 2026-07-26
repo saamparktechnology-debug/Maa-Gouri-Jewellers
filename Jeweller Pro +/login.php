@@ -481,6 +481,49 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
             transform: translateX(-3px);
         }
         .btn-back i { font-size: 14px; }
+            /* ===== MOBILE INPUT FIX ===== */
+        @media (max-width: 768px) {
+            .input-wrap {
+                position: relative;
+                display: flex;
+                align-items: center;
+            }
+            .input-icon {
+                position: absolute;
+                left: 12px;
+                top: 50%;
+                transform: translateY(-50%);
+                z-index: 3;
+                pointer-events: none;
+                font-size: 13px;
+                color: var(--gold-dark);
+            }
+            .jewel-field {
+                width: 100%;
+                padding: 11px 42px 11px 38px !important;
+                font-size: 16px !important; /* Prevents iOS zoom */
+                box-sizing: border-box;
+                position: relative;
+                z-index: 1;
+            }
+            .eye-btn {
+                position: absolute;
+                right: 10px;
+                top: 50%;
+                transform: translateY(-50%);
+                z-index: 4;
+                background: none;
+                border: none;
+                cursor: pointer;
+                color: rgba(122,78,10,0.5);
+                font-size: 14px;
+                padding: 4px;
+                line-height: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+        }
     </style>
     <link rel="stylesheet" href="mobile.css">
 </head>
@@ -518,6 +561,49 @@ foreach($logo_paths as $lp) {
         @keyframes gemGlowPulse { 0%,100%{filter:drop-shadow(0 0 8px #d68b16)} 50%{filter:drop-shadow(0 0 22px #ff9900)} }
         @keyframes titleGold { from{color:#d68b16} to{color:#f5c842} }
         @keyframes barSlide { 0%{transform:translateX(-100%)} 100%{transform:translateX(480%)} }
+            /* ===== MOBILE INPUT FIX ===== */
+        @media (max-width: 768px) {
+            .input-wrap {
+                position: relative;
+                display: flex;
+                align-items: center;
+            }
+            .input-icon {
+                position: absolute;
+                left: 12px;
+                top: 50%;
+                transform: translateY(-50%);
+                z-index: 3;
+                pointer-events: none;
+                font-size: 13px;
+                color: var(--gold-dark);
+            }
+            .jewel-field {
+                width: 100%;
+                padding: 11px 42px 11px 38px !important;
+                font-size: 16px !important; /* Prevents iOS zoom */
+                box-sizing: border-box;
+                position: relative;
+                z-index: 1;
+            }
+            .eye-btn {
+                position: absolute;
+                right: 10px;
+                top: 50%;
+                transform: translateY(-50%);
+                z-index: 4;
+                background: none;
+                border: none;
+                cursor: pointer;
+                color: rgba(122,78,10,0.5);
+                font-size: 14px;
+                padding: 4px;
+                line-height: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+        }
     </style>
 </div>
 <script>
@@ -800,6 +886,7 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
 
 
 
