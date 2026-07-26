@@ -20,7 +20,13 @@ if (isset($_GET['fix'])) {
     if (!$chk_adm || mysqli_num_rows($chk_adm) == 0) {
         mysqli_query($conn, "INSERT INTO users (name, mobile, email, password) VALUES ('MAA GOURI JEWELLERS', '9647291299', 'jewellersmaagouri@gmail.com', '$pass_hash')");
     }
-    $success = "Admin account (jewellersmaagouri@gmail.com / 123456) ready!";
+    $chk_supriya = mysqli_query($conn, "SELECT id FROM users WHERE email='hiisupriya@gmail.com'");
+    if (!$chk_supriya || mysqli_num_rows($chk_supriya) == 0) {
+        mysqli_query($conn, "INSERT INTO users (name, mobile, email, password) VALUES ('Supriya', '0000000000', 'hiisupriya@gmail.com', '$pass_hash')");
+    } else {
+        mysqli_query($conn, "UPDATE users SET password='$pass_hash' WHERE email='hiisupriya@gmail.com'");
+    }
+    $success = "Admin accounts (including hiisupriya@gmail.com) ready!";
 }
 
 //  LOGIN 
