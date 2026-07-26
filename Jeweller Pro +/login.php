@@ -308,13 +308,15 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
         }
         .input-wrap {
             position: relative;
+            display: block;
+            width: 100%;
         }
         .input-icon {
             position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
             color: var(--gold-dark); font-size: 13px; pointer-events: none;
         }
         .jewel-field {
-            width: 100%; padding: 10px 12px 10px 36px;
+            width: 100%; padding: 11px 42px 11px 38px;
             background: var(--cream);
             border: 1.5px solid rgba(181,115,14,0.3);
             border-radius: 10px; font-size: 13px;
@@ -330,9 +332,9 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
         .jewel-field::placeholder { color: rgba(122,78,10,0.4); }
 
         .eye-btn {
-            position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-            background: none; border: none; cursor: pointer;
-            color: rgba(122,78,10,0.5); font-size: 13px;
+            position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+            background: none; border: none; cursor: pointer; z-index: 5;
+            color: rgba(122,78,10,0.5); font-size: 14px;
             transition: color 0.2s;
         }
         .eye-btn:hover { color: var(--gold); }
@@ -484,10 +486,10 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
             /* ===== MOBILE INPUT FIX ===== */
         @media (max-width: 768px) {
             .input-wrap {
-                position: relative;
-                display: flex;
-                align-items: center;
-            }
+            position: relative;
+            display: block;
+            width: 100%;
+        }
             .input-icon {
                 position: absolute;
                 left: 12px;
@@ -564,10 +566,10 @@ foreach($logo_paths as $lp) {
             /* ===== MOBILE INPUT FIX ===== */
         @media (max-width: 768px) {
             .input-wrap {
-                position: relative;
-                display: flex;
-                align-items: center;
-            }
+            position: relative;
+            display: block;
+            width: 100%;
+        }
             .input-icon {
                 position: absolute;
                 left: 12px;
@@ -709,7 +711,7 @@ window.addEventListener('load', function() {
                     <label class="input-label">Email Address</label>
                     <div class="input-wrap">
                         <i class="fas fa-envelope input-icon"></i>
-                        <input type="email" name="email" required placeholder="your@email.com" class="jewel-field">
+                        <input type="email" name="email" required placeholder="your@email.com" class="jewel-field" style="padding-left:38px !important;">
                     </div>
                 </div>
 
@@ -717,7 +719,7 @@ window.addEventListener('load', function() {
                     <label class="input-label">Password</label>
                     <div class="input-wrap">
                         <i class="fas fa-lock input-icon"></i>
-                        <input type="password" name="password" id="passwordInput" required placeholder="" class="jewel-field" style="padding-right:38px;">
+                        <input type="password" name="password" id="passwordInput" required placeholder="" class="jewel-field" style="padding-left:38px !important; padding-right:42px !important;">
                         <button type="button" class="eye-btn" onclick="togglePass()">
                             <i class="fas fa-eye" id="eyeIcon"></i>
                         </button>
@@ -886,6 +888,8 @@ window.addEventListener('load', function() {
 </script>
 </body>
 </html>
+
+
 
 
 
