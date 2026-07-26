@@ -491,6 +491,7 @@ $logo_paths = [
     'assets/images/maa_gouri_logo.png',
     'assets/images/moti_logo.png',
     'assets/images/radhey_shyam_logo.png',
+    'assets/images/moti-removebg-preview.png',
     'logo.png'
 ];
 $logo_file = 'logo.png';
