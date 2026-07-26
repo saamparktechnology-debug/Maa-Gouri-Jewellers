@@ -12,7 +12,7 @@ if(!isset($_SESSION['user_id'])) {
 if($_SERVER['REQUEST_METHOD'] == 'POST') {
     if(isset($_POST['add_product'])) {
         $serial_no = mysqli_real_escape_string($conn, trim($_POST['serial_no'] ?? ''));
-        $name = mysqli_real_escape_string($conn, $_POST['name']);
+        $name = mysqli_real_escape_string($conn, trim($_POST['name'] ?? ''));
         $item_name_raw = $_POST['item_name'] ?? '';
         if($item_name_raw === 'Other' && !empty($_POST['item_name_custom'])) {
             $item_name_raw = $_POST['item_name_custom'];
@@ -52,7 +52,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
     elseif(isset($_POST['update_product'])) {
         $id = $_POST['product_id'];
         $serial_no = mysqli_real_escape_string($conn, trim($_POST['serial_no'] ?? ''));
-        $name = mysqli_real_escape_string($conn, $_POST['name']);
+        $name = mysqli_real_escape_string($conn, trim($_POST['name'] ?? ''));
         $item_name_raw2 = $_POST['item_name'] ?? '';
         if($item_name_raw2 === 'Other' && !empty($_POST['item_name_custom'])) { $item_name_raw2 = $_POST['item_name_custom']; }
         $item_name = mysqli_real_escape_string($conn, $item_name_raw2);
@@ -866,7 +866,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
                         <div class="mb-3">
                             <label> Product Name</label>
-                            <input list="productNameList" type="text" id="addProductName" name="name" placeholder="Enter product name or choose Others" required class="jewel-input" onchange="onAddProductNameChange()">
+                            <input list="productNameList" type="text" id="addProductName" name="name" placeholder="Enter product name or choose Others" class="jewel-input" onchange="onAddProductNameChange()">
                             <datalist id="productNameList">
                                 <option value="Others"></option>
                             </datalist>
@@ -907,7 +907,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
                         <div class="mb-3">
                             <label> Serial Number</label>
-                            <input type="text" name="serial_no" placeholder="Enter serial number" required class="jewel-input">
+                            <input type="text" name="serial_no" placeholder="Enter serial number" class="jewel-input">
                         </div>
 
                         <div class="mb-3">
@@ -1122,7 +1122,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
             <div class="mb-3">
                 <label> Serial Number</label>
-                <input type="text" name="serial_no" id="editProductSerial" required class="jewel-input">
+                <input type="text" name="serial_no" id="editProductSerial" class="jewel-input">
             </div>
             <div class="mb-3">
                 <label> HUID Code</label>
@@ -1130,7 +1130,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             </div>
             <div class="mb-3">
                 <label> Product Name</label>
-                <input type="text" name="name" id="editProductName" required class="jewel-input">
+                <input type="text" name="name" id="editProductName" class="jewel-input">
             </div>
             <div class="mb-3">
                 <label> Category</label>
