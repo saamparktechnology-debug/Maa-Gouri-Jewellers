@@ -413,13 +413,17 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                             </div>
                         </div>
                         <div class="stamp-space-box" style="margin-top:auto; padding-top:15px; margin-bottom:10px;">
+                            <div class="signature-stamp-frame" style="border-color:#94a3b8; background:rgba(241,245,249,0.5);">
+                                <div class="stamp-label-text" style="color:#64748b;">Customer Signature</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bottom-right" style="display:flex; flex-direction:column; justify-content:flex-end; align-items:flex-end;">
+                        <div class="stamp-space-box" style="margin-top:auto; padding-top:15px; margin-bottom:10px;">
                             <div class="signature-stamp-frame">
                                 <div class="stamp-label-text">Signature &amp; Stamp<br>Authorised Signatory</div>
                             </div>
                         </div>
-                    </div>
-                    <div class="bottom-right">
-                         <!-- Empty space or other calculations if needed -->
                     </div>
                 </div>
                 <!-- Developer Footer -->
@@ -603,8 +607,8 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                             </div>
                         </div>
                         <div class="stamp-space-box" style="margin-top:auto; padding-top:15px; margin-bottom:10px;">
-                            <div class="signature-stamp-frame">
-                                <div class="stamp-label-text">Signature &amp; Stamp<br>Authorised Signatory</div>
+                            <div class="signature-stamp-frame" style="border-color:#94a3b8; background:rgba(241,245,249,0.5);">
+                                <div class="stamp-label-text" style="color:#64748b;">Customer Signature</div>
                             </div>
                         </div>
                     </div>
