@@ -248,7 +248,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
 
 // Fetch products from DB
 $all_products = [];
-$products_result = mysqli_query($conn, "SELECT id, name, item_name, serial_no, category, price, quantity, huid_code FROM products ORDER BY category, item_name, name");
+$products_result = mysqli_query($conn, "SELECT id, name, item_name, serial_no, category, weight, price, quantity, huid_code FROM products ORDER BY category, item_name, name");
 if($products_result) {
     while($p = mysqli_fetch_assoc($products_result)) {
         $all_products[] = $p;
@@ -1897,6 +1897,7 @@ function filterGramStock(query) {
         opt.dataset.category = p.category;
         opt.dataset.itemName = p.item_name || p.name;
         opt.dataset.qty = p.quantity;
+        opt.dataset.weight = p.weight || '';
         opt.dataset.huid = p.huid_code || p.serial_no || '';
         if (isOutOfStock) opt.style.color = '#dc2626';
         select.appendChild(opt);
@@ -1964,21 +1965,24 @@ function onGramStockChange() {
 
     if (qty <= 0) {
         rateInput.value = '';
-        weightInput.value = '';
+        $stockWeight = parseFloat(opt.dataset.weight) || 0;
+        weightInput.value = $stockWeight > 0 ? $stockWeight : '';
         infoDiv.innerHTML = '<strong style="color:#dc2626;">' + name + '</strong> | <strong style="color:#dc2626;"> OUT OF STOCK (0 pcs available)</strong>';
     } else if (shopRate10g > 0) {
         rateInput.value = shopRate10g.toFixed(0);
         const hint = document.getElementById('gramRatePerGramHint');
         if(hint) hint.textContent = '\u2248 \u20B9' + shopRatePerGram.toLocaleString('en-IN', {maximumFractionDigits:2}) + ' per gram (shop rate used in billing)';
         infoDiv.innerHTML = '<strong>' + name + '</strong> | Shop Rate: \u20B9' + shopRatePerGram.toLocaleString('en-IN', {maximumFractionDigits:2}) + '/g | Stock Value: \u20B9' + price.toLocaleString('en-IN') + ' | Available Stock: <strong style="color:#059669;">' + qty + ' pcs</strong>';
-        weightInput.value = '';
+        $stockWeight = parseFloat(opt.dataset.weight) || 0;
+        weightInput.value = $stockWeight > 0 ? $stockWeight : '';
     } else {
         rateInput.value = '';
         const hint = document.getElementById('gramRatePerGramHint');
         if(hint) hint.textContent = '\u26A0 Set shop rate for ' + (category || 'this category') + ' in the panel on the right first!';
         if(hint) hint.style.color = '#dc2626';
         infoDiv.innerHTML = '<strong>' + name + '</strong> | Stock Value: \u20B9' + price.toLocaleString('en-IN') + ' | Available Stock: <strong style="color:#059669;">' + qty + ' pcs</strong> | \u26A0 Set shop rate first!';
-        weightInput.value = '';
+        $stockWeight = parseFloat(opt.dataset.weight) || 0;
+        weightInput.value = $stockWeight > 0 ? $stockWeight : '';
     }
 
     infoDiv.classList.remove('hidden');
@@ -2368,6 +2372,7 @@ function filterQtyStock(query) {
         opt.dataset.category = p.category;
         opt.dataset.itemName = p.item_name || p.name;
         opt.dataset.qty = p.quantity;
+        opt.dataset.weight = p.weight || '';
         if (isOutOfStock) opt.style.color = '#dc2626';
         select.appendChild(opt);
     });
@@ -3492,6 +3497,7 @@ function convertNumberToWords($number) {
     return trim($result).' Rupees Only';
 }
 ?>
+
 
 
 
