@@ -61,7 +61,13 @@ $bill_to_label = $is_gst ? 'Bill To' : 'Customer Details';
 $doc_term_name = $is_gst ? 'invoice' : 'cash memo';
 
 // Calculate overall effective GST rate (e.g. 18% or 3%)
-$effective_gst_pct = ($subtotal > 0 && $gst_total > 0) ? round(($gst_total / $subtotal) * 100, 1) : ($is_gst ? 3 : 0);
+if ($raw_gst_type === 'gst_3') {
+    $effective_gst_pct = 3;
+} elseif ($raw_gst_type === 'gst_18') {
+    $effective_gst_pct = 18;
+} else {
+    $effective_gst_pct = ($subtotal > 0 && $gst_total > 0) ? round(($gst_total / $subtotal) * 100, 1) : ($is_gst ? 3 : 0);
+}
 
 $cgst_rate   = $is_gst ? round($effective_gst_pct / 2, 2) : 0;
 $sgst_rate   = $is_gst ? round($effective_gst_pct / 2, 2) : 0;
@@ -96,7 +102,11 @@ $current_balance = $prev_balance + $balance;
 $total_pcs = 0;
 $total_gross_wt = 0;
 $total_net_wt = 0;
+$total_making_charge = 0;
+$total_hallmark = 0;
 foreach($items as $it) {
+    $total_making_charge += floatval($it['making_charge'] ?? 0);
+    $total_hallmark += floatval($it['hallmark'] ?? 0);
     $u = strtolower(trim($it['unit'] ?? 'g'));
     $val = floatval($it['quantity']);
     if (in_array($u, ['qty','pcs','piece','pieces'])) {
@@ -614,6 +624,22 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                     <div class="bottom-right">
                         <div class="calc-card">
                             <div class="calc-line">
+                                <span>Total Items Value</span>
+                                <span>₹<?php echo number_format($subtotal - $total_making_charge - $total_hallmark, 2); ?></span>
+                            </div>
+                            <?php if($total_making_charge > 0): ?>
+                            <div class="calc-line">
+                                <span>Total Making Charge</span>
+                                <span>₹<?php echo number_format($total_making_charge, 2); ?></span>
+                            </div>
+                            <?php endif; ?>
+                            <?php if($total_hallmark > 0): ?>
+                            <div class="calc-line">
+                                <span>Total Hallmark Charge</span>
+                                <span>₹<?php echo number_format($total_hallmark, 2); ?></span>
+                            </div>
+                            <?php endif; ?>
+                            <div class="calc-line" style="border-top:1px dashed #cbd5e1;padding-top:4px;margin-top:2px;">
                                 <span>Taxable Amount</span>
                                 <span>₹<?php echo number_format($subtotal, 2); ?></span>
                             </div>
