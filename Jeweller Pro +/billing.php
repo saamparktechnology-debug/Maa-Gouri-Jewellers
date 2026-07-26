@@ -255,22 +255,22 @@ if($products_result) {
     }
 }
 
-// Build item type options
-$itemTypeOptions = [
-    'Gold 22K' => [],
-    'Gold 18K' => [],
-    'Silver'   => [],
-    'Stone'    => [],
-    'Diamond'  => [],
-    'Others'   => []
-];
-$categories = ['Gold 22K', 'Gold 18K', 'Silver', 'Stone', 'Diamond'];
+// Build item type options from ALL categories in the products table
+$categories_res = mysqli_query($conn, "SELECT DISTINCT category FROM products WHERE category != '' ORDER BY category");
+$all_db_categories = [];
+if ($categories_res) {
+    while ($cr = mysqli_fetch_assoc($categories_res)) {
+        if (!empty($cr['category'])) $all_db_categories[] = $cr['category'];
+    }
+}
+$categories = array_unique(array_merge(['Gold 22K', 'Gold 18K', 'Silver', 'Stone', 'Diamond', 'Others'], $all_db_categories));
 foreach ($categories as $cat) {
+    if (!isset($itemTypeOptions[$cat])) $itemTypeOptions[$cat] = [];
     $safeCat = mysqli_real_escape_string($conn, $cat);
-    $res = mysqli_query($conn, "SELECT DISTINCT item_name FROM products WHERE category = '$safeCat' AND item_name != '' ORDER BY item_name");
+    $res = mysqli_query($conn, "SELECT DISTINCT item_name FROM products WHERE category = '$safeCat' AND item_name != '' AND item_name IS NOT NULL ORDER BY item_name");
     if($res) {
         while ($row = mysqli_fetch_assoc($res)) {
-            if (!empty($row['item_name'])) {
+            if (!empty($row['item_name']) && !in_array($row['item_name'], $itemTypeOptions[$cat])) {
                 $itemTypeOptions[$cat][] = $row['item_name'];
             }
         }
@@ -1809,6 +1809,16 @@ Object.keys(defaultItemTypeOptions).forEach(category => {
 Object.keys(itemTypeOptions).forEach(category => {
     if(!mergedItemTypeOptions[category]) {
         mergedItemTypeOptions[category] = itemTypeOptions[category];
+    }
+});
+// Also add any custom item_names from ALL_PRODUCTS that aren't already included
+ALL_PRODUCTS.forEach(p => {
+    const cat = p.category || '';
+    const name = (p.item_name || p.name || '').trim();
+    if (!cat || !name) return;
+    if (!mergedItemTypeOptions[cat]) mergedItemTypeOptions[cat] = [];
+    if (!mergedItemTypeOptions[cat].includes(name)) {
+        mergedItemTypeOptions[cat].push(name);
     }
 });
 
