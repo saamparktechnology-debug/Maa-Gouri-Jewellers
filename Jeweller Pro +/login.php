@@ -477,57 +477,157 @@ $otpSent = isset($_SESSION['otp_sent']) && $_SESSION['otp_sent'];
             font-family: 'Poppins', sans-serif;
             margin-bottom: 20px;
         }
+            color: rgba(122,78,10,0.5); font-size: 14px;
+            transition: color 0.2s;
+        }
+        .eye-btn:hover { color: var(--gold); }
+
+        /*  Forgot password  */
+        .forgot-link {
+            text-align: right; margin-top: -8px; margin-bottom: 20px;
+        }
+        .forgot-link a {
+            font-size: 11px; font-weight: 600;
+            color: var(--crimson); text-decoration: none;
+            transition: opacity 0.2s;
+        }
+        .forgot-link a:hover { opacity: 0.7; }
+
+        /*  Submit button  */
+        .btn-submit {
+            width: 100%;
+            padding: 11px;
+            background: linear-gradient(135deg, var(--crimson), var(--gold));
+            border: none; border-radius: 10px;
+            font-family: 'Poppins', sans-serif;
+            font-size: 13px; font-weight: 700;
+            color: #fff; cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+            letter-spacing: 0.5px;
+        }
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 28px rgba(128,0,32,0.35);
+        }
+        .btn-submit:active { transform: translateY(0); }
+
+        /*  Divider  */
+        .divider {
+            display: flex; align-items: center; gap: 12px;
+            margin: 18px 0; color: rgba(122,78,10,0.4); font-size: 11px;
+        }
+        .divider::before, .divider::after {
+            content: ''; flex: 1; height: 1px;
+            background: rgba(181,115,14,0.2);
+        }
+
+        /*  OTP boxes  */
+        .otp-row {
+            display: flex; justify-content: center; gap: 10px; margin-bottom: 24px;
+        }
+        .otp-box {
+            width: 44px; height: 52px;
+            text-align: center; font-size: 20px; font-weight: 700;
+            font-family: 'Poppins', serif;
+            background: var(--cream);
+            border: 2px solid rgba(181,115,14,0.3);
+            border-radius: 12px; color: var(--crimson);
+            outline: none; transition: all 0.25s ease;
+            caret-color: var(--gold);
+        }
+        .otp-box:focus {
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(214,139,22,0.2);
+            background: #fffdf5;
+            transform: scale(1.06);
+        }
+        .otp-box.filled {
+            border-color: var(--crimson);
+            background: #fff1f2;
+        }
+
+        /* OTP shield icon */
+        .otp-shield {
+            width: 64px; height: 64px;
+            background: linear-gradient(135deg, var(--crimson), var(--gold));
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 16px;
+            box-shadow: 0 8px 24px rgba(128,0,32,0.3);
+            animation: shieldPulse 2s ease-in-out infinite;
+        }
+        @keyframes shieldPulse {
+            0%,100% { box-shadow: 0 8px 24px rgba(128,0,32,0.3); }
+            50%      { box-shadow: 0 8px 32px rgba(214,139,22,0.5); }
+        }
+        .otp-shield i { color: #fff; font-size: 26px; }
+
+        /*  Resend / back links  */
+        .text-link {
+            background: none; border: none; cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            font-size: 12px; font-weight: 600;
+            color: var(--crimson); transition: opacity 0.2s;
+        }
+        .text-link:hover { opacity: 0.7; }
+        .text-link-gray {
+            background: none; border: none; cursor: pointer;
+            font-family: 'Poppins', sans-serif;
+            font-size: 12px; color: #9ca3af;
+            transition: color 0.2s; display: block; margin: 8px auto 0;
+        }
+        .text-link-gray:hover { color: var(--text-mid); }
+
+        /*  Trust badges  */
+        .trust-badges {
+            display: flex; justify-content: center; gap: 20px;
+            margin-top: 22px; padding-top: 18px;
+            border-top: 1px solid rgba(181,115,14,0.12);
+        }
+        .badge-item {
+            display: flex; flex-direction: column; align-items: center; gap: 4px;
+            font-size: 10px; color: var(--text-mid); opacity: 0.75;
+        }
+        .badge-item i { font-size: 16px; color: var(--gold); }
+
+        /*  Responsive  */
+        @media (max-width: 720px) {
+            .login-card { grid-template-columns: 1fr; }
+            .left-panel { display: none; }
+            .right-panel { padding: 36px 28px; }
+        }
+        @media (max-width: 400px) {
+            .right-panel { padding: 28px 20px; }
+            .otp-box { width: 38px; height: 46px; font-size: 18px; }
+        }
+
+        /* Back button */
+        .btn-back {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 18px;
+            background: linear-gradient(135deg, rgba(214,139,22,0.15), rgba(214,139,22,0.08));
+            color: var(--gold);
+            border: 1.5px solid rgba(214,139,22,0.3);
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            font-family: 'Poppins', sans-serif;
+            margin-bottom: 20px;
+        }
         .btn-back:hover {
             background: linear-gradient(135deg, rgba(214,139,22,0.25), rgba(214,139,22,0.15));
             border-color: rgba(214,139,22,0.5);
             transform: translateX(-3px);
         }
         .btn-back i { font-size: 14px; }
-            /* ===== MOBILE INPUT FIX ===== */
-        @media (max-width: 768px) {
-            .input-wrap {
-            position: relative;
-            display: block;
-            width: 100%;
-        }
-            .input-icon {
-                position: absolute;
-                left: 12px;
-                top: 50%;
-                transform: translateY(-50%);
-                z-index: 3;
-                pointer-events: none;
-                font-size: 13px;
-                color: var(--gold-dark);
-            }
-            .jewel-field {
-                width: 100%;
-                padding: 11px 42px 11px 38px !important;
-                font-size: 16px !important; /* Prevents iOS zoom */
-                box-sizing: border-box;
-                position: relative;
-                z-index: 1;
-            }
-            button[type="button"].eye-btn {
-                position: absolute;
-                right: 10px;
-                top: 50%;
-                transform: translateY(-50%);
-                z-index: 4;
-                background: none;
-                border: none;
-                cursor: pointer;
-                color: rgba(122,78,10,0.5);
-                font-size: 14px;
-                padding: 4px;
-                line-height: 1;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-        }
     </style>
-    <link rel="stylesheet" href="mobile.css">
+    <link rel="stylesheet" href="mobile.css?v=2.0">
 </head>
 <body>
 
@@ -563,49 +663,6 @@ foreach($logo_paths as $lp) {
         @keyframes gemGlowPulse { 0%,100%{filter:drop-shadow(0 0 8px #d68b16)} 50%{filter:drop-shadow(0 0 22px #ff9900)} }
         @keyframes titleGold { from{color:#d68b16} to{color:#f5c842} }
         @keyframes barSlide { 0%{transform:translateX(-100%)} 100%{transform:translateX(480%)} }
-            /* ===== MOBILE INPUT FIX ===== */
-        @media (max-width: 768px) {
-            .input-wrap {
-            position: relative;
-            display: block;
-            width: 100%;
-        }
-            .input-icon {
-                position: absolute;
-                left: 12px;
-                top: 50%;
-                transform: translateY(-50%);
-                z-index: 3;
-                pointer-events: none;
-                font-size: 13px;
-                color: var(--gold-dark);
-            }
-            .jewel-field {
-                width: 100%;
-                padding: 11px 42px 11px 38px !important;
-                font-size: 16px !important; /* Prevents iOS zoom */
-                box-sizing: border-box;
-                position: relative;
-                z-index: 1;
-            }
-            button[type="button"].eye-btn {
-                position: absolute;
-                right: 10px;
-                top: 50%;
-                transform: translateY(-50%);
-                z-index: 4;
-                background: none;
-                border: none;
-                cursor: pointer;
-                color: rgba(122,78,10,0.5);
-                font-size: 14px;
-                padding: 4px;
-                line-height: 1;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-            }
-        }
     </style>
 </div>
 <script>
