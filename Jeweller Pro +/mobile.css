@@ -75,7 +75,7 @@ html, body {
         width: 100% !important; margin-bottom: 0px !important; min-height: 40px !important; display: flex !important; justify-content: center !important; align-items: center !important; box-sizing: border-box !important; font-size: 13px !important; padding: 8px 16px !important;
     }
     /* Don't stretch small action buttons inside tables/forms */
-    .action-btn, .btn-remove { width: auto !important; min-height: unset !important; }
+    .action-btn, .btn-remove, .eye-btn, button.eye-btn, button[type="button"].eye-btn { width: auto !important; min-height: unset !important; }
     
     /* 9. Modals full width */
     [id$="Modal"] > div, .modal-content, .modal-dialog { max-width: 96vw !important; width: 96vw !important; max-height: 90vh !important; margin: 2vh auto !important; box-sizing: border-box !important; overflow-x: hidden; border-radius: 8px !important; }
@@ -129,12 +129,6 @@ html, body {
 
 /* ===== LOGIN PAGE MOBILE FIXES ===== */
 @media screen and (max-width: 768px) {
-    .jewel-field {
-        padding: 11px 42px 11px 38px !important;
-        font-size: 16px !important;
-        width: 100% !important;
-        box-sizing: border-box !important;
-    }
     .input-wrap {
         position: relative !important;
         display: block !important;
@@ -148,22 +142,33 @@ html, body {
         z-index: 3 !important;
         pointer-events: none !important;
     }
-    button[type="button"].eye-btn {
+    .jewel-field, input.jewel-field, input[type="email"], input[type="password"] {
+        width: 100% !important;
+        padding: 11px 42px 11px 38px !important;
+        font-size: 16px !important; /* Prevents iOS zoom */
+        box-sizing: border-box !important;
+        position: relative !important;
+        z-index: 1 !important;
+    }
+    button[type="button"].eye-btn, .eye-btn {
         position: absolute !important;
         right: 10px !important;
+        left: auto !important;
         top: 50% !important;
         transform: translateY(-50%) !important;
         width: auto !important;
+        max-width: 32px !important;
         min-height: unset !important;
         height: auto !important;
         padding: 4px 6px !important;
         z-index: 5 !important;
-        background: none !important;
+        background: transparent !important;
         border: none !important;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
         font-size: 14px !important;
+        margin: 0 !important;
     }
 }
 
