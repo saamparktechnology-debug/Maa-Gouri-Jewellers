@@ -1248,8 +1248,14 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                             <?php echo $balance>0 ? '₹'.number_format($balance,2) : '-'; ?>
                         </td>
                         <td class="text-center">
-                            <?php if(strpos($bill['gst_type'], 'gst') === 0): ?>
-                                <span style="color:#0d9488;font-weight:700;font-size:11px;"> GST</span>
+                            <?php
+                            $is_gst_row = (strpos($bill['gst_type'] ?? '', 'gst') === 0 || $gst_amt > 0);
+                            $taxable_row = floatval($bill['total_amount'] ?? 0) - $gst_amt;
+                            $is_18_row = ($bill['gst_type'] === 'gst_18' || ($taxable_row > 0 && ($gst_amt / $taxable_row) > 0.10));
+                            $gst_label_row = $is_18_row ? 'GST (18%)' : 'GST (3%)';
+                            ?>
+                            <?php if($is_gst_row): ?>
+                                <span style="color:#0d9488;font-weight:700;font-size:11px;"><?php echo $gst_label_row; ?></span>
                                 <?php if($gst_amt>0): ?>
                                     <div style="font-size:9px;color:#14b8a6;">Total: ₹<?php echo number_format($gst_amt,2); ?></div>
                                     <div style="font-size:9px;color:#14b8a6;">C+S: ₹<?php echo number_format($cgst_amt,2); ?> ea</div>
@@ -1420,6 +1426,16 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
         const totalBalance = billsData.reduce((s,b) => s + parseFloat(b.balance_amount||0), 0);
         const totalGST     = billsData.reduce((s,b) => s + parseFloat(b.gst_amount||0), 0);
         const isGstBill    = b => (b.gst_type && (b.gst_type.startsWith('gst') || b.gst_type === 'gst')) || parseFloat(b.gst_amount||0) > 0;
+        const getGstTypeLabel = b => {
+            if (!isGstBill(b)) return 'Non-GST';
+            const tot = parseFloat(b.total_amount || 0);
+            const gst = parseFloat(b.gst_amount || 0);
+            const tax = tot - gst;
+            if (b.gst_type === 'gst_18' || (tax > 0 && (gst / tax) > 0.10)) {
+                return 'GST (18%)';
+            }
+            return 'GST (3%)';
+        };
         const gstBills     = billsData.filter(isGstBill).length;
         const nonGstBills  = billsData.filter(b => !isGstBill(b)).length;
         const paidBills    = billsData.filter(b => b.payment_status === 'paid').length;
@@ -1439,7 +1455,6 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
         //  UPDATED: Added GSTIN column header
         aoa1.push(['#', 'Invoice No', 'Customer Name', 'GSTIN', 'Mobile', 'Address', 'Total Amount (₹)', 'Paid Amount (₹)', 'Balance Due (₹)', 'GST Type', 'GST Amount (₹)', 'Payment Status', 'Date']);
         billsData.forEach((b, i) => {
-            const gstTypeLabel = isGstBill(b) ? (b.gst_type === 'gst_18' ? 'GST (18%)' : 'GST (3%)') : 'Non-GST';
             aoa1.push([
                 i + 1,
                 b.invoice_no,
@@ -1450,7 +1465,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 parseFloat(b.total_amount||0),
                 parseFloat(b.paid_amount||0),
                 parseFloat(b.balance_amount||0),
-                gstTypeLabel,
+                getGstTypeLabel(b),
                 parseFloat(b.gst_amount||0),
                 b.payment_status === 'paid' ? 'Full Paid' : b.payment_status === 'part' ? 'Part Payment' : 'Unpaid',
                 fmtDate(b.created_at)
