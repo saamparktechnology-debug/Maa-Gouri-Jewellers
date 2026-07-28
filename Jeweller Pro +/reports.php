@@ -45,7 +45,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_invoice_items') {
                         'product_name' => $row['product_name'] ?? '',
                         'serial_no' => $row['serial_no'] ?? '',
                         'huid_code' => $row['huid_code'] ?? '',
-                        'hsn_code' => $row['hsn_code'] ?? '0',
+                        'hsn_code' => (!empty($row['hsn_code']) && $row['hsn_code'] !== '0') ? $row['hsn_code'] : '7113',
                         'price' => floatval($row['price'] ?? 0),
                         'quantity' => floatval($row['quantity'] ?? 0),
                         'category' => $row['category'] ?? '',
@@ -1419,8 +1419,9 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
         const totalPaid    = billsData.reduce((s,b) => s + parseFloat(b.paid_amount||0), 0);
         const totalBalance = billsData.reduce((s,b) => s + parseFloat(b.balance_amount||0), 0);
         const totalGST     = billsData.reduce((s,b) => s + parseFloat(b.gst_amount||0), 0);
-        const gstBills     = billsData.filter(b => b.gst_type === 'gst').length;
-        const nonGstBills  = billsData.filter(b => b.gst_type !== 'gst').length;
+        const isGstBill    = b => (b.gst_type && (b.gst_type.startsWith('gst') || b.gst_type === 'gst')) || parseFloat(b.gst_amount||0) > 0;
+        const gstBills     = billsData.filter(isGstBill).length;
+        const nonGstBills  = billsData.filter(b => !isGstBill(b)).length;
         const paidBills    = billsData.filter(b => b.payment_status === 'paid').length;
         const partBills    = billsData.filter(b => b.payment_status === 'part').length;
         const unpaidBills  = billsData.filter(b => b.payment_status === 'unpaid').length;
@@ -1438,6 +1439,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
         //  UPDATED: Added GSTIN column header
         aoa1.push(['#', 'Invoice No', 'Customer Name', 'GSTIN', 'Mobile', 'Address', 'Total Amount (₹)', 'Paid Amount (₹)', 'Balance Due (₹)', 'GST Type', 'GST Amount (₹)', 'Payment Status', 'Date']);
         billsData.forEach((b, i) => {
+            const gstTypeLabel = isGstBill(b) ? (b.gst_type === 'gst_18' ? 'GST (18%)' : 'GST (3%)') : 'Non-GST';
             aoa1.push([
                 i + 1,
                 b.invoice_no,
@@ -1448,7 +1450,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 parseFloat(b.total_amount||0),
                 parseFloat(b.paid_amount||0),
                 parseFloat(b.balance_amount||0),
-                b.gst_type === 'gst' ? 'GST (3%)' : 'Non-GST',
+                gstTypeLabel,
                 parseFloat(b.gst_amount||0),
                 b.payment_status === 'paid' ? 'Full Paid' : b.payment_status === 'part' ? 'Part Payment' : 'Unpaid',
                 fmtDate(b.created_at)
@@ -1548,7 +1550,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                             </div>
                             <div>
                                 <label class="block text-[10px] font-semibold text-gray-600 mb-1">HSN Code</label>
-                                <input type="text" id="restoreHsn_${index}" value="0" class="jewel-input w-full rounded-lg px-2 py-1 text-xs" style="background:#fff;">
+                                <input type="text" id="restoreHsn_${index}" value="${item.hsn_code || '7113'}" class="jewel-input w-full rounded-lg px-2 py-1 text-xs" style="background:#fff;">
                             </div>
                         </div>
                     `;
@@ -1637,7 +1639,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                     category: item.category || '',
                     weight: item.weight || '',
                     restore_qty: parseFloat(qtyInput ? qtyInput.value : item.quantity) || 0,
-                    hsn_code: hsnInput ? hsnInput.value.trim() : '0'
+                    hsn_code: (hsnInput && hsnInput.value.trim() && hsnInput.value.trim() !== '0') ? hsnInput.value.trim() : '7113'
                 };
             });
             

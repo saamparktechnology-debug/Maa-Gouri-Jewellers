@@ -527,6 +527,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
                 $manual_serial = mysqli_real_escape_string($conn, trim($item['serial'] ?? $item['serial_no'] ?? ''));
                 $manual_huid = mysqli_real_escape_string($conn, trim($item['huid_code'] ?? $item['huid'] ?? ''));
                 $manual_hsn = mysqli_real_escape_string($conn, trim($item['hsn'] ?? $item['hsn_code'] ?? ''));
+                if (empty($manual_hsn) || $manual_hsn === '0') $manual_hsn = '7113';
 
                 if($product_id === 'other' || !is_numeric($product_id)) {
                     $item_query = "INSERT INTO invoice_items (invoice_id, product_id, product_name, serial_no, huid_code, hsn_code, quantity, price, total, making_charge, making_charge_pct, hallmark, discount) VALUES ($invoice_id, NULL, '".$manual_name."', '".$manual_serial."', '".$manual_huid."', '".$manual_hsn."', $quantity, $price, $total, $item_making_charge, $item_making_charge_pct, $item_hallmark, $item_discount)";

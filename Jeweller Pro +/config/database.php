@@ -100,7 +100,7 @@ $products_cols = [
     'weight'    => "VARCHAR(20) NULL",
     'item_name' => "VARCHAR(255) DEFAULT ''",
     'huid_code' => "VARCHAR(100) NULL",
-    'hsn_code'  => "VARCHAR(50) DEFAULT '0'",
+    'hsn_code'  => "VARCHAR(50) DEFAULT '7113'",
 ];
 
 foreach ($products_cols as $col_name => $col_definition) {

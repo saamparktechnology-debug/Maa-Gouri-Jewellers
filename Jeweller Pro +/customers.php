@@ -39,7 +39,7 @@ if(isset($_GET['action']) && $_GET['action'] === 'get_orders') {
                         'qty'   => $it['quantity'],
                         'rate'  => $it['price'],
                         'total' => $it['total'],
-                        'hsn'   => $it['hsn_code'] ?? ''
+                        'hsn'   => (!empty($it['hsn_code']) && $it['hsn_code'] !== '0') ? $it['hsn_code'] : '7113'
                     ];
                 }
             }
