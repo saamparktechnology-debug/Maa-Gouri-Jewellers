@@ -1362,8 +1362,14 @@ function submitPayment() {
                                     <input type="number" id="gramWeight" placeholder="Grams (e.g. 5.5)" step="0.001" min="0" class="jewel-input w-full rounded-lg px-3 py-2 text-sm" oninput="autoGramTotal()">
                                 </div>
                                 <div>
-                                    <label class="block mb-1 text-xs font-semibold text-yellow-800">Quantity (Pcs) *</label>
-                                    <input type="number" id="gramQty" value="1" step="1" min="1" class="jewel-input w-full rounded-lg px-3 py-2 text-sm" oninput="autoGramTotal()">
+                                    <label class="block mb-1 text-xs font-semibold text-yellow-800">Quantity & Unit *</label>
+                                    <div class="flex gap-2">
+                                        <input type="number" id="gramQty" value="1" step="1" min="1" class="jewel-input w-1/2 rounded-lg px-3 py-2 text-sm" oninput="autoGramTotal()">
+                                        <select id="gramUnit" class="jewel-input w-1/2 rounded-lg px-2 py-2 text-sm" onchange="autoGramTotal()">
+                                            <option value="pcs">Pcs</option>
+                                            <option value="pair">Pair</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -1477,10 +1483,10 @@ function submitPayment() {
                                     <span>Old Gold Deduction</span><span id="oldGoldDisplayAmount">- &#8377;0.00</span>
                                 </div>
                                 <div class="flex justify-between text-sm" style="color:#2563eb;" id="cgstRow">
-                                    <span>CGST (on Gold)</span><span id="cgstAmount">&#8377;0.00</span>
+                                    <span>CGST</span><span id="cgstAmount">&#8377;0.00</span>
                                 </div>
                                 <div class="flex justify-between text-sm" style="color:#2563eb;" id="sgstRow">
-                                    <span>SGST (on Gold)</span><span id="sgstAmount">&#8377;0.00</span>
+                                    <span>SGST</span><span id="sgstAmount">&#8377;0.00</span>
                                 </div>
                                 <div style="height:1px;background:rgba(181,115,14,0.25);margin:8px 0;"></div>
                                 <div class="flex justify-between font-bold text-xl" style="color:#800020;">
@@ -1494,6 +1500,7 @@ function submitPayment() {
                     <input type="hidden" name="subtotal" id="hiddenSubtotal" value="0">
                     <input type="hidden" name="gst_amount" id="hiddenGst" value="0">
                     <input type="hidden" name="total_amount" id="hiddenTotal" value="0">
+                    <input type="hidden" name="gst_type" id="hiddenGstType" value="non_gst">
                     <input type="hidden" name="items" id="hiddenItems" value="[]">
                     <input type="hidden" name="making_charge" id="hiddenMakingCharge" value="0">
                     <input type="hidden" name="hallmark" id="hiddenHallmark" value="0">
@@ -2176,14 +2183,18 @@ function autoGramTotal() {
     let total = 0;
     const hint = document.getElementById('gramRatePerGramHint');
     
+    const unitEl = document.getElementById('gramUnit');
+    const isPair = unitEl && unitEl.value === 'pair';
+    const unitLabel = isPair ? 'pairs' : 'pcs';
+    
     if (weight > 0) {
         const ratePerGram = rate10g / 10;
         total = parseFloat((weight * ratePerGram * qty).toFixed(2));
-        if(hint && rate10g > 0) hint.textContent = '\u2248 \u20B9' + ratePerGram.toLocaleString('en-IN', {maximumFractionDigits:2}) + '/g \u00D7 ' + qty + ' pcs';
+        if(hint && rate10g > 0) hint.textContent = '\u2248 \u20B9' + ratePerGram.toLocaleString('en-IN', {maximumFractionDigits:2}) + '/g \u00D7 ' + qty + ' ' + unitLabel;
         else if(hint) hint.textContent = '';
     } else if (qty > 0 && rate10g > 0) {
         total = parseFloat((qty * rate10g).toFixed(2));
-        if(hint) hint.textContent = '\u2248 \u20B9' + rate10g.toLocaleString('en-IN', {maximumFractionDigits:2}) + ' per piece \u00D7 ' + qty + ' pcs';
+        if(hint) hint.textContent = '\u2248 \u20B9' + rate10g.toLocaleString('en-IN', {maximumFractionDigits:2}) + (isPair ? ' per pair \u00D7 ' : ' per piece \u00D7 ') + qty + ' ' + unitLabel;
     } else if(hint) {
         hint.textContent = '';
     }
@@ -2271,6 +2282,9 @@ function submitGramItem() {
     let unit = 'g';
     let itemPrice = 0;
     
+    const unitEl = document.getElementById('gramUnit');
+    const isPair = unitEl && unitEl.value === 'pair';
+    
     if (weight > 0) {
         let ratePerGram = rate10g / 10;
         baseAmount = parseFloat((weight * ratePerGram * qty).toFixed(2));
@@ -2278,7 +2292,7 @@ function submitGramItem() {
         itemPrice = ratePerGram;
     } else {
         baseAmount = parseFloat((qty * rate10g).toFixed(2));
-        unit = 'pcs';
+        unit = isPair ? 'pair' : 'pcs';
         itemPrice = rate10g;
     }
     
@@ -2301,9 +2315,17 @@ function submitGramItem() {
     
     const inputHuid = document.getElementById('manualHuid') ? document.getElementById('manualHuid').value.trim() : '';
 
+    let finalName = name;
+    if (isPair && finalName.toLowerCase().indexOf('pair') === -1) {
+        finalName += ' (Pair)';
+    }
+    if (qty > 1 && weight > 0) {
+        finalName += ' (' + qty + (isPair ? ' pairs)' : ' pcs)');
+    }
+
     items.push({
         product_id: productId,
-        name: name + (qty > 1 && weight > 0 ? ' (' + qty + ' pcs)' : ''),
+        name: finalName,
         item_type: itemType,
         hsn: hsn,
         quantity: weight > 0 ? weight : qty,
@@ -2338,6 +2360,7 @@ function submitGramItem() {
     if (source === 'stock') {
         document.getElementById('gramStockProduct').value = '';
         document.getElementById('gramStockProductInfo').classList.add('hidden');
+        if (document.getElementById('gramUnit')) document.getElementById('gramUnit').value = 'pcs';
         filterGramStock('');
     } else if (source === 'category') {
         document.getElementById('gramCatSelect').value = '';
@@ -2755,12 +2778,13 @@ function calculateTotal() {
     
     let cgst = 0, sgst = 0;
     items.forEach(item => {
+        let taxable_amount = (item.total !== undefined) ? item.total : (item.base_amount !== undefined ? item.base_amount : item.price * item.quantity);
         if (item.gst_type === 'gst_3') {
-            cgst += (item.base_amount !== undefined ? item.base_amount : item.price * item.quantity) * 0.015;
-            sgst += (item.base_amount !== undefined ? item.base_amount : item.price * item.quantity) * 0.015;
+            cgst += taxable_amount * 0.015;
+            sgst += taxable_amount * 0.015;
         } else if (item.gst_type === 'gst_18') {
-            cgst += (item.base_amount !== undefined ? item.base_amount : item.price * item.quantity) * 0.09;
-            sgst += (item.base_amount !== undefined ? item.base_amount : item.price * item.quantity) * 0.09;
+            cgst += taxable_amount * 0.09;
+            sgst += taxable_amount * 0.09;
         }
     });
 
@@ -2770,7 +2794,7 @@ function calculateTotal() {
     const grand = Math.max(0, subtotal + cgst + sgst - oldGold);
     
     const fmt = v => '\u20B9' + v.toFixed(2);
-    document.getElementById('subtotal').textContent       = fmt(subtotal);
+    document.getElementById('subtotal').textContent = fmt(subtotal - makingAmt - hallmark + discount);
     document.getElementById('makingChargeAmount').textContent = fmt(makingAmt);
     document.getElementById('hallmarkAmount').textContent = fmt(hallmark);
     document.getElementById('discountAmount').textContent = '- ' + fmt(discount);
@@ -2788,6 +2812,10 @@ function calculateTotal() {
     document.getElementById('hiddenSubtotal').value  = subtotal;
     document.getElementById('hiddenGst').value       = cgst + sgst;
     document.getElementById('hiddenTotal').value     = grand;
+    let overallGst = 'non_gst';
+    if (items.some(i => i.gst_type === 'gst_18')) overallGst = 'gst_18';
+    else if (items.some(i => i.gst_type === 'gst_3')) overallGst = 'gst_3';
+    if (document.getElementById('hiddenGstType')) document.getElementById('hiddenGstType').value = overallGst;
     document.getElementById('hiddenItems').value     = JSON.stringify(buildItemsForSubmit());
     document.getElementById('hiddenMakingCharge').value = makingAmt;
     document.getElementById('hiddenHallmark').value  = hallmark;

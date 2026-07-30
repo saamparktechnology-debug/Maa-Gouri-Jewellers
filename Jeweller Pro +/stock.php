@@ -23,6 +23,10 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         if($item_name_raw === 'Other' && !empty($_POST['item_name_custom'])) {
             $item_name_raw = $_POST['item_name_custom'];
         }
+        $unit = $_POST['unit'] ?? 'pcs';
+        if ($unit === 'pair' && stripos($name, 'pair') === false) {
+            $name .= ' (Pair)';
+        }
         $item_name = mysqli_real_escape_string($conn, $item_name_raw);
         $category = mysqli_real_escape_string($conn, $_POST['category']);
         $weight = mysqli_real_escape_string($conn, $_POST['weight']);
@@ -928,9 +932,18 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
                         <input type="hidden" name="price" value="0">
 
-                        <div class="mb-4">
-                            <label> Quantity</label>
-                            <input type="number" name="quantity" placeholder="Enter quantity" required class="jewel-input">
+                        <div class="mb-4 flex gap-2">
+                            <div class="flex-1">
+                                <label> Quantity</label>
+                                <input type="number" name="quantity" placeholder="Enter quantity" required class="jewel-input">
+                            </div>
+                            <div class="w-1/3">
+                                <label> Unit</label>
+                                <select name="unit" class="jewel-input">
+                                    <option value="pcs">Pcs</option>
+                                    <option value="pair">Pair</option>
+                                </select>
+                            </div>
                         </div>
 
                         <button type="submit" name="add_product" class="btn-jewel w-full text-center">

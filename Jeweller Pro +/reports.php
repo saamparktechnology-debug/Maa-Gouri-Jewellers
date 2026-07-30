@@ -49,7 +49,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_invoice_items') {
                         'price' => floatval($row['price'] ?? 0),
                         'quantity' => floatval($row['quantity'] ?? 0),
                         'category' => $row['category'] ?? '',
-                        'weight' => $row['weight'] ?? ''
+                        'weight' => $row['weight'] ?? '',
+                        'unit' => (stripos($row['product_name'] ?? '', 'pair') !== false) ? 'pairs' : 'pcs'
                     ];
                 }
             }
