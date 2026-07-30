@@ -1336,7 +1336,7 @@ function submitPayment() {
                                     </div>
                                     <div class="sm:col-span-2">
                                         <label class="block mb-1 text-xs font-semibold text-yellow-800">HSN Code</label>
-                                        <input type="text" id="gramManualHsn" placeholder="7108" value="7108" class="jewel-input w-full rounded-lg px-3 py-2 text-sm">
+                                        <input type="text" id="gramManualHsn" placeholder="7113" value="7113" class="jewel-input w-full rounded-lg px-3 py-2 text-sm">
                                     </div>
                                 </div>
                             </div>
@@ -2219,7 +2219,7 @@ function submitGramItem() {
     let productId = 'other';
     let name = '';
     let itemType = '';
-    let hsn = '7108';
+    let hsn = '7113';
     let weight = parseFloat(document.getElementById('gramWeight')?.value) || 0;
     const rate10g = parseFloat(document.getElementById('gramRate').value) || 0;
     const qty = parseFloat(document.getElementById('gramQty')?.value) || 1;
@@ -2230,7 +2230,7 @@ function submitGramItem() {
         if (!opt || !opt.value) { alert('Please select a product from stock.'); return; }
         productId = opt.value;
         name = opt.dataset.itemName;
-        hsn = '7108';
+        hsn = '7113';
 
         // Stock pcs validation check
         const stockQty = parseFloat(opt.dataset.qty) || 0;
@@ -2268,10 +2268,10 @@ function submitGramItem() {
         productId = 'other';
         name = type;  // e.g. "Jhumka"
         itemType = type;
-        hsn = '7108';
+        hsn = '7113';
     } else {
         name = document.getElementById('gramManualName').value.trim();
-        hsn = document.getElementById('gramManualHsn').value.trim() || '7108';
+        hsn = document.getElementById('gramManualHsn').value.trim() || '7113';
         if (!name) { alert('Please enter an item description.'); return; }
     }
     
