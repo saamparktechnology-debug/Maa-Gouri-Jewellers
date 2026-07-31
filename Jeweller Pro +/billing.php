@@ -403,7 +403,19 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
             goto skip_invoice;
         }
     } else {
-        $invoice_no = 'INV-' . date('Ymd') . '-' . rand(1000, 9999);
+        $today = date('Ymd');
+        $prefix = 'INV-' . $today . '-';
+        $q = mysqli_query($conn, "SELECT id, invoice_no FROM invoices ORDER BY id DESC LIMIT 1");
+        $next_num = 450;
+        if ($q && mysqli_num_rows($q) > 0) {
+            $row = mysqli_fetch_assoc($q);
+            if (intval($row['id']) > 6) {
+                $parts = explode('-', $row['invoice_no']);
+                $last_num = intval(end($parts));
+                $next_num = $last_num + 1;
+            }
+        }
+        $invoice_no = $prefix . str_pad($next_num, 4, '0', STR_PAD_LEFT);
     }
     $customer_gstin = mysqli_real_escape_string($conn, $_POST['customer_gstin'] ?? '');
     $huid_code = mysqli_real_escape_string($conn, trim($_POST['huid_code'] ?? ''));
@@ -444,6 +456,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
     $raw_items = json_decode($_POST['items'] ?? '[]', true);
     if (is_array($raw_items)) {
         $req_pcs_map = [];
+        $req_weight_map = [];
         foreach ($raw_items as $it) {
             $pid = $it['product_id'] ?? '';
             if ($pid !== 'other' && is_numeric($pid)) {
@@ -451,12 +464,18 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
                 $pcs_req = floatval($it['pcs'] ?? $it['stock_deduct'] ?? 1);
                 if ($pcs_req <= 0) $pcs_req = 1;
                 $req_pcs_map[$pid_int] = ($req_pcs_map[$pid_int] ?? 0) + $pcs_req;
+                
+                if (isset($it['unit']) && $it['unit'] === 'g') {
+                    $w_req = floatval($it['quantity'] ?? 0);
+                    $req_weight_map[$pid_int] = ($req_weight_map[$pid_int] ?? 0) + $w_req;
+                }
             }
         }
         foreach ($req_pcs_map as $pid_int => $total_pcs_req) {
-            $st_res = mysqli_query($conn, "SELECT name, item_name, quantity FROM products WHERE id = $pid_int");
+            $st_res = mysqli_query($conn, "SELECT name, item_name, quantity, weight FROM products WHERE id = $pid_int");
             if ($st_res && $st_row = mysqli_fetch_assoc($st_res)) {
                 $avail_qty = floatval($st_row['quantity']);
+                $avail_weight = floatval($st_row['weight'] ?? 0);
                 $p_title = !empty($st_row['item_name']) ? $st_row['item_name'] : $st_row['name'];
                 if ($avail_qty <= 0) {
                     $error = "&#10007; Cannot create invoice! Product '$p_title' is OUT OF STOCK (0 pcs available).";
@@ -464,6 +483,12 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
                 }
                 if ($total_pcs_req > $avail_qty) {
                     $error = "&#10007; Cannot create invoice! Product '$p_title' has only $avail_qty pcs in stock, but $total_pcs_req pcs requested.";
+                    goto skip_invoice;
+                }
+                
+                $total_w_req = $req_weight_map[$pid_int] ?? 0;
+                if ($avail_weight > 0 && $total_w_req > $avail_weight) {
+                    $error = "&#10007; Cannot create invoice! Product '$p_title' has only {$avail_weight}g in stock, but {$total_w_req}g requested.";
                     goto skip_invoice;
                 }
             } else {
@@ -542,8 +567,29 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
                                VALUES ($invoice_id, $pid, '".$manual_name."', '".$manual_serial."', '".$manual_huid."', '".$manual_hsn."', $quantity, $price, $total, $item_making_charge, $item_making_charge_pct, $item_hallmark, $item_discount)";
                 mysqli_query($conn, $item_query);
 
+                $w_deduct = (isset($item['unit']) && $item['unit'] === 'g') ? floatval($item['quantity'] ?? 0) : 0;
+                
+                if ($w_deduct > 0) {
+                    // Update weight first
+                    mysqli_query($conn, "UPDATE products SET weight = CAST(weight AS DECIMAL(10,3)) - $w_deduct WHERE id = $pid AND weight IS NOT NULL AND weight != ''");
+                }
+                
                 // 1. Deduct piece count from products.quantity
                 mysqli_query($conn, "UPDATE products SET quantity = quantity - $pcs_deduct WHERE id = $pid");
+                
+                if ($w_deduct > 0) {
+                    // Check if there is still weight left but quantity became <= 0 (sold partial weight of last piece)
+                    $st_res = mysqli_query($conn, "SELECT weight, quantity FROM products WHERE id = $pid");
+                    if ($st_res && $row = mysqli_fetch_assoc($st_res)) {
+                        $rem_w = floatval($row['weight'] ?? 0);
+                        $rem_qty = floatval($row['quantity'] ?? 0);
+                        if ($rem_w > 0.001 && $rem_qty <= 0) {
+                            // Restore quantity to 1 so the remaining weight can still be sold
+                            mysqli_query($conn, "UPDATE products SET quantity = 1 WHERE id = $pid");
+                        }
+                    }
+                }
+                
                 // 2. Auto-delete product from stock table if stock reaches 0 or less
                 mysqli_query($conn, "DELETE FROM products WHERE id = $pid AND quantity <= 0");
             }
@@ -2247,6 +2293,20 @@ function submitGramItem() {
         }
         if (totalReqPcs > stockQty) {
             alert(' Exceeds Available Stock!\nOnly ' + stockQty + ' pcs available in stock for "' + name + '", but ' + totalReqPcs + ' pcs requested.');
+            return;
+        }
+        
+        // Stock weight validation check
+        const stockWeight = parseFloat(opt.dataset.weight) || 0;
+        let existingWeight = 0;
+        items.forEach(it => {
+            if (String(it.product_id) === String(productId) && it.unit === 'g') {
+                existingWeight += (parseFloat(it.quantity) || 0);
+            }
+        });
+        const totalReqWeight = existingWeight + weight;
+        if (weight > 0 && stockWeight > 0 && totalReqWeight > stockWeight) {
+            alert(' Weight Exceeds Available Stock!\nOnly ' + stockWeight + 'g available in stock for "' + name + '", but you are requesting ' + totalReqWeight + 'g.');
             return;
         }
     } else if (source === 'category') {
