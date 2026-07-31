@@ -1155,7 +1155,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 </div>
                 <div>
                     <label class="filter-label"> Payment</label>
-                    <select name="filter_status" class="jewel-input w-full">
+                    <select name="filter_status" class="jewel-input w-full" onchange="this.form.submit()">
                         <option value="" <?php if(!$filter_status) echo 'selected'; ?>>All</option>
                         <option value="paid"   <?php if($filter_status==='paid')   echo 'selected'; ?>> Paid</option>
                         <option value="part"   <?php if($filter_status==='part')   echo 'selected'; ?>> Part</option>
@@ -1164,9 +1164,9 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 </div>
                 <div>
                     <label class="filter-label"> GST Type</label>
-                    <select name="filter_gst" class="jewel-input w-full">
+                    <select name="filter_gst" class="jewel-input w-full" onchange="this.form.submit()">
                         <option value="" <?php if(!$filter_gst) echo 'selected'; ?>>All</option>
-                        <option value="gst"     <?php if($filter_gst==='gst')     echo 'selected'; ?>> GST (3%)</option>
+                        <option value="gst"     <?php if($filter_gst==='gst')     echo 'selected'; ?>> GST</option>
                         <option value="non_gst" <?php if($filter_gst==='non_gst') echo 'selected'; ?>> Non-GST</option>
                     </select>
                 </div>

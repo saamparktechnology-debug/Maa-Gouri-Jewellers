@@ -405,17 +405,20 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
     } else {
         $today = date('Ymd');
         $prefix = 'INV-' . $today . '-';
-        $q = mysqli_query($conn, "SELECT invoice_no, created_at FROM invoices ORDER BY id DESC LIMIT 1");
-        $next_num = 450;
-        if ($q && mysqli_num_rows($q) > 0) {
-            $row = mysqli_fetch_assoc($q);
-            $parts = explode('-', $row['invoice_no']);
-            $last_num = intval(end($parts));
-            
-            // Check if this invoice was created after the deployment of this feature
-            if (strtotime($row['created_at']) > strtotime('2026-07-31 16:00:00')) {
-                $next_num = $last_num + 1;
+        $q = mysqli_query($conn, "SELECT invoice_no FROM invoices WHERE created_at >= '2026-07-31 16:00:00'");
+        $existing_nums = [];
+        if ($q) {
+            while ($row = mysqli_fetch_assoc($q)) {
+                $parts = explode('-', $row['invoice_no']);
+                $num = intval(end($parts));
+                if ($num >= 450) {
+                    $existing_nums[] = $num;
+                }
             }
+        }
+        $next_num = 450;
+        while (in_array($next_num, $existing_nums)) {
+            $next_num++;
         }
         $invoice_no = $prefix . str_pad($next_num, 4, '0', STR_PAD_LEFT);
     }
