@@ -22,16 +22,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_invoice_items') {
             // Fetch items
             $res = mysqli_query($conn, "
                 SELECT 
-                    ii.id, 
-                    ii.product_id, 
-                    ii.product_name, 
-                    ii.serial_no, 
-                    ii.huid_code, 
-                    ii.hsn_code, 
-                    ii.price, 
-                    ii.quantity,
+                    ii.*,
                     p.category,
-                    p.weight
+                    p.weight AS p_weight
                 FROM invoice_items ii 
                 LEFT JOIN products p ON ii.product_id = p.id 
                 WHERE ii.invoice_id = $invoice_id
@@ -39,6 +32,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_invoice_items') {
             
             if ($res) {
                 while ($row = mysqli_fetch_assoc($res)) {
+                    $unit = !empty($row['unit']) ? $row['unit'] : ((stripos($row['product_name'] ?? '', 'pair') !== false) ? 'pairs' : 'pcs');
+                    $gross_wt = !empty($row['gross_wt']) ? floatval($row['gross_wt']) : (floatval($row['quantity'] ?? 0));
+                    $pcs = !empty($row['pcs']) ? intval($row['pcs']) : 1;
                     $items[] = [
                         'id' => intval($row['id']),
                         'product_id' => $row['product_id'] ? intval($row['product_id']) : null,
@@ -48,9 +44,12 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_invoice_items') {
                         'hsn_code' => (!empty($row['hsn_code']) && $row['hsn_code'] !== '0') ? $row['hsn_code'] : '7113',
                         'price' => floatval($row['price'] ?? 0),
                         'quantity' => floatval($row['quantity'] ?? 0),
+                        'pcs' => $pcs,
+                        'gross_wt' => $gross_wt,
+                        'net_wt' => floatval($row['net_wt'] ?? $gross_wt),
                         'category' => $row['category'] ?? '',
-                        'weight' => $row['weight'] ?? '',
-                        'unit' => (stripos($row['product_name'] ?? '', 'pair') !== false) ? 'pairs' : 'pcs'
+                        'weight' => !empty($row['gross_wt']) ? $row['gross_wt'] : ($row['p_weight'] ?? ''),
+                        'unit' => $unit
                     ];
                 }
             }

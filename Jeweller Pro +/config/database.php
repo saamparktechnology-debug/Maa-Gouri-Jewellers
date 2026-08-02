@@ -101,6 +101,7 @@ $products_cols = [
     'item_name' => "VARCHAR(255) DEFAULT ''",
     'huid_code' => "VARCHAR(100) NULL",
     'hsn_code'  => "VARCHAR(50) DEFAULT '7113'",
+    'unit'      => "VARCHAR(20) DEFAULT 'pcs'",
 ];
 
 foreach ($products_cols as $col_name => $col_definition) {
@@ -110,6 +111,9 @@ foreach ($products_cols as $col_name => $col_definition) {
         mysqli_query($conn, "ALTER TABLE products ADD COLUMN $col_name $col_definition$unique");
     }
 }
+// Backfill pair for existing products
+mysqli_query($conn, "UPDATE products SET unit = 'pair' WHERE (unit IS NULL OR unit = '' OR unit = 'pcs') AND (name LIKE '%(Pair)%' OR name LIKE '%pair%' OR item_name LIKE '%pair%')");
+
 
 $create_customers = "CREATE TABLE IF NOT EXISTS customers (
 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -257,13 +261,19 @@ mysqli_query($conn, $create_invoice_items);
 
 // Ensure required columns exist on invoice_items table
 $invoice_items_cols = [
-    'product_name'  => "VARCHAR(200) NULL",
-    'serial_no'     => "VARCHAR(100) NULL",
-    'hsn_code'      => "VARCHAR(50) NULL",
-    'making_charge' => "DECIMAL(10,2) DEFAULT 0",
-    'hallmark'      => "DECIMAL(10,2) DEFAULT 0",
-    'discount'      => "DECIMAL(10,2) DEFAULT 0",
-    'huid_code'     => "VARCHAR(100) NULL",
+    'product_name'      => "VARCHAR(200) NULL",
+    'serial_no'         => "VARCHAR(100) NULL",
+    'hsn_code'          => "VARCHAR(50) NULL",
+    'making_charge'     => "DECIMAL(10,2) DEFAULT 0",
+    'making_charge_pct' => "DECIMAL(5,2) DEFAULT 0",
+    'hallmark'          => "DECIMAL(10,2) DEFAULT 0",
+    'discount'          => "DECIMAL(10,2) DEFAULT 0",
+    'huid_code'         => "VARCHAR(100) NULL",
+    'pcs'               => "INT DEFAULT 1",
+    'unit'              => "VARCHAR(20) DEFAULT 'g'",
+    'gross_wt'          => "DECIMAL(10,3) DEFAULT 0",
+    'net_wt'            => "DECIMAL(10,3) DEFAULT 0",
+    'gst_type'          => "VARCHAR(20) DEFAULT 'non_gst'",
 ];
 
 foreach ($invoice_items_cols as $col_name => $col_definition) {

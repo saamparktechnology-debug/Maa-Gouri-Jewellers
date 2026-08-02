@@ -23,7 +23,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         if($item_name_raw === 'Other' && !empty($_POST['item_name_custom'])) {
             $item_name_raw = $_POST['item_name_custom'];
         }
-        $unit = $_POST['unit'] ?? 'pcs';
+        $unit = mysqli_real_escape_string($conn, $_POST['unit'] ?? 'pcs');
         if ($unit === 'pair' && stripos($name, 'pair') === false) {
             $name .= ' (Pair)';
         }
@@ -42,8 +42,12 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         if(mysqli_num_rows($chk2) == 0) {
             mysqli_query($conn, "ALTER TABLE products ADD COLUMN created_at DATETIME DEFAULT NULL");
         }
+        $chk3 = mysqli_query($conn, "SHOW COLUMNS FROM products LIKE 'unit'");
+        if(mysqli_num_rows($chk3) == 0) {
+            mysqli_query($conn, "ALTER TABLE products ADD COLUMN unit VARCHAR(20) DEFAULT 'pcs'");
+        }
 
-        $query = "INSERT INTO products (serial_no, name, item_name, category, weight, price, quantity, huid_code, created_at) VALUES ('$serial_no', '$name', '$item_name', '$category', '$weight', '$price', '$quantity', '$huid_code', NOW())";
+        $query = "INSERT INTO products (serial_no, name, item_name, category, weight, price, quantity, unit, huid_code, created_at) VALUES ('$serial_no', '$name', '$item_name', '$category', '$weight', '$price', '$quantity', '$unit', '$huid_code', NOW())";
         if(mysqli_query($conn, $query)) {
             $success = " Product added successfully! ";
         } else {
@@ -71,8 +75,9 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         $huid_code = mysqli_real_escape_string($conn, trim($_POST['huid_code'] ?? ''));
         $price = $_POST['price'];
         $quantity = $_POST['quantity'];
+        $unit = mysqli_real_escape_string($conn, $_POST['unit'] ?? 'pcs');
 
-        $query = "UPDATE products SET serial_no='$serial_no', name='$name', item_name='$item_name', category='$category', weight='$weight', price='$price', quantity='$quantity', huid_code='$huid_code' WHERE id=$id";
+        $query = "UPDATE products SET serial_no='$serial_no', name='$name', item_name='$item_name', category='$category', weight='$weight', price='$price', quantity='$quantity', unit='$unit', huid_code='$huid_code' WHERE id=$id";
         if(mysqli_query($conn, $query)) {
             $success = " Product updated successfully! ";
         } else {
@@ -1045,7 +1050,10 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                             <span style="color:#d1d5db;">-</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td class="text-center font-bold text-sm" style="color:#800020;"><?php echo $qty; ?></td>
+                                    <td class="text-center font-bold text-sm" style="color:#800020;">
+                                        <?php echo $qty; ?>
+                                        <span class="text-xs font-semibold uppercase" style="color:#7a4e0a;display:block;font-size:10px;"><?php echo htmlspecialchars($product['unit'] ?? 'pcs'); ?></span>
+                                    </td>
                                     <td class="text-center">
                                         <span class="px-2 py-1 rounded-full text-xs font-semibold <?php echo $status_class; ?>">
                                             <?php echo $status_text; ?>
@@ -1053,7 +1061,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                     </td>
                                     <td class="text-center">
                                         <div class="action-btns flex flex-wrap gap-1 justify-center">
-                                            <button onclick="openEditModal(<?php echo $product['id']; ?>,'<?php echo addslashes($product['serial_no']); ?>','<?php echo addslashes($product['name']); ?>','<?php echo addslashes($product['item_name'] ?? ''); ?>','<?php echo $product['category']; ?>','<?php echo addslashes($product['weight'] ?? ''); ?>',<?php echo $product['price']; ?>,<?php echo $product['quantity']; ?>,'<?php echo addslashes($product['huid_code'] ?? ''); ?>')" class="btn-edit">
+                                            <button onclick="openEditModal(<?php echo $product['id']; ?>,'<?php echo addslashes($product['serial_no']); ?>','<?php echo addslashes($product['name']); ?>','<?php echo addslashes($product['item_name'] ?? ''); ?>','<?php echo $product['category']; ?>','<?php echo addslashes($product['weight'] ?? ''); ?>',<?php echo $product['price']; ?>,<?php echo $product['quantity']; ?>,'<?php echo addslashes($product['huid_code'] ?? ''); ?>','<?php echo addslashes($product['unit'] ?? 'pcs'); ?>')" class="btn-edit">
                                                 <i class="fas fa-edit"></i> Edit
                                             </button>
                                             <button onclick="openUpdateModal(<?php echo $product['id']; ?>,'<?php echo addslashes($product['name']); ?>')" class="btn-addstock">
@@ -1092,9 +1100,9 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             $q = intval($row['quantity']);
                             $total_qty += $q;
                             $w = floatval($row['weight'] ?? 0);
-                            $total_weight += $w * $q;
+                            $total_weight += $w;
                             $p = floatval($row['price'] ?? 0);
-                            $total_price += $p * $q;
+                            $total_price += $p;
                         }
                     }
                     ?>
@@ -1187,9 +1195,18 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 <label> Price (₹)</label>
                 <input type="number" step="0.01" name="price" id="editProductPrice" required class="jewel-input">
             </div>
-            <div class="mb-4">
-                <label> Quantity</label>
-                <input type="number" name="quantity" id="editProductQuantity" required class="jewel-input">
+            <div class="mb-4 flex gap-2">
+                <div class="flex-1">
+                    <label> Quantity</label>
+                    <input type="number" name="quantity" id="editProductQuantity" required class="jewel-input">
+                </div>
+                <div class="w-1/3">
+                    <label> Unit</label>
+                    <select name="unit" id="editProductUnit" class="jewel-input">
+                        <option value="pcs">Pcs</option>
+                        <option value="pair">Pair</option>
+                    </select>
+                </div>
             </div>
             <div class="flex gap-3">
                 <button type="submit" name="update_product" class="btn-jewel flex-1 text-center"> Update</button>
@@ -1313,7 +1330,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     }
 
     /* ---------- Modals ---------- */
-    function openEditModal(id, serial_no, name, item_name, category, weight, price, quantity, huid_code) {
+    function openEditModal(id, serial_no, name, item_name, category, weight, price, quantity, huid_code, unit) {
         document.getElementById('editProductId').value = id;
         document.getElementById('editProductSerial').value = serial_no;
         document.getElementById('editProductName').value = name;
@@ -1321,6 +1338,9 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         document.getElementById('editProductPrice').value = price;
         document.getElementById('editProductQuantity').value = quantity;
         document.getElementById('editProductHuid').value = huid_code || '';
+        if (document.getElementById('editProductUnit')) {
+            document.getElementById('editProductUnit').value = (unit === 'pair') ? 'pair' : 'pcs';
+        }
 
         const catSel = document.getElementById('editProductCategory');
         catSel.value = category;

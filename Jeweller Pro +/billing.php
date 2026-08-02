@@ -248,9 +248,12 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
 
 // Fetch products from DB
 $all_products = [];
-$products_result = mysqli_query($conn, "SELECT id, name, item_name, serial_no, category, weight, price, quantity, huid_code FROM products ORDER BY category, item_name, name");
+$products_result = mysqli_query($conn, "SELECT id, name, item_name, serial_no, category, weight, price, quantity, unit, huid_code FROM products ORDER BY category, item_name, name");
 if($products_result) {
     while($p = mysqli_fetch_assoc($products_result)) {
+        if(empty($p['unit'])) {
+            $p['unit'] = (stripos($p['name'], 'pair') !== false || stripos($p['item_name'], 'pair') !== false) ? 'pair' : 'pcs';
+        }
         $all_products[] = $p;
     }
 }
@@ -533,7 +536,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
         }
         if(!$col_qty_decimal) mysqli_query($conn, "ALTER TABLE invoice_items MODIFY COLUMN quantity DECIMAL(10,3) NULL");
 
-        // Per-item making charge / hallmark / discount columns (manual entry per item)
+        // Per-item making charge / hallmark / discount / pcs / unit / weight columns
         $col_item_mc = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'making_charge'")) > 0;
         if(!$col_item_mc) mysqli_query($conn, "ALTER TABLE invoice_items ADD COLUMN making_charge DECIMAL(10,2) DEFAULT 0");
         $col_item_mc_pct = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'making_charge_pct'")) > 0;
@@ -542,6 +545,14 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
         if(!$col_item_hm) mysqli_query($conn, "ALTER TABLE invoice_items ADD COLUMN hallmark DECIMAL(10,2) DEFAULT 0");
         $col_item_disc = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'discount'")) > 0;
         if(!$col_item_disc) mysqli_query($conn, "ALTER TABLE invoice_items ADD COLUMN discount DECIMAL(10,2) DEFAULT 0");
+        $col_item_pcs = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'pcs'")) > 0;
+        if(!$col_item_pcs) mysqli_query($conn, "ALTER TABLE invoice_items ADD COLUMN pcs INT DEFAULT 1");
+        $col_item_unit = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'unit'")) > 0;
+        if(!$col_item_unit) mysqli_query($conn, "ALTER TABLE invoice_items ADD COLUMN unit VARCHAR(20) DEFAULT 'g'");
+        $col_item_gross = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'gross_wt'")) > 0;
+        if(!$col_item_gross) mysqli_query($conn, "ALTER TABLE invoice_items ADD COLUMN gross_wt DECIMAL(10,3) DEFAULT 0");
+        $col_item_net = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'net_wt'")) > 0;
+        if(!$col_item_net) mysqli_query($conn, "ALTER TABLE invoice_items ADD COLUMN net_wt DECIMAL(10,3) DEFAULT 0");
 
         if(is_array($items)) {
             foreach($items as $item) {
@@ -559,8 +570,14 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
                 $manual_hsn = mysqli_real_escape_string($conn, trim($item['hsn'] ?? $item['hsn_code'] ?? ''));
                 if (empty($manual_hsn) || $manual_hsn === '0') $manual_hsn = '7113';
 
+                $item_pcs   = intval($item['pcs'] ?? $item['stock_deduct'] ?? 1);
+                if ($item_pcs <= 0) $item_pcs = 1;
+                $item_unit  = mysqli_real_escape_string($conn, $item['unit'] ?? 'g');
+                $item_gross = floatval($item['gross_wt'] ?? ($item_unit === 'g' ? $quantity : 0));
+                $item_net   = floatval($item['net_wt'] ?? ($item_unit === 'g' ? $quantity : 0));
+
                 if($product_id === 'other' || !is_numeric($product_id)) {
-                    $item_query = "INSERT INTO invoice_items (invoice_id, product_id, product_name, serial_no, huid_code, hsn_code, quantity, price, total, making_charge, making_charge_pct, hallmark, discount) VALUES ($invoice_id, NULL, '".$manual_name."', '".$manual_serial."', '".$manual_huid."', '".$manual_hsn."', $quantity, $price, $total, $item_making_charge, $item_making_charge_pct, $item_hallmark, $item_discount)";
+                    $item_query = "INSERT INTO invoice_items (invoice_id, product_id, product_name, serial_no, huid_code, hsn_code, quantity, price, total, making_charge, making_charge_pct, hallmark, discount, pcs, unit, gross_wt, net_wt) VALUES ($invoice_id, NULL, '".$manual_name."', '".$manual_serial."', '".$manual_huid."', '".$manual_hsn."', $quantity, $price, $total, $item_making_charge, $item_making_charge_pct, $item_hallmark, $item_discount, $item_pcs, '".$item_unit."', $item_gross, $item_net)";
                     mysqli_query($conn, $item_query);
                     continue;
                 }
@@ -568,8 +585,8 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
                 $pcs_deduct = floatval($item['pcs'] ?? $item['stock_deduct'] ?? 1);
                 if($pcs_deduct <= 0) $pcs_deduct = 1;
 
-                $item_query = "INSERT INTO invoice_items (invoice_id, product_id, product_name, serial_no, huid_code, hsn_code, quantity, price, total, making_charge, making_charge_pct, hallmark, discount)
-                               VALUES ($invoice_id, $pid, '".$manual_name."', '".$manual_serial."', '".$manual_huid."', '".$manual_hsn."', $quantity, $price, $total, $item_making_charge, $item_making_charge_pct, $item_hallmark, $item_discount)";
+                $item_query = "INSERT INTO invoice_items (invoice_id, product_id, product_name, serial_no, huid_code, hsn_code, quantity, price, total, making_charge, making_charge_pct, hallmark, discount, pcs, unit, gross_wt, net_wt)
+                               VALUES ($invoice_id, $pid, '".$manual_name."', '".$manual_serial."', '".$manual_huid."', '".$manual_hsn."', $quantity, $price, $total, $item_making_charge, $item_making_charge_pct, $item_hallmark, $item_discount, $item_pcs, '".$item_unit."', $item_gross, $item_net)";
                 mysqli_query($conn, $item_query);
 
                 $w_deduct = (isset($item['unit']) && $item['unit'] === 'g') ? floatval($item['quantity'] ?? 0) : 0;
@@ -1514,6 +1531,9 @@ function submitPayment() {
                     <div class="p-4 rounded-xl" style="background:rgba(214,139,22,0.06);border:1px solid rgba(214,139,22,0.18);">
                         <div class="flex justify-end">
                             <div class="w-full sm:w-96 space-y-1.5">
+                                <div class="flex justify-between text-sm pb-1 mb-1" style="color:#059669;border-bottom:1px dashed rgba(5,150,105,0.3);" id="totalWeightRow">
+                                    <span class="font-medium">Total Gross Weight</span><span id="totalWeightDisplay" class="font-bold">0.000 g</span>
+                                </div>
                                 <div class="flex justify-between text-sm" style="color:#7a4e0a;">
                                     <span>Subtotal</span><span id="subtotal" class="font-semibold">&#8377;0.00</span>
                                 </div>
@@ -1955,7 +1975,8 @@ function filterGramStock(query) {
         
     filtered.forEach(p => {
         const isOutOfStock = (parseFloat(p.quantity) <= 0);
-        const stockText = isOutOfStock ? 'OUT OF STOCK' : (p.quantity + ' pcs');
+        const pUnit = (p.unit || '').toLowerCase() === 'pair' ? 'pair' : 'pcs';
+        const stockText = isOutOfStock ? 'OUT OF STOCK' : (p.quantity + ' ' + pUnit);
         const display = (p.item_name || p.name) + ' | SN:' + (p.serial_no || '-') + ' | Stock: ' + stockText;
         const opt = document.createElement('option');
         opt.value = p.id;
@@ -1966,6 +1987,7 @@ function filterGramStock(query) {
         opt.dataset.category = p.category;
         opt.dataset.itemName = p.item_name || p.name;
         opt.dataset.qty = p.quantity;
+        opt.dataset.unit = pUnit;
         opt.dataset.weight = p.weight || '';
         opt.dataset.huid = p.huid_code || p.serial_no || '';
         if (isOutOfStock) opt.style.color = '#dc2626';
@@ -1977,10 +1999,11 @@ function filterGramStock(query) {
         if (query.length > 0 && filtered.length > 0) {
             filtered.slice(0, 8).forEach(p => {
                 const isOut = (parseFloat(p.quantity) <= 0);
+                const pUnit = (p.unit || '').toLowerCase() === 'pair' ? 'pair' : 'pcs';
                 const item = document.createElement('div');
                 item.className = 'autocomplete-suggestion-item';
                 item.style.cssText = 'padding:8px 12px;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;background:#fff;';
-                item.innerHTML = '<div><strong style="color:#022c22;">' + (p.item_name || p.name) + '</strong> <span style="font-size:11px;color:#059669;">(' + p.category + ')</span></div><div style="font-size:11px;color:' + (isOut?'#dc2626':'#7a4e0a') + ';">SN: ' + (p.serial_no || '-') + ' | ' + (isOut ? 'OUT OF STOCK' : (p.quantity + ' pcs')) + '</div>';
+                item.innerHTML = '<div><strong style="color:#022c22;">' + (p.item_name || p.name) + '</strong> <span style="font-size:11px;color:#059669;">(' + p.category + ')</span></div><div style="font-size:11px;color:' + (isOut?'#dc2626':'#7a4e0a') + ';">SN: ' + (p.serial_no || '-') + ' | ' + (isOut ? 'OUT OF STOCK' : (p.quantity + ' ' + pUnit)) + '</div>';
                 item.onmouseover = function() { this.style.background = '#f5ead0'; };
                 item.onmouseout = function() { this.style.background = '#fff'; };
                 item.onclick = function() {
@@ -2017,41 +2040,65 @@ function onGramStockChange() {
         return;
     }
     
-    const price    = parseFloat(opt.dataset.price) || 0;    // DB: total item value
-    const qty      = parseFloat(opt.dataset.qty) || 0;      // DB: pieces in stock
-    const name     = opt.dataset.itemName;
-    const category = opt.dataset.category || '';
-    const huid     = opt.dataset.huid || '';
+    const price       = parseFloat(opt.dataset.price) || 0;    // DB: total item value
+    const qty         = parseFloat(opt.dataset.qty) || 0;      // DB: pieces in stock
+    const name        = opt.dataset.itemName || opt.dataset.name || '';
+    const category    = opt.dataset.category || '';
+    const huid        = opt.dataset.huid || '';
+    const stockWeight = parseFloat(opt.dataset.weight) || 0;
 
     // Auto-fill HUID
     if (document.getElementById('manualHuid')) {
         document.getElementById('manualHuid').value = huid;
     }
 
+    // Weight should NOT come automatically on stock product selection
+    if (weightInput) {
+        weightInput.value = '';
+    }
+
+    // Automatically detect and select Pcs vs Pair strictly from product stock
+    const unitSelect = document.getElementById('gramUnit');
+    if (unitSelect) {
+        const stockUnit = (opt.dataset.unit || '').toLowerCase().trim();
+        if (stockUnit === 'pair' || stockUnit === 'pairs') {
+            unitSelect.value = 'pair';
+        } else if (stockUnit === 'pcs' || stockUnit === 'pc' || stockUnit === 'piece') {
+            unitSelect.value = 'pcs';
+        } else {
+            const nameLower = name.toLowerCase();
+            const isPair = nameLower.includes('pair') || 
+                           nameLower.includes('jhumka') || 
+                           nameLower.includes('tops') || 
+                           nameLower.includes('jhuladul') || 
+                           nameLower.includes('dul') || 
+                           nameLower.includes('bali') || 
+                           nameLower.includes('noya') || 
+                           nameLower.includes('bauti') || 
+                           nameLower.includes('earring');
+            unitSelect.value = isPair ? 'pair' : 'pcs';
+        }
+    }
+
     // Use shop rate (per 10g) for this category - the correct billing rate
     const shopRatePerGram = getShopRateForCategory(category); // returns per-gram from shop rates
     const shopRate10g     = shopRatePerGram * 10;             // convert back to per-10g for the field
+    const wtInfo          = stockWeight > 0 ? ' | Stock Wt: <strong>' + stockWeight.toFixed(3) + 'g</strong>' : '';
 
     if (qty <= 0) {
         rateInput.value = '';
-        $stockWeight = parseFloat(opt.dataset.weight) || 0;
-        weightInput.value = $stockWeight > 0 ? $stockWeight : '';
-        infoDiv.innerHTML = '<strong style="color:#dc2626;">' + name + '</strong> | <strong style="color:#dc2626;"> OUT OF STOCK (0 pcs available)</strong>';
+        infoDiv.innerHTML = '<strong style="color:#dc2626;">' + name + '</strong>' + wtInfo + ' | <strong style="color:#dc2626;"> OUT OF STOCK (0 pcs available)</strong>';
     } else if (shopRate10g > 0) {
         rateInput.value = shopRate10g.toFixed(0);
         const hint = document.getElementById('gramRatePerGramHint');
         if(hint) hint.textContent = '\u2248 \u20B9' + shopRatePerGram.toLocaleString('en-IN', {maximumFractionDigits:2}) + ' per gram (shop rate used in billing)';
-        infoDiv.innerHTML = '<strong>' + name + '</strong> | Shop Rate: \u20B9' + shopRatePerGram.toLocaleString('en-IN', {maximumFractionDigits:2}) + '/g | Stock Value: \u20B9' + price.toLocaleString('en-IN') + ' | Available Stock: <strong style="color:#059669;">' + qty + ' pcs</strong>';
-        $stockWeight = parseFloat(opt.dataset.weight) || 0;
-        weightInput.value = $stockWeight > 0 ? $stockWeight : '';
+        infoDiv.innerHTML = '<strong>' + name + '</strong>' + wtInfo + ' | Shop Rate: \u20B9' + shopRatePerGram.toLocaleString('en-IN', {maximumFractionDigits:2}) + '/g | Stock Value: \u20B9' + price.toLocaleString('en-IN') + ' | Available Stock: <strong style="color:#059669;">' + qty + ' pcs</strong>';
     } else {
         rateInput.value = '';
         const hint = document.getElementById('gramRatePerGramHint');
         if(hint) hint.textContent = '\u26A0 Set shop rate for ' + (category || 'this category') + ' in the panel on the right first!';
         if(hint) hint.style.color = '#dc2626';
-        infoDiv.innerHTML = '<strong>' + name + '</strong> | Stock Value: \u20B9' + price.toLocaleString('en-IN') + ' | Available Stock: <strong style="color:#059669;">' + qty + ' pcs</strong> | \u26A0 Set shop rate first!';
-        $stockWeight = parseFloat(opt.dataset.weight) || 0;
-        weightInput.value = $stockWeight > 0 ? $stockWeight : '';
+        infoDiv.innerHTML = '<strong>' + name + '</strong>' + wtInfo + ' | Stock Value: \u20B9' + price.toLocaleString('en-IN') + ' | Available Stock: <strong style="color:#059669;">' + qty + ' pcs</strong> | \u26A0 Set shop rate first!';
     }
 
     infoDiv.classList.remove('hidden');
@@ -2068,58 +2115,26 @@ function updateGramItemTypes() {
     }
     
     const options = mergedItemTypeOptions[category] || [];
-    
-    // Group matching products from ALL_PRODUCTS stock array
-    const categoryStock = ALL_PRODUCTS.filter(p => {
-        const catName = (p.category || '').toLowerCase();
-        const targetCat = category.toLowerCase();
-        return catName.includes(targetCat) || targetCat.includes(catName);
-    });
-
     options.forEach(item => {
-        const matchingItems = categoryStock.filter(p => {
-            const pName = (p.item_name || p.name || '').toLowerCase();
-            const itName = item.toLowerCase();
-            return pName.includes(itName) || itName.includes(pName);
-        });
-
-        let totalQty = 0;
-        matchingItems.forEach(p => {
-            totalQty += parseFloat(p.quantity) || 0;
-        });
-
         const opt = document.createElement('option');
         opt.value = item;
-        if (totalQty > 0) {
-            opt.textContent = item + ' (In Stock: ' + totalQty + ' pcs)';
-            opt.dataset.inStock = 'true';
-            opt.dataset.stockQty = totalQty;
-        } else {
-            opt.textContent = item + ' (Out of Stock)';
-            opt.dataset.inStock = 'false';
-            opt.dataset.stockQty = 0;
-            opt.style.color = '#dc2626';
-        }
+        opt.textContent = item;
         itemTypeSelect.appendChild(opt);
     });
     
-    const shopRate = getShopRateForCategory(category);
+    // Auto-fill shop rate for selected category
+    const shopRatePerGram = getShopRateForCategory(category);
+    const shopRate10g = shopRatePerGram * 10;
     const rateInput = document.getElementById('gramRate');
-    const rateBadge = document.getElementById('gramCatLiveRateBadge');
-    const rateText = document.getElementById('gramCatLiveRateText');
-    
-    const per10g = shopRate * 10;
-    if (per10g > 0) {
-        rateInput.value = per10g.toFixed(0);
+    if (shopRate10g > 0) {
+        rateInput.value = shopRate10g.toFixed(0);
         const hint = document.getElementById('gramRatePerGramHint');
-        if(hint) hint.textContent = '\u2248 \u20B9' + shopRate.toFixed(2) + ' per gram (used in billing)';
-        rateText.innerHTML = '<strong>Shop Rate:</strong> \u20B9' + per10g.toLocaleString('en-IN') + '/10g = \u20B9' + shopRate.toFixed(2) + '/g';
-        rateBadge.classList.remove('hidden');
+        if(hint) hint.textContent = '\u2248 \u20B9' + shopRatePerGram.toLocaleString('en-IN', {maximumFractionDigits:2}) + ' per gram (shop rate)';
     } else {
         rateInput.value = '';
         const hint = document.getElementById('gramRatePerGramHint');
-        if(hint) hint.textContent = '';
-        rateBadge.classList.add('hidden');
+        if(hint) hint.textContent = '\u26A0 Set shop rate for ' + category + ' in the panel on the right first!';
+        if(hint) hint.style.color = '#dc2626';
     }
     autoGramTotal();
     onGramItemTypeChange();
@@ -2128,9 +2143,27 @@ function updateGramItemTypes() {
 function onGramItemTypeChange() {
     const itemTypeSelect = document.getElementById('gramItemType');
     const statusDiv = document.getElementById('gramCatStockStatus');
+    const opt = itemTypeSelect ? itemTypeSelect.options[itemTypeSelect.selectedIndex] : null;
+
+    if (opt && opt.value) {
+        const unitSelect = document.getElementById('gramUnit');
+        if (unitSelect) {
+            const valLower = opt.value.toLowerCase();
+            const isPair = valLower.includes('pair') || 
+                           valLower.includes('jhumka') || 
+                           valLower.includes('tops') || 
+                           valLower.includes('jhuladul') || 
+                           valLower.includes('dul') || 
+                           valLower.includes('bali') || 
+                           valLower.includes('noya') || 
+                           valLower.includes('bauti') || 
+                           valLower.includes('earring');
+            unitSelect.value = isPair ? 'pair' : 'pcs';
+        }
+    }
+
     if (!statusDiv) return;
 
-    const opt = itemTypeSelect.options[itemTypeSelect.selectedIndex];
     if (!opt || !opt.value) {
         statusDiv.classList.add('hidden');
         return;
@@ -2191,7 +2224,7 @@ function updateMakingChargeHint() {
         const rate10g = parseFloat(document.getElementById('gramRate')?.value) || 0;
         const qty = parseFloat(document.getElementById('gramQty')?.value) || 1;
         if (weight > 0) {
-            baseAmount = weight * (rate10g / 10) * qty;
+            baseAmount = weight * (rate10g / 10);
         } else {
             baseAmount = qty * rate10g;
         }
@@ -2209,11 +2242,11 @@ function updateMakingChargeHint() {
     if (inputVal > 0) {
         if (currentMcMode === 'pct') {
             const mcAmt = baseAmount > 0 ? baseAmount * (inputVal / 100) : 0;
-            hintEl.textContent = '= \u20B9' + mcAmt.toFixed(2);
+            hintEl.textContent = '= ₹' + mcAmt.toFixed(2);
             hintEl.style.display = 'block';
         } else {
             const mcPct = baseAmount > 0 ? (inputVal / baseAmount) * 100 : 0;
-            hintEl.textContent = baseAmount > 0 ? '= ' + mcPct.toFixed(2) + '%' : 'Direct \u20B9' + inputVal.toFixed(2);
+            hintEl.textContent = baseAmount > 0 ? '= ' + mcPct.toFixed(2) + '%' : 'Direct ₹' + inputVal.toFixed(2);
             hintEl.style.display = 'block';
         }
     } else {
@@ -2240,12 +2273,15 @@ function autoGramTotal() {
     
     if (weight > 0) {
         const ratePerGram = rate10g / 10;
-        total = parseFloat((weight * ratePerGram * qty).toFixed(2));
-        if(hint && rate10g > 0) hint.textContent = '\u2248 \u20B9' + ratePerGram.toLocaleString('en-IN', {maximumFractionDigits:2}) + '/g \u00D7 ' + qty + ' ' + unitLabel;
-        else if(hint) hint.textContent = '';
+        total = parseFloat((weight * ratePerGram).toFixed(2));
+        if(hint && rate10g > 0) {
+            hint.textContent = '≈ ₹' + ratePerGram.toLocaleString('en-IN', {maximumFractionDigits:2}) + '/g × ' + weight + 'g' + (qty > 1 ? ' (' + qty + ' ' + unitLabel + ')' : '');
+        } else if(hint) {
+            hint.textContent = '';
+        }
     } else if (qty > 0 && rate10g > 0) {
         total = parseFloat((qty * rate10g).toFixed(2));
-        if(hint) hint.textContent = '\u2248 \u20B9' + rate10g.toLocaleString('en-IN', {maximumFractionDigits:2}) + (isPair ? ' per pair \u00D7 ' : ' per piece \u00D7 ') + qty + ' ' + unitLabel;
+        if(hint) hint.textContent = '≈ ₹' + rate10g.toLocaleString('en-IN', {maximumFractionDigits:2}) + (isPair ? ' per pair × ' : ' per piece × ') + qty + ' ' + unitLabel;
     } else if(hint) {
         hint.textContent = '';
     }
@@ -2254,7 +2290,7 @@ function autoGramTotal() {
     const previewEl = document.getElementById('gramTotalPreview');
     
     if (total > 0) {
-        previewEl.textContent = '\u20B9' + total.toLocaleString('en-IN', {minimumFractionDigits: 2});
+        previewEl.textContent = '₹' + total.toLocaleString('en-IN', {minimumFractionDigits: 2});
         previewRow.style.display = '';
     } else {
         previewRow.style.display = 'none';
@@ -2352,7 +2388,7 @@ function submitGramItem() {
     
     if (weight > 0) {
         let ratePerGram = rate10g / 10;
-        baseAmount = parseFloat((weight * ratePerGram * qty).toFixed(2));
+        baseAmount = parseFloat((weight * ratePerGram).toFixed(2));
         unit = 'g';
         itemPrice = ratePerGram;
     } else {
@@ -2396,6 +2432,8 @@ function submitGramItem() {
         quantity: weight > 0 ? weight : qty,
         unit: unit,
         pcs: qty,
+        gross_wt: weight > 0 ? weight : 0,
+        net_wt: weight > 0 ? weight : 0,
         stock_deduct: qty,
         price: itemPrice,
         base_amount: baseAmount,
@@ -2460,7 +2498,8 @@ function filterQtyStock(query) {
         
     filtered.forEach(p => {
         const isOutOfStock = (parseFloat(p.quantity) <= 0);
-        const stockText = isOutOfStock ? 'OUT OF STOCK' : (p.quantity + ' pcs');
+        const pUnit = (p.unit || '').toLowerCase() === 'pair' ? 'pair' : 'pcs';
+        const stockText = isOutOfStock ? 'OUT OF STOCK' : (p.quantity + ' ' + pUnit);
         const display = (p.item_name || p.name) + ' | SN:' + (p.serial_no || '-') + ' | Stock: ' + stockText;
         const opt = document.createElement('option');
         opt.value = p.id;
@@ -2471,6 +2510,7 @@ function filterQtyStock(query) {
         opt.dataset.category = p.category;
         opt.dataset.itemName = p.item_name || p.name;
         opt.dataset.qty = p.quantity;
+        opt.dataset.unit = pUnit;
         opt.dataset.weight = p.weight || '';
         if (isOutOfStock) opt.style.color = '#dc2626';
         select.appendChild(opt);
@@ -2481,10 +2521,11 @@ function filterQtyStock(query) {
         if (query.length > 0 && filtered.length > 0) {
             filtered.slice(0, 8).forEach(p => {
                 const isOut = (parseFloat(p.quantity) <= 0);
+                const pUnit = (p.unit || '').toLowerCase() === 'pair' ? 'pair' : 'pcs';
                 const item = document.createElement('div');
                 item.className = 'autocomplete-suggestion-item';
                 item.style.cssText = 'padding:8px 12px;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;background:#fff;';
-                item.innerHTML = '<div><strong style="color:#022c22;">' + (p.item_name || p.name) + '</strong> <span style="font-size:11px;color:#059669;">(' + p.category + ')</span></div><div style="font-size:11px;color:' + (isOut?'#dc2626':'#7a4e0a') + ';">SN: ' + (p.serial_no || '-') + ' | ' + (isOut ? 'OUT OF STOCK' : (p.quantity + ' pcs')) + '</div>';
+                item.innerHTML = '<div><strong style="color:#022c22;">' + (p.item_name || p.name) + '</strong> <span style="font-size:11px;color:#059669;">(' + p.category + ')</span></div><div style="font-size:11px;color:' + (isOut?'#dc2626':'#7a4e0a') + ';">SN: ' + (p.serial_no || '-') + ' | ' + (isOut ? 'OUT OF STOCK' : (p.quantity + ' ' + pUnit)) + '</div>';
                 item.onmouseover = function() { this.style.background = '#f5ead0'; };
                 item.onmouseout = function() { this.style.background = '#fff'; };
                 item.onclick = function() {
@@ -2746,12 +2787,15 @@ function updateItemsList() {
         const hmValDisp = (hm > 0) ? hm : '';
         const discValDisp = (disc > 0) ? disc : '';
         const chargeInputStyle = 'width:60px;padding:3px 4px;border:1px solid #e5c98a;border-radius:5px;font-size:11px;text-align:right;';
+        const qtyDisp = (item.unit === 'g') 
+                ? (item.quantity + 'g' + ((item.pcs && item.pcs > 1) ? '<br><span style="font-size:10px;color:#9ca3af;">(' + item.pcs + ' pcs)</span>' : ''))
+                : (item.quantity > 0 ? item.quantity + ' ' + (item.unit || 'pcs') : '\u2014');
         html += '<tr>' +
             '<td class="px-2 py-2 text-xs text-center" style="color:#9ca3af;">' + (idx+1) + '</td>' +
             '<td class="px-2 py-2 text-xs" style="color:#374151;">' + icon + ' ' + htmlEsc(item.name) +
                 (item.item_type ? '<span style="color:#b5730e;font-size:10px;"> [' + htmlEsc(item.item_type) + ']</span>' : '') +
                 badge + '<div style="color:#9ca3af;font-size:10px;">HSN: ' + (item.hsn || '7108') + '</div></td>' +
-            '<td class="px-2 py-2 text-center text-xs" style="color:#6b7280;">' + (item.quantity > 0 ? item.quantity : '\u2014') + '</td>' +
+            '<td class="px-2 py-2 text-center text-xs font-medium" style="color:#4b5563;">' + qtyDisp + '</td>' +
             '<td class="px-2 py-2 text-right text-xs" style="color:#374151;">' + (item.price > 0 ? '\u20B9' + item.price.toFixed(2) : '\u2014') + '</td>' +
             '<td class="px-2 py-2 text-right text-xs" style="color:#374151;">\u20B9' + base.toFixed(2) + '</td>' +
             '<td class="px-2 py-2 text-right text-xs">' +
@@ -2853,12 +2897,27 @@ function calculateTotal() {
         }
     });
 
+    const totalGrossWeight = items.reduce((sum, item) => {
+        if (item.unit === 'g') return sum + (parseFloat(item.quantity) || 0);
+        return sum + (parseFloat(item.gross_wt) || 0);
+    }, 0);
+    const totalPieces = items.reduce((sum, item) => {
+        if (item.pcs) return sum + (parseInt(item.pcs) || 1);
+        if (item.unit !== 'g') return sum + (parseInt(item.quantity) || 1);
+        return sum + 1;
+    }, 0);
+
     const oldGoldEl = document.getElementById('oldGoldAmountInput');
     const oldGold = parseFloat(oldGoldEl?.value) || 0;
 
     const grand = Math.max(0, subtotal + cgst + sgst - oldGold);
     
     const fmt = v => '\u20B9' + v.toFixed(2);
+    if (document.getElementById('totalWeightDisplay')) {
+        document.getElementById('totalWeightDisplay').textContent = totalGrossWeight.toFixed(3) + ' g' + (totalPieces > 0 ? ' (' + totalPieces + ' pcs)' : '');
+        const weightRow = document.getElementById('totalWeightRow');
+        if (weightRow) weightRow.style.display = (totalGrossWeight > 0 || totalPieces > 0) ? '' : 'none';
+    }
     document.getElementById('subtotal').textContent = fmt(subtotal - makingAmt - hallmark + discount);
     document.getElementById('makingChargeAmount').textContent = fmt(makingAmt);
     document.getElementById('hallmarkAmount').textContent = fmt(hallmark);

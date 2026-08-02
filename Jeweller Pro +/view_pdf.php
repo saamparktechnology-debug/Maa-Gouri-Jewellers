@@ -31,11 +31,12 @@ $inv = mysqli_fetch_assoc($inv_res);
 // Fetch invoice items
 $col_gst_type_check = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'gst_type'")) > 0;
 $select_gst_type = $col_gst_type_check ? "ii.gst_type," : "'non_gst' AS gst_type,";
+$col_pcs_check = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'pcs'")) > 0;
+$select_pcs = $col_pcs_check ? "ii.pcs, ii.unit, ii.gross_wt, ii.net_wt," : "1 AS pcs, 'g' AS unit, ii.quantity AS gross_wt, ii.quantity AS net_wt,";
 
 $items_res = mysqli_query($conn, "
     SELECT ii.invoice_id, ii.product_id, ii.quantity, ii.price, ii.total,
-           ii.making_charge, ii.hallmark, ii.discount, $select_gst_type
-           'g' AS unit,
+           ii.making_charge, ii.hallmark, ii.discount, $select_gst_type $select_pcs
            COALESCE(ii.product_name, p.name) AS product_name,
            COALESCE(ii.serial_no, p.serial_no) AS serial_no,
            COALESCE(ii.huid_code, p.huid_code) AS huid_code,
@@ -111,13 +112,24 @@ foreach($items as $it) {
     $total_item_discount += floatval($it['discount'] ?? 0);
     $u = strtolower(trim($it['unit'] ?? 'g'));
     $val = floatval($it['quantity']);
-    if (in_array($u, ['qty','pcs','piece','pieces'])) {
-        $total_pcs += intval($val > 0 ? $val : 1);
-    } else {
-        $total_pcs += intval($it['pcs'] ?? 1);
-        $total_gross_wt += floatval($it['gross_wt'] ?? $val);
-        $total_net_wt   += floatval($it['net_wt'] ?? $val);
+    $is_piece = in_array($u, ['qty','pcs','piece','pieces']);
+    
+    $item_pcs = intval($it['pcs'] ?? 0);
+    if ($item_pcs <= 0) {
+        $pname = $it['product_name'] ?? '';
+        if (preg_match('/\((\d+)\s*(?:pcs|pairs?|pieces)\)/i', $pname, $m)) {
+            $item_pcs = intval($m[1]);
+        } else {
+            $item_pcs = $is_piece ? intval($val > 0 ? $val : 1) : 1;
+        }
     }
+    
+    $gross = floatval($it['gross_wt'] ?? ($is_piece ? 0 : $val));
+    $net   = floatval($it['net_wt'] ?? ($is_piece ? 0 : $val));
+    
+    $total_pcs += $item_pcs;
+    $total_gross_wt += $gross;
+    $total_net_wt   += $net;
 }
 
 // Number to words
@@ -553,9 +565,16 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                             $unit     = strtolower(trim($it['unit'] ?? 'g'));
                             $is_piece = in_array($unit, ['qty','pcs','piece','pieces']);
                             $item_val = floatval($it['quantity']);
-                            $item_pcs = $is_piece ? intval($item_val > 0 ? $item_val : 1) : intval($it['pcs'] ?? 1);
-                            $gross_wt = $is_piece ? 0 : floatval($it['gross_wt'] ?? $item_val);
-                            $net_wt   = $is_piece ? 0 : floatval($it['net_wt'] ?? $item_val);
+                            $item_pcs = intval($it['pcs'] ?? 0);
+                            if ($item_pcs <= 0) {
+                                if (preg_match('/\((\d+)\s*(?:pcs|pairs?|pieces)\)/i', $it['product_name'] ?? '', $m)) {
+                                    $item_pcs = intval($m[1]);
+                                } else {
+                                    $item_pcs = $is_piece ? intval($item_val > 0 ? $item_val : 1) : 1;
+                                }
+                            }
+                            $gross_wt = floatval($it['gross_wt'] ?? ($is_piece ? 0 : $item_val));
+                            $net_wt   = floatval($it['net_wt'] ?? ($is_piece ? 0 : $item_val));
                             $rate     = floatval($it['price']);
                             $amt      = floatval($it['total']);
                             $it_gst_type = $it['gst_type'] ?? 'non_gst';
