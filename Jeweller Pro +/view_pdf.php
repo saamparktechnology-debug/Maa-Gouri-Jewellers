@@ -149,18 +149,36 @@ function ind_format($num) {
 }
 
 function num2words($n) {
-    $n = (int)round($n);
+    $num = round(floatval($n), 2);
+    $whole = (int)floor($num);
+    $fraction = (int)round(($num - $whole) * 100);
+    
+    if ($whole == 0 && $fraction == 0) return 'Zero Rupees Only';
+    
+    $words = '';
+    if ($whole > 0) {
+        $words .= num2words_integer($whole) . ' Rupees';
+    }
+    if ($fraction > 0) {
+        if (!empty($words)) $words .= ' and ';
+        $words .= num2words_integer($fraction) . ' Paise';
+    }
+    return $words . ' Only';
+}
+
+function num2words_integer($n) {
+    $n = (int)$n;
     $ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
     $tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
     if($n==0) return 'Zero';
     if($n<20) return $ones[$n];
     if($n<100) return $tens[(int)($n/10)].($n%10?' '.$ones[$n%10]:'');
-    if($n<1000) return $ones[(int)($n/100)].' Hundred'.($n%100?' '.num2words($n%100):'');
-    if($n<100000) return num2words((int)($n/1000)).' Thousand'.($n%1000?' '.num2words($n%1000):'');
-    if($n<10000000) return num2words((int)($n/100000)).' Lakh'.($n%100000?' '.num2words($n%100000):'');
-    return num2words((int)($n/10000000)).' Crore'.($n%10000000?' '.num2words($n%10000000):'');
+    if($n<1000) return $ones[(int)($n/100)].' Hundred'.($n%100?' '.num2words_integer($n%100):'');
+    if($n<100000) return num2words_integer((int)($n/1000)).' Thousand'.($n%1000?' '.num2words_integer($n%1000):'');
+    if($n<10000000) return num2words_integer((int)($n/100000)).' Lakh'.($n%100000?' '.num2words_integer($n%100000):'');
+    return num2words_integer((int)($n/10000000)).' Crore'.($n%10000000?' '.num2words_integer($n%10000000):'');
 }
-$total_words = num2words($total) . ' Rupees Only';
+$total_words = num2words($total);
 
 $logo_file = $COMPANY['logo_path'] ?? 'logo.png';
 
@@ -191,7 +209,7 @@ if ($is_receipt) {
         $rec_prev_balance = $rec_new_balance + $rec_paid_amount;
     }
     $rec_prev_paid = max(0, floatval($inv['total_amount']) - $rec_prev_balance);
-    $rec_words = num2words($rec_paid_amount) . ' Rupees Only';
+    $rec_words = num2words($rec_paid_amount);
 }
 ?>
 <!DOCTYPE html>

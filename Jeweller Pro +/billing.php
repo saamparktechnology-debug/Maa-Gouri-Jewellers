@@ -386,8 +386,8 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
     // Old Gold is deducted after tax so GST is calculated strictly on new items subtotal.
     $subtotal_before_tax = $subtotal + $pola;
     $total_before_round  = $subtotal_before_tax + $gst_amount - $old_gold_amount;
-    $total_amount  = max(0, round($total_before_round));
-    $round_off     = $total_amount - $total_before_round;
+    $total_amount  = max(0, round($total_before_round, 2));
+    $round_off     = 0;
 
     $chkEmailColumn = mysqli_query($conn, "SHOW COLUMNS FROM customers LIKE 'email'");
     if($chkEmailColumn && mysqli_num_rows($chkEmailColumn) == 0) {
