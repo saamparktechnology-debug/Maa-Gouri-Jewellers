@@ -2,6 +2,29 @@
 session_start();
 require_once __DIR__ . '/config/database.php';
 
+// Auto-create stock_transfers table if missing on online/live database
+$create_transfers_table_sql = "CREATE TABLE IF NOT EXISTS `stock_transfers` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `transfer_no` varchar(50) NOT NULL,
+  `destination_shop` varchar(150) NOT NULL,
+  `transfer_date` date NOT NULL,
+  `entry_mode` varchar(20) DEFAULT 'stock',
+  `product_id` int(11) DEFAULT NULL,
+  `item_name` varchar(150) NOT NULL,
+  `category` varchar(100) DEFAULT NULL,
+  `weight` decimal(10,3) DEFAULT 0.000,
+  `quantity` int(11) DEFAULT 1,
+  `unit` varchar(20) DEFAULT 'pcs',
+  `unit_price` decimal(10,2) DEFAULT 0.00,
+  `item_value` decimal(12,2) DEFAULT 0.00,
+  `huid_code` varchar(100) DEFAULT NULL,
+  `remarks` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `transfer_no` (`transfer_no`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+mysqli_query($conn, $create_transfers_table_sql);
+
 // Auth check
 if (!isset($_SESSION['user_id']) && !isset($_COOKIE['remember_user'])) {
     header("Location: login.php");
@@ -433,9 +456,24 @@ if ($s_res) {
                 <div id="stockFields" class="bg-white p-5 rounded-xl border border-amber-200 mb-5">
                     <div class="grid grid-cols-1 md:grid-cols-4 gap-5 mb-4">
                         <div class="md:col-span-2">
-                            <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                                Select Product From Inventory <span class="text-rose-500">*</span>
-                            </label>
+                            <div class="flex justify-between items-center mb-1.5">
+                                <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                                    Select Product From Inventory <span class="text-rose-500">*</span>
+                                </label>
+                                <span id="stock_match_badge" class="text-[10px] text-amber-700 font-bold bg-amber-100 px-2 py-0.5 rounded-full hidden"></span>
+                            </div>
+
+                            <!-- Search Input Box -->
+                            <div class="relative mb-2">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-amber-600">
+                                    <i class="fas fa-search text-xs"></i>
+                                </div>
+                                <input type="text" id="stock_search_input" oninput="filterStockDropdown(this.value)" placeholder="Type to search stock by Name, Category, HUID, or Serial..." class="w-full pl-9 pr-8 py-2 bg-amber-50/70 border border-amber-300 rounded-lg text-xs font-semibold text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500">
+                                <button type="button" onclick="clearStockSearch()" id="clear_stock_search_btn" class="hidden absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">
+                                    <i class="fas fa-xmark text-xs"></i>
+                                </button>
+                            </div>
+
                             <select name="product_id" id="product_select" onchange="onStockProductChange()" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-bold text-slate-900 focus:outline-none focus:border-amber-500">
                                 <option value="">-- Choose Product to Transfer --</option>
                                 <?php foreach ($products_list as $p): ?>
@@ -742,6 +780,70 @@ if ($s_res) {
             const price = parseFloat(document.getElementById('manual_price').value || '0');
             const tot = qty * price;
             document.getElementById('manual_val').value = tot.toFixed(2);
+        }
+
+        function filterStockDropdown(query) {
+            const sel = document.getElementById('product_select');
+            if (!sel) return;
+            const options = sel.options;
+            const clearBtn = document.getElementById('clear_stock_search_btn');
+            const badge = document.getElementById('stock_match_badge');
+            
+            const q = query.trim().toLowerCase();
+            let matchCount = 0;
+            let firstMatchIndex = -1;
+
+            if (q.length > 0) {
+                if (clearBtn) clearBtn.classList.remove('hidden');
+            } else {
+                if (clearBtn) clearBtn.classList.add('hidden');
+                if (badge) badge.classList.add('hidden');
+            }
+
+            for (let i = 1; i < options.length; i++) {
+                const opt = options[i];
+                const name = (opt.getAttribute('data-name') || '').toLowerCase();
+                const cat = (opt.getAttribute('data-category') || '').toLowerCase();
+                const huid = (opt.getAttribute('data-huid') || '').toLowerCase();
+                const text = opt.text.toLowerCase();
+
+                const isMatch = (q === '') || text.includes(q) || name.includes(q) || cat.includes(q) || huid.includes(q);
+
+                if (isMatch) {
+                    opt.hidden = false;
+                    opt.style.display = '';
+                    matchCount++;
+                    if (firstMatchIndex === -1) firstMatchIndex = i;
+                } else {
+                    opt.hidden = true;
+                    opt.style.display = 'none';
+                }
+            }
+
+            if (q.length > 0) {
+                if (badge) {
+                    badge.textContent = `${matchCount} product(s) found`;
+                    badge.classList.remove('hidden');
+                }
+
+                // If only 1 product matches, auto select it
+                if (matchCount === 1 && firstMatchIndex !== -1) {
+                    sel.selectedIndex = firstMatchIndex;
+                    onStockProductChange();
+                } else if (sel.selectedIndex > 0 && options[sel.selectedIndex].hidden) {
+                    sel.selectedIndex = 0;
+                    onStockProductChange();
+                }
+            }
+        }
+
+        function clearStockSearch() {
+            const input = document.getElementById('stock_search_input');
+            if (input) {
+                input.value = '';
+                filterStockDropdown('');
+                input.focus();
+            }
         }
     </script>
 </body>

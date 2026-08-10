@@ -407,13 +407,13 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
         }
     } else {
         $today = date('Ymd');
-        $prefix = 'INV-' . $today . '-';
         $raw_gst_type = strtolower(trim($_POST['gst_type'] ?? 'non_gst'));
         $is_gst_invoice = ($gst_amount > 0 || ($raw_gst_type !== 'non_gst' && !empty($raw_gst_type)));
 
         if ($is_gst_invoice) {
-            // --- GST TAX INVOICE SEQUENCE (INV-YYYYMMDD-0567...) ---
-            $q = mysqli_query($conn, "SELECT invoice_no FROM invoices WHERE (gst_amount > 0 OR (gst_type IS NOT NULL AND gst_type != '' AND gst_type != 'non_gst')) AND invoice_no LIKE 'INV-%'");
+            // --- GST TAX INVOICE SEQUENCE (Continues past sequence: 0450, 0451, 0452...) ---
+            $prefix = 'GST-' . $today . '-';
+            $q = mysqli_query($conn, "SELECT invoice_no FROM invoices WHERE (invoice_no LIKE 'GST-%' OR invoice_no LIKE 'INV-%')");
             $existing_nums = [];
             if ($q) {
                 while ($row = mysqli_fetch_assoc($q)) {
@@ -433,19 +433,20 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
             }
             $invoice_no = $prefix . str_pad($next_num, 4, '0', STR_PAD_LEFT);
         } else {
-            // --- CASH MEMO (NON-GST) SEQUENCE (INV-YYYYMMDD-0001, 0002...) ---
-            $q = mysqli_query($conn, "SELECT invoice_no FROM invoices WHERE (gst_amount <= 0 AND (gst_type IS NULL OR gst_type = '' OR gst_type = 'non_gst')) AND invoice_no LIKE 'INV-%'");
+            // --- CASH MEMO (NON-GST) SEQUENCE (CM-YYYYMMDD-0001, 0002...) ---
+            $prefix = 'CM-' . $today . '-';
+            $q = mysqli_query($conn, "SELECT invoice_no FROM invoices WHERE invoice_no LIKE 'CM-%'");
             $existing_nums = [];
             if ($q) {
                 while ($row = mysqli_fetch_assoc($q)) {
                     $parts = explode('-', $row['invoice_no']);
                     $num = intval(end($parts));
-                    if ($num > 0 && $num <= 3000) {
+                    if ($num > 0) {
                         $existing_nums[] = $num;
                     }
                 }
             }
-            $next_num = 1; // Cash Memos start from 0001
+            $next_num = 1;
             if (!empty($existing_nums)) {
                 $next_num = max($existing_nums) + 1;
             }
@@ -1339,9 +1340,9 @@ function submitPayment() {
                         <div id="manualInvoiceDiv" style="display:none;">
                             <input type="text" name="manual_invoice_no" id="manualInvoiceNo"
                                 class="jewel-input w-full rounded-lg px-3 py-2 text-sm" placeholder="e.g. INV-2024-001">
-                            <p class="text-xs mt-1" style="color:#9ca3af;">&#9888;&#65039; If empty, auto-generated: INV-YYYYMMDD-XXXX</p>
+                            <p class="text-xs mt-1" style="color:#9ca3af;">&#9888;&#65039; If empty: Cash Memos auto-generate as CM-YYYYMMDD-XXXX and GST Tax Invoices as GST-YYYYMMDD-XXXX</p>
                         </div>
-                        <div id="autoInvoiceInfo" class="text-xs" style="color:#9ca3af;">Auto-generated (INV-YYYYMMDD-XXXX)</div>
+                        <div id="autoInvoiceInfo" class="text-xs font-semibold" style="color:#d68b16;">Auto-generated: Cash Memo (CM-YYYYMMDD-XXXX) | GST Tax Invoice (GST-YYYYMMDD-XXXX)</div>
                     </div>
 
                     <!-- Customer Details -->
