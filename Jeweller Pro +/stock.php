@@ -368,37 +368,45 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             bottom: 0;
             background: linear-gradient(135deg, #1a0a00, #4a2000);
             border-top: 2px solid #d68b16;
-            padding: 8px 12px;
-            display: flex;
-            flex-wrap: nowrap;
-            justify-content: space-between;
+            padding: 8px 10px;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 6px;
             align-items: center;
             border-radius: 0 0 20px 20px;
             z-index: 100;
             color: #fff;
             box-shadow: 0 -10px 30px rgba(0,0,0,0.15);
-            gap: 6px;
             margin-top: auto;
             margin-left: -20px;
             margin-right: -20px;
             margin-bottom: -20px;
-            overflow: visible !important;
+            box-sizing: border-box;
+        }
+        @media (max-width: 1280px) {
+            .sticky-stock-summary {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        @media (max-width: 600px) {
+            .sticky-stock-summary {
+                grid-template-columns: 1fr;
+            }
         }
         .sticky-stock-summary .summary-item {
             position: relative;
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: space-between;
             gap: 4px;
-            font-size: 10.5px;
+            font-size: 9.5px;
             background: rgba(255, 255, 255, 0.08);
-            padding: 4px 8px;
+            padding: 4px 6px;
             border-radius: 6px;
             border: 1px solid rgba(255, 215, 0, 0.25);
             transition: all 0.2s ease;
             white-space: nowrap;
-            flex: 0 1 auto;
-            min-width: max-content;
+            min-width: 0;
             box-sizing: border-box;
             cursor: pointer;
         }
