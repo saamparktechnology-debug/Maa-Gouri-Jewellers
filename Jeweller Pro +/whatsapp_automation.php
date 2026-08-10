@@ -418,7 +418,7 @@ $advance_customers_list = mysqli_query($conn,
 );
 $total_customers      = mysqli_num_rows($all_customers);
 
-$logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-preview.png','moti-removebg-preview.png'];
+$logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-preview.png','moti-removebg-preview.png','radhey shyam logo.png'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -736,8 +736,8 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
      <nav class="sidebar-nav">
         <div class="sidebar-section-label">Main Menu</div>
 
-        <a href="index.php" class="active">
-            <i class="fas fa-home"></i> HOME
+        <a href="index.php">
+            <i class="fas fa-home"></i> DASHBOARD
         </a>
         <a href="billing.php">
             <i class="fas fa-receipt"></i> BILLING
@@ -747,6 +747,9 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         </a>
         <a href="customers.php">
             <i class="fas fa-users"></i> CUSTOMERS
+        </a>
+        <a href="transfer.php">
+            <i class="fas fa-exchange-alt"></i> TRANSFER
         </a>
 
         <div class="sidebar-divider"></div>
@@ -759,13 +762,13 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             <i class="fas fa-hourglass-half"></i> DUE LIST
         </a>
         <a href="income_expenses.php">
-            <i class="fas fa-chart-line"></i> INCOME & EXP
+            <i class="fas fa-chart-line"></i> INCOME &amp; EXP
         </a>
 
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Tools</div>
 
-        <a href="whatsapp_automation.php">
+        <a href="whatsapp_automation.php" class="active">
             <i class="fab fa-whatsapp"></i> WHATSAPP
         </a>
         <a href="purchase.php">

@@ -521,8 +521,26 @@ $sanchari_cols4 = mysqli_query($conn, "SHOW COLUMNS FROM sanchari_payments LIKE 
 if ($sanchari_cols4 && mysqli_num_rows($sanchari_cols4) == 0) {
     @mysqli_query($conn, "ALTER TABLE sanchari_payments ADD COLUMN payment_mode VARCHAR(50) DEFAULT 'Cash' AFTER payment_status");
 }
-
-// Set session user if needed
+// Ensure stock_transfers table exists
+$create_stock_transfers = "CREATE TABLE IF NOT EXISTS stock_transfers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    transfer_no VARCHAR(50) UNIQUE NOT NULL,
+    destination_shop VARCHAR(150) NOT NULL,
+    transfer_date DATE NOT NULL,
+    entry_mode VARCHAR(20) DEFAULT 'stock',
+    product_id INT DEFAULT NULL,
+    item_name VARCHAR(150) NOT NULL,
+    category VARCHAR(100) DEFAULT NULL,
+    weight DECIMAL(10,3) DEFAULT 0.000,
+    quantity INT DEFAULT 1,
+    unit VARCHAR(20) DEFAULT 'pcs',
+    unit_price DECIMAL(10,2) DEFAULT 0.00,
+    item_value DECIMAL(12,2) DEFAULT 0.00,
+    huid_code VARCHAR(100) DEFAULT NULL,
+    remarks TEXT DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)";
+@mysqli_query($conn, $create_stock_transfers);
 
 
 

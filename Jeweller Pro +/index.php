@@ -935,6 +935,9 @@ if($is_logged_in) {
         <a href="customers.php">
             <i class="fas fa-users"></i> CUSTOMERS
         </a>
+        <a href="transfer.php">
+            <i class="fas fa-exchange-alt"></i> TRANSFER
+        </a>
 
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Analytics</div>

@@ -279,6 +279,7 @@ h1,h2,h3,.gold-font{font-family:'Poppins',sans-serif;font-weight:700;}
 .sidebar-nav a{display:flex;align-items:center;gap:12px;padding:11px 20px;color:rgba(255,255,255,0.85);text-decoration:none;font-size:13px;font-weight:500;transition:all .2s;border-left:3px solid transparent;position:relative;}
 .sidebar-nav a:hover{background:rgba(255,255,255,0.13);color:#fff;border-left-color:rgba(255,255,255,0.8);padding-left:26px;}
 .sidebar-nav a.active{background:rgba(255,255,255,0.22);color:#fff;border-left-color:#fff;font-weight:700;}
+.sidebar-nav a.active::after{content:'';position:absolute;right:0;top:50%;transform:translateY(-50%);width:4px;height:60%;background:#fff;border-radius:4px 0 0 4px;}
 .sidebar-nav a i{width:18px;text-align:center;font-size:14px;flex-shrink:0;}
 .sidebar-divider{height:1px;background:rgba(255,255,255,0.12);margin:6px 16px;}
 .sidebar-user{padding:14px 16px 18px;border-top:1px solid rgba(255,255,255,0.18);background:rgba(0,0,0,0.12);flex-shrink:0;}
@@ -340,12 +341,16 @@ nav.nav-gold span{color:#fff!important;}
 <body style="background:#F5F5F5;margin:0;padding:0;">
 
 <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+</head>
+<body style="background:#F5F5F5;margin:0;padding:0;">
+
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
 <!-- SIDEBAR -->
 <div class="sidebar" id="mainSidebar">
     <div class="sidebar-logo">
         <?php
-        $logo_paths=['assets/images/moti-removebg-preview.png','images/moti-removebg-preview.png','moti-removebg-preview.png','logo.png'];
+        $logo_paths=['assets/images/moti-removebg-preview.png','images/moti-removebg-preview.png','moti-removebg-preview.png','radhey shyam logo.png'];
         $found=false;
         foreach($logo_paths as $p){if(file_exists($p)){echo '<img src="'.$p.'" alt="Logo">';$found=true;break;}}
         if(!$found) echo '<i class="fas fa-gem" style="color:#fff;font-size:30px;"></i>';
@@ -354,11 +359,11 @@ nav.nav-gold span{color:#fff!important;}
     </div>
     <nav class="sidebar-nav">
         <div class="sidebar-section-label">Main Menu</div>
-        <a href="index.php"><i class="fas fa-home"></i> HOME</a>
+        <a href="index.php"><i class="fas fa-home"></i> DASHBOARD</a>
         <a href="billing.php"><i class="fas fa-receipt"></i> BILLING</a>
         <a href="stock.php"><i class="fas fa-boxes"></i> STOCK</a>
         <a href="customers.php"><i class="fas fa-users"></i> CUSTOMERS</a>
-        
+        <a href="transfer.php"><i class="fas fa-exchange-alt"></i> TRANSFER</a>
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Analytics</div>
         <a href="reports.php"><i class="fas fa-chart-bar"></i> REPORTS</a>
@@ -367,7 +372,7 @@ nav.nav-gold span{color:#fff!important;}
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Tools</div>
         <a href="whatsapp_automation.php"><i class="fab fa-whatsapp"></i> WHATSAPP</a>
-        <a href="purchase.php" class="active"><i class="fas fa-shopping-cart"></i> PURCHASE</a>
+        <a href="purchase.php" class="active"><i class="fas fa-book"></i> PURCHASE</a>
         <a href="contacts.php"><i class="fas fa-address-book"></i> CONTACTS</a>
         <a href="accounts.php"><i class="fas fa-calculator"></i> ACCOUNTS</a>
     </nav>

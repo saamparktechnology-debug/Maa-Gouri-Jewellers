@@ -474,7 +474,7 @@ while($r = mysqli_fetch_assoc($bills_result)) $bills_rows[] = $r;
 $total_bills_amount = array_sum(array_column($bills_rows, 'total_amount'));
 $total_bills_count  = count($bills_rows);
 
-$logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-preview.png', 'moti-removebg-preview.png', 'logo.png'];
+$logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-preview.png', 'moti-removebg-preview.png', 'radhey shyam logo.png'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -799,10 +799,11 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
 
     <nav class="sidebar-nav">
         <div class="sidebar-section-label">Main Menu</div>
-        <a href="index.php"><i class="fas fa-home"></i> HOME</a>
+        <a href="index.php"><i class="fas fa-home"></i> DASHBOARD</a>
         <a href="billing.php"><i class="fas fa-receipt"></i> BILLING</a>
         <a href="stock.php"><i class="fas fa-boxes"></i> STOCK</a>
         <a href="customers.php"><i class="fas fa-users"></i> CUSTOMERS</a>
+        <a href="transfer.php"><i class="fas fa-exchange-alt"></i> TRANSFER</a>
 
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Analytics</div>
@@ -819,8 +820,8 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 <a href="contacts.php">
             <i class="fas fa-address-book"></i> CONTACTS
         </a>
-<a href="accounts.php">
-            <i class="fas fa-book"></i> ACCOUNT
+        <a href="accounts.php">
+            <i class="fas fa-calculator"></i> ACCOUNTS
         </a>
     </nav>
 

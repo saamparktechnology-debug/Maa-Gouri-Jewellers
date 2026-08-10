@@ -315,28 +315,64 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
 .amount-words-bar strong { color:#2b1b17; font-weight:700; }
 
 /* Strict A4 Printing Rules */
+@page {
+    size: A4 portrait;
+    margin: 5mm 8mm;
+}
 @media print {
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+    }
     html, body {
-        width: 210mm !important;
-        height: 297mm !important;
+        width: 100% !important;
+        height: auto !important;
         background: #fff !important;
         padding: 0 !important;
         margin: 0 !important;
     }
     .print-actions { display:none !important; }
-    .invoice-card { min-height: 275mm !important; 
+    .invoice-card { 
         width: 100% !important;
         max-width: 100% !important;
-        min-height: 285mm !important;
-        border: 2.5px solid #ffd700; box-shadow: 0 0 15px rgba(255, 215, 0, 0.5) !important;
+        min-height: auto !important;
+        height: auto !important;
+        background: #fffbf4 !important;
+        border: 2px solid #d68b16 !important;
+        border-radius: 10px !important;
         box-shadow: none !important;
-        border-radius: 0 !important;
-        padding: 24px 28px !important;
-        background: #fff !important;
+        padding: 16px 20px !important;
+        box-sizing: border-box !important;
         page-break-inside: avoid;
     }
-    .full-page-coloured-watermark { opacity:0.12 !important; z-index: 99 !important; }
+    .inv-table { 
+        display: table !important; 
+        width: 100% !important; 
+        white-space: normal !important; 
+        border-collapse: collapse !important;
+        page-break-inside: auto; 
+    }
+    .inv-table tr { 
+        display: table-row !important; 
+        page-break-inside: avoid; 
+        page-break-after: auto; 
+    .full-page-coloured-watermark { 
+        position: absolute !important;
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        width: 480px !important;
+        height: 480px !important;
+        object-fit: contain !important;
+        opacity: 0.16 !important; 
+        z-index: 9999 !important; 
+        pointer-events: none !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
     .inv-table tbody tr:nth-child(even) { background:#fcf8ee !important; }
+    .bottom-section { page-break-inside: avoid; }
 }
 </style>
     <link rel="stylesheet" href="mobile.css">

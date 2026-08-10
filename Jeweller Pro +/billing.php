@@ -244,7 +244,7 @@ $last_upi_paid = 0;
 $last_is_split = 0;
 $last_old_gold_amount = 0;
 
-$logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-preview.png', 'moti-removebg-preview.png', 'logo.png'];
+$logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-preview.png', 'moti-removebg-preview.png', 'radhey shyam logo.png'];
 
 // Fetch products from DB
 $all_products = [];
@@ -408,26 +408,73 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
     } else {
         $today = date('Ymd');
         $prefix = 'INV-' . $today . '-';
-        $q = mysqli_query($conn, "SELECT invoice_no FROM invoices WHERE created_at >= '2026-07-31 16:00:00'");
-        $existing_nums = [];
-        if ($q) {
-            while ($row = mysqli_fetch_assoc($q)) {
-                $parts = explode('-', $row['invoice_no']);
-                $num = intval(end($parts));
-                if ($num >= 450) {
-                    $existing_nums[] = $num;
+        $raw_gst_type = strtolower(trim($_POST['gst_type'] ?? 'non_gst'));
+        $is_gst_invoice = ($gst_amount > 0 || ($raw_gst_type !== 'non_gst' && !empty($raw_gst_type)));
+
+        if ($is_gst_invoice) {
+            // --- GST TAX INVOICE SEQUENCE (INV-YYYYMMDD-0567...) ---
+            $q = mysqli_query($conn, "SELECT invoice_no FROM invoices WHERE (gst_amount > 0 OR (gst_type IS NOT NULL AND gst_type != '' AND gst_type != 'non_gst')) AND invoice_no LIKE 'INV-%'");
+            $existing_nums = [];
+            if ($q) {
+                while ($row = mysqli_fetch_assoc($q)) {
+                    $parts = explode('-', $row['invoice_no']);
+                    $num = intval(end($parts));
+                    if ($num > 0) {
+                        $existing_nums[] = $num;
+                    }
                 }
             }
+            $next_num = 450;
+            if (!empty($existing_nums)) {
+                $next_num = max($existing_nums) + 1;
+            }
+            while (in_array($next_num, $existing_nums)) {
+                $next_num++;
+            }
+            $invoice_no = $prefix . str_pad($next_num, 4, '0', STR_PAD_LEFT);
+        } else {
+            // --- CASH MEMO (NON-GST) SEQUENCE (INV-YYYYMMDD-0001, 0002...) ---
+            $q = mysqli_query($conn, "SELECT invoice_no FROM invoices WHERE (gst_amount <= 0 AND (gst_type IS NULL OR gst_type = '' OR gst_type = 'non_gst')) AND invoice_no LIKE 'INV-%'");
+            $existing_nums = [];
+            if ($q) {
+                while ($row = mysqli_fetch_assoc($q)) {
+                    $parts = explode('-', $row['invoice_no']);
+                    $num = intval(end($parts));
+                    if ($num > 0 && $num <= 3000) {
+                        $existing_nums[] = $num;
+                    }
+                }
+            }
+            $next_num = 1; // Cash Memos start from 0001
+            if (!empty($existing_nums)) {
+                $next_num = max($existing_nums) + 1;
+            }
+            while (in_array($next_num, $existing_nums)) {
+                $next_num++;
+            }
+            $invoice_no = $prefix . str_pad($next_num, 4, '0', STR_PAD_LEFT);
         }
-        $next_num = 450;
-        while (in_array($next_num, $existing_nums)) {
-            $next_num++;
-        }
-        $invoice_no = $prefix . str_pad($next_num, 4, '0', STR_PAD_LEFT);
     }
     $customer_gstin = mysqli_real_escape_string($conn, $_POST['customer_gstin'] ?? '');
     $huid_code = mysqli_real_escape_string($conn, trim($_POST['huid_code'] ?? ''));
-    $created_by_val = (isset($_SESSION['user_id']) && intval($_SESSION['user_id']) > 0) ? intval($_SESSION['user_id']) : "NULL";
+    $created_by_val = "NULL";
+    $session_uid = (isset($_SESSION['user_id']) && intval($_SESSION['user_id']) > 0) ? intval($_SESSION['user_id']) : 0;
+    if ($session_uid > 0) {
+        $u_chk = mysqli_query($conn, "SELECT id FROM users WHERE id = $session_uid LIMIT 1");
+        if ($u_chk && mysqli_num_rows($u_chk) > 0) {
+            $created_by_val = $session_uid;
+        } else {
+            $first_u = mysqli_query($conn, "SELECT id FROM users ORDER BY id ASC LIMIT 1");
+            if ($first_u && $fu_row = mysqli_fetch_assoc($first_u)) {
+                $created_by_val = intval($fu_row['id']);
+            }
+        }
+    } else {
+        $first_u = mysqli_query($conn, "SELECT id FROM users ORDER BY id ASC LIMIT 1");
+        if ($first_u && $fu_row = mysqli_fetch_assoc($first_u)) {
+            $created_by_val = intval($fu_row['id']);
+        }
+    }
 
     $chk1 = mysqli_query($conn, "SHOW COLUMNS FROM invoices LIKE 'paid_amount'");
     if($chk1 && mysqli_num_rows($chk1) == 0) {
@@ -668,6 +715,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
         .sidebar-nav a { display: flex; align-items: center; gap: 12px; padding: 11px 20px; color: rgba(255,255,255,0.85); text-decoration: none; font-size: 13px; font-weight: 500; transition: all 0.2s ease; border-left: 3px solid transparent; position: relative; }
         .sidebar-nav a:hover { background: rgba(255,255,255,0.13); color: #fff; border-left-color: rgba(255,255,255,0.8); padding-left: 26px; }
         .sidebar-nav a.active { background: rgba(255,255,255,0.22); color: #fff; border-left-color: #fff; font-weight: 700; }
+        .sidebar-nav a.active::after { content: ''; position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 4px; height: 60%; background: #fff; border-radius: 4px 0 0 4px; }
         .sidebar-nav a i { width: 18px; text-align: center; font-size: 14px; flex-shrink: 0; }
         .sidebar-divider { height: 1px; background: rgba(255,255,255,0.12); margin: 6px 16px; }
         .sidebar-user { padding: 14px 16px 18px; border-top: 1px solid rgba(255,255,255,0.18); background: rgba(0,0,0,0.12); flex-shrink: 0; }
@@ -893,7 +941,7 @@ window.addEventListener('load', function() {
         <div class="sidebar-section-label">Main Menu</div>
 
         <a href="index.php">
-            <i class="fas fa-home"></i> HOME
+            <i class="fas fa-home"></i> DASHBOARD
         </a>
         <a href="billing.php" class="active">
             <i class="fas fa-receipt"></i> BILLING
@@ -903,6 +951,9 @@ window.addEventListener('load', function() {
         </a>
         <a href="customers.php">
             <i class="fas fa-users"></i> CUSTOMERS
+        </a>
+        <a href="transfer.php">
+            <i class="fas fa-exchange-alt"></i> TRANSFER
         </a>
         
 
@@ -2083,7 +2134,7 @@ function onGramStockChange() {
     // Use shop rate (per 10g) for this category - the correct billing rate
     const shopRatePerGram = getShopRateForCategory(category); // returns per-gram from shop rates
     const shopRate10g     = shopRatePerGram * 10;             // convert back to per-10g for the field
-    const wtInfo          = stockWeight > 0 ? ' | Stock Wt: <strong>' + stockWeight.toFixed(3) + 'g</strong>' : '';
+    const wtInfo          = stockWeight > 0 ? ' | Available Weight: <strong style="color:#059669;">' + stockWeight.toFixed(3) + ' g</strong>' : '';
 
     if (qty <= 0) {
         rateInput.value = '';
@@ -2091,14 +2142,14 @@ function onGramStockChange() {
     } else if (shopRate10g > 0) {
         rateInput.value = shopRate10g.toFixed(0);
         const hint = document.getElementById('gramRatePerGramHint');
-        if(hint) hint.textContent = '\u2248 \u20B9' + shopRatePerGram.toLocaleString('en-IN', {maximumFractionDigits:2}) + ' per gram (shop rate used in billing)';
-        infoDiv.innerHTML = '<strong>' + name + '</strong>' + wtInfo + ' | Shop Rate: \u20B9' + shopRatePerGram.toLocaleString('en-IN', {maximumFractionDigits:2}) + '/g | Stock Value: \u20B9' + price.toLocaleString('en-IN') + ' | Available Stock: <strong style="color:#059669;">' + qty + ' pcs</strong>';
+        if(hint) hint.textContent = '≈ ₹' + shopRatePerGram.toLocaleString('en-IN', {maximumFractionDigits:2}) + ' per gram (shop rate used in billing)';
+        infoDiv.innerHTML = '<strong>' + name + '</strong> | Shop Rate: ₹' + shopRatePerGram.toLocaleString('en-IN', {maximumFractionDigits:2}) + '/g | Available Qty: <strong style="color:#059669;">' + qty + ' pcs</strong>' + wtInfo;
     } else {
         rateInput.value = '';
         const hint = document.getElementById('gramRatePerGramHint');
-        if(hint) hint.textContent = '\u26A0 Set shop rate for ' + (category || 'this category') + ' in the panel on the right first!';
+        if(hint) hint.textContent = '⚠ Set shop rate for ' + (category || 'this category') + ' in the panel on the right first!';
         if(hint) hint.style.color = '#dc2626';
-        infoDiv.innerHTML = '<strong>' + name + '</strong>' + wtInfo + ' | Stock Value: \u20B9' + price.toLocaleString('en-IN') + ' | Available Stock: <strong style="color:#059669;">' + qty + ' pcs</strong> | \u26A0 Set shop rate first!';
+        infoDiv.innerHTML = '<strong>' + name + '</strong> | Available Qty: <strong style="color:#059669;">' + qty + ' pcs</strong>' + wtInfo + ' | ⚠ Set shop rate first!';
     }
 
     infoDiv.classList.remove('hidden');
@@ -2565,14 +2616,16 @@ function onQtyStockChange() {
     const price = parseFloat(opt.dataset.price) || 0;
     const qty = parseFloat(opt.dataset.qty) || 0;
     const name = opt.dataset.itemName;
+    const stockWeight = parseFloat(opt.dataset.weight) || 0;
+    const wtInfo = stockWeight > 0 ? ' | Available Weight: <strong style="color:#059669;">' + stockWeight.toFixed(3) + ' g</strong>' : '';
     
     rateInput.value = price.toFixed(2);
     qtyInput.value = 1;
     
     if (qty <= 0) {
-        infoDiv.innerHTML = '<strong style="color:#dc2626;">' + name + '</strong> | <strong style="color:#dc2626;"> OUT OF STOCK (0 pcs available)</strong>';
+        infoDiv.innerHTML = '<strong style="color:#dc2626;">' + name + '</strong>' + wtInfo + ' | <strong style="color:#dc2626;"> OUT OF STOCK (0 pcs available)</strong>';
     } else {
-        infoDiv.innerHTML = '<strong>' + name + '</strong> Selected. Price per Piece: ₹' + price.toFixed(2) + ' | Available Stock: <strong style="color:#059669;">' + qty + ' pcs</strong>';
+        infoDiv.innerHTML = '<strong>' + name + '</strong> Selected. Price per Piece: ₹' + price.toFixed(2) + ' | Available Qty: <strong style="color:#059669;">' + qty + ' pcs</strong>' + wtInfo;
     }
     infoDiv.classList.remove('hidden');
     

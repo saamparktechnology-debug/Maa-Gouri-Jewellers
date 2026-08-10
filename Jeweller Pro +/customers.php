@@ -127,7 +127,7 @@ $customers = [];
 if($customers_result) while($row = mysqli_fetch_assoc($customers_result)) $customers[] = $row;
 
 $error_message = isset($error_msg) ? $error_msg : '';
-$logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-preview.png','moti-removebg-preview.png'];
+$logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-preview.png','moti-removebg-preview.png','radhey shyam logo.png'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -533,10 +533,11 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
     <nav class="sidebar-nav">
         <div class="sidebar-section-label">Main Menu</div>
-        <a href="index.php"><i class="fas fa-home"></i> HOME</a>
+        <a href="index.php"><i class="fas fa-home"></i> DASHBOARD</a>
         <a href="billing.php"><i class="fas fa-receipt"></i> BILLING</a>
         <a href="stock.php"><i class="fas fa-boxes"></i> STOCK</a>
         <a href="customers.php" class="active"><i class="fas fa-users"></i> CUSTOMERS</a>
+        <a href="transfer.php"><i class="fas fa-exchange-alt"></i> TRANSFER</a>
 
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Analytics</div>
@@ -551,7 +552,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 <a href="contacts.php">
             <i class="fas fa-address-book"></i> CONTACTS
         </a>
-<a href="accounts.php"><i class="fas fa-book"></i> ACCOUNTS</a>
+<a href="accounts.php"><i class="fas fa-calculator"></i> ACCOUNTS</a>
     </nav>
 
     <div class="sidebar-user">

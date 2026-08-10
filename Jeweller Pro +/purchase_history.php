@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 session_start();
 require_once 'config/database.php';
 if(file_exists('config/company_config.php')) {
@@ -221,7 +221,7 @@ table.hist-table tbody tr:hover { background: rgba(214,139,22,0.06); }
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Tools</div>
         <a href="whatsapp_automation.php"><i class="fab fa-whatsapp"></i> WHATSAPP</a>
-        <a href="purchase.php"><i class="fas fa-shopping-cart"></i> PURCHASE</a>
+        <a href="purchase.php"><i class="fas fa-book"></i> PURCHASE</a>
         <a href="purchase_history.php" class="active"><i class="fas fa-history"></i> PURCHASE HISTORY</a>
         <a href="contacts.php"><i class="fas fa-address-book"></i> CONTACTS</a>
         <a href="accounts.php"><i class="fas fa-calculator"></i> ACCOUNTS</a>

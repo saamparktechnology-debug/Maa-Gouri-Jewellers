@@ -104,7 +104,7 @@ if(!empty($search)) {
     $products = mysqli_query($conn, "SELECT * FROM products ORDER BY id");
 }
 $low_stock = mysqli_query($conn, "SELECT * FROM products WHERE quantity < 5 ORDER BY quantity ASC");
-$logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-preview.png','moti-removebg-preview.png'];
+$logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-preview.png','moti-removebg-preview.png','radhey shyam logo.png'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -368,34 +368,140 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             bottom: 0;
             background: linear-gradient(135deg, #1a0a00, #4a2000);
             border-top: 2px solid #d68b16;
-            padding: 14px 24px;
+            padding: 8px 12px;
             display: flex;
-            justify-content: space-around;
+            flex-wrap: nowrap;
+            justify-content: space-between;
             align-items: center;
             border-radius: 0 0 20px 20px;
-            z-index: 10;
+            z-index: 100;
             color: #fff;
             box-shadow: 0 -10px 30px rgba(0,0,0,0.15);
-            flex-wrap: wrap;
-            gap: 12px;
+            gap: 6px;
             margin-top: auto;
             margin-left: -20px;
             margin-right: -20px;
             margin-bottom: -20px;
+            overflow: visible !important;
         }
         .sticky-stock-summary .summary-item {
+            position: relative;
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 13px;
+            justify-content: center;
+            gap: 4px;
+            font-size: 10.5px;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 215, 0, 0.25);
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            flex: 0 1 auto;
+            min-width: max-content;
+            box-sizing: border-box;
+            cursor: pointer;
+        }
+        .sticky-stock-summary .summary-item:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: #ffd700;
         }
         .sticky-stock-summary .summary-item i {
             color: #ffd700;
-            font-size: 16px;
+            font-size: 11px;
+            flex-shrink: 0;
+        }
+        .sticky-stock-summary .summary-item span {
+            font-size: 10.5px;
+            white-space: nowrap;
         }
         .sticky-stock-summary .summary-item span strong {
             color: #ffd700;
-            font-size: 15px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .summary-dropdown-btn {
+            background: rgba(255, 215, 0, 0.2);
+            color: #ffd700;
+            border: 1px solid rgba(255, 215, 0, 0.4);
+            border-radius: 4px;
+            padding: 1px 4px;
+            font-size: 8.5px;
+            cursor: pointer;
+            margin-left: 2px;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            flex-shrink: 0;
+        }
+        .summary-dropdown-btn:hover {
+            background: #ffd700;
+            color: #1a0a00;
+        }
+        .summary-dropdown-menu {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 10px;
+            background: #011921;
+            border: 1.5px solid #d68b16;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            padding: 12px;
+            min-width: 220px;
+            max-width: 280px;
+            z-index: 9999;
+            color: #fff;
+            font-size: 12px;
+            pointer-events: auto;
+        }
+        .sticky-stock-summary .summary-item:first-child .summary-dropdown-menu {
+            left: 0;
+            transform: none;
+        }
+        .sticky-stock-summary .summary-item:last-child .summary-dropdown-menu {
+            left: auto;
+            right: 0;
+            transform: none;
+        }
+        .summary-dropdown-menu.show {
+            display: block !important;
+            animation: fadeInDropdown 0.2s ease-out;
+        }
+        @keyframes fadeInDropdown {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .summary-dropdown-menu h4 {
+            color: #ffd700;
+            font-weight: 700;
+            font-size: 12px;
+            border-bottom: 1px solid rgba(214,139,22,0.3);
+            padding-bottom: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .summary-dropdown-menu .cat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px dashed rgba(255,255,255,0.1);
+        }
+        .summary-dropdown-menu .cat-row:last-child {
+            border-bottom: none;
+        }
+        .summary-dropdown-menu .cat-name {
+            color: #e2e8f0;
+            font-weight: 500;
+        }
+        .summary-dropdown-menu .cat-val {
+            color: #ffd700;
             font-weight: 700;
         }
 
@@ -757,6 +863,9 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         <a href="customers.php">
             <i class="fas fa-users"></i> CUSTOMERS
         </a>
+        <a href="transfer.php">
+            <i class="fas fa-exchange-alt"></i> TRANSFER
+        </a>
 
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Analytics</div>
@@ -1092,6 +1201,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                     $total_qty = 0;
                     $total_weight = 0.0;
                     $total_price = 0.0;
+                    $cat_breakdown = [];
 
                     if ($products && mysqli_num_rows($products) > 0) {
                         mysqli_data_seek($products, 0);
@@ -1103,25 +1213,112 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             $total_weight += $w;
                             $p = floatval($row['price'] ?? 0);
                             $total_price += $p;
+
+                            $cat = trim($row['category'] ?? 'Other');
+                            if (empty($cat)) { $cat = 'Other'; }
+
+                            if (!isset($cat_breakdown[$cat])) {
+                                $cat_breakdown[$cat] = [
+                                    'unique_items' => 0,
+                                    'qty'          => 0,
+                                    'weight'       => 0.0,
+                                    'price'        => 0.0
+                                ];
+                            }
+                            $cat_breakdown[$cat]['unique_items']++;
+                            $cat_breakdown[$cat]['qty'] += $q;
+                            $cat_breakdown[$cat]['weight'] += $w;
+                            $cat_breakdown[$cat]['price'] += $p;
                         }
                     }
                     ?>
                     <div class="sticky-stock-summary">
+                        <!-- Unique Items -->
                         <div class="summary-item">
                             <i class="fas fa-boxes"></i>
                             <span>Unique Items: <strong><?php echo $total_unique_items; ?></strong></span>
+                            <button type="button" onclick="toggleStockBreakdown('uniqueDropdown', event)" class="summary-dropdown-btn" title="Category Breakdown">
+                                Category <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="summary-dropdown-menu" id="uniqueDropdown">
+                                <h4><span><i class="fas fa-boxes text-yellow-400 mr-1"></i> Unique Items</span> <i class="fas fa-times text-xs opacity-50 cursor-pointer" onclick="toggleStockBreakdown('uniqueDropdown', event)"></i></h4>
+                                <?php if (!empty($cat_breakdown)): ?>
+                                    <?php foreach ($cat_breakdown as $cname => $cdata): ?>
+                                        <div class="cat-row">
+                                            <span class="cat-name"><?php echo htmlspecialchars($cname); ?></span>
+                                            <span class="cat-val"><?php echo $cdata['unique_items']; ?> items</span>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="text-xs text-gray-400 py-1">No items found</div>
+                                <?php endif; ?>
+                            </div>
                         </div>
+
+                        <!-- Total Quantity -->
                         <div class="summary-item">
                             <i class="fas fa-cubes"></i>
                             <span>Total Qty: <strong><?php echo number_format($total_qty); ?> pcs</strong></span>
+                            <button type="button" onclick="toggleStockBreakdown('qtyDropdown', event)" class="summary-dropdown-btn" title="Category Breakdown">
+                                Category <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="summary-dropdown-menu" id="qtyDropdown">
+                                <h4><span><i class="fas fa-cubes text-yellow-400 mr-1"></i> Quantity</span> <i class="fas fa-times text-xs opacity-50 cursor-pointer" onclick="toggleStockBreakdown('qtyDropdown', event)"></i></h4>
+                                <?php if (!empty($cat_breakdown)): ?>
+                                    <?php foreach ($cat_breakdown as $cname => $cdata): ?>
+                                        <div class="cat-row">
+                                            <span class="cat-name"><?php echo htmlspecialchars($cname); ?></span>
+                                            <span class="cat-val"><?php echo number_format($cdata['qty']); ?> pcs</span>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="text-xs text-gray-400 py-1">No stock found</div>
+                                <?php endif; ?>
+                            </div>
                         </div>
+
+                        <!-- Total Weight -->
                         <div class="summary-item">
                             <i class="fas fa-weight-hanging"></i>
                             <span>Total Weight: <strong><?php echo number_format($total_weight, 3); ?> g</strong></span>
+                            <button type="button" onclick="toggleStockBreakdown('weightDropdown', event)" class="summary-dropdown-btn" title="Category Breakdown">
+                                Category <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="summary-dropdown-menu" id="weightDropdown">
+                                <h4><span><i class="fas fa-weight-hanging text-yellow-400 mr-1"></i> Weight Breakdown</span> <i class="fas fa-times text-xs opacity-50 cursor-pointer" onclick="toggleStockBreakdown('weightDropdown', event)"></i></h4>
+                                <?php if (!empty($cat_breakdown)): ?>
+                                    <?php foreach ($cat_breakdown as $cname => $cdata): ?>
+                                        <div class="cat-row">
+                                            <span class="cat-name"><?php echo htmlspecialchars($cname); ?></span>
+                                            <span class="cat-val"><?php echo number_format($cdata['weight'], 3); ?> g</span>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="text-xs text-gray-400 py-1">No weight data</div>
+                                <?php endif; ?>
+                            </div>
                         </div>
+
+                        <!-- Estimated Value -->
                         <div class="summary-item">
                             <i class="fas fa-coins"></i>
                             <span>Est. Value: <strong>₹<?php echo number_format($total_price, 2); ?></strong></span>
+                            <button type="button" onclick="toggleStockBreakdown('valueDropdown', event)" class="summary-dropdown-btn" title="Category Breakdown">
+                                Category <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="summary-dropdown-menu" id="valueDropdown">
+                                <h4><span><i class="fas fa-coins text-yellow-400 mr-1"></i> Value Breakdown</span> <i class="fas fa-times text-xs opacity-50 cursor-pointer" onclick="toggleStockBreakdown('valueDropdown', event)"></i></h4>
+                                <?php if (!empty($cat_breakdown)): ?>
+                                    <?php foreach ($cat_breakdown as $cname => $cdata): ?>
+                                        <div class="cat-row">
+                                            <span class="cat-name"><?php echo htmlspecialchars($cname); ?></span>
+                                            <span class="cat-val">₹<?php echo number_format($cdata['price'], 2); ?></span>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="text-xs text-gray-400 py-1">No value data</div>
+                                <?php endif; ?>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1379,11 +1576,26 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
     function closeDeleteModal() { document.getElementById('deleteModal').classList.remove('flex'); }
 
-    /* Close modal on outside click */
-    ['editModal','updateModal','deleteModal'].forEach(function(id) {
-        document.getElementById(id).addEventListener('click', function(e) {
-            if(e.target === this) this.classList.remove('flex');
-        });
+    /* ---------- Stock Summary Category Dropdowns ---------- */
+    function toggleStockBreakdown(menuId, event) {
+        if(event) {
+            if(typeof event.stopPropagation === 'function') event.stopPropagation();
+        }
+        const target = document.getElementById(menuId);
+        if (!target) return;
+        const isShown = target.classList.contains('show');
+        
+        document.querySelectorAll('.summary-dropdown-menu').forEach(m => m.classList.remove('show'));
+        
+        if (!isShown) {
+            target.classList.add('show');
+        }
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.summary-item') && !e.target.closest('.summary-dropdown-menu')) {
+            document.querySelectorAll('.summary-dropdown-menu').forEach(m => m.classList.remove('show'));
+        }
     });
 </script>
 

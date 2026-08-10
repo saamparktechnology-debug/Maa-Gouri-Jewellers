@@ -152,7 +152,7 @@ function pct($part, $total) {
     return $total > 0 ? round(($part / $total) * 100) : 0;
 }
 
-$logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-preview.png','moti-removebg-preview.png'];
+$logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-preview.png','moti-removebg-preview.png','radhey shyam logo.png'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -162,14 +162,12 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 <title>Accounts - MAA GOURI JEWELLERS</title>
 <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap');
 
-*, *::before, *::after { box-sizing: border-box; font-family: 'Poppins', sans-serif; }
-h1, h2, h3, .gold-font { font-family: 'Poppins', sans-serif; font-weight: 700; }
+* { font-family: 'Poppins', sans-serif; box-sizing: border-box; }
+h1,h2,h3,.gold-font { font-family: 'Poppins', sans-serif; font-weight: 700; }
 
-/* ========== SIDEBAR ========== */
 .sidebar {
     position: fixed;
     top: 0;
@@ -186,6 +184,7 @@ h1, h2, h3, .gold-font { font-family: 'Poppins', sans-serif; font-weight: 700; }
 }
 
 .sidebar-nav::-webkit-scrollbar { width: 4px; }
+.sidebar-nav::-webkit-scrollbar-track { background: transparent; }
 .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
 
 .sidebar-logo {
@@ -200,11 +199,10 @@ h1, h2, h3, .gold-font { font-family: 'Poppins', sans-serif; font-weight: 700; }
 .sidebar-logo img {
     width: 44px;
     height: 44px;
-    object-fit: cover;
+    object-fit: contain;
     border-radius: 50%;
     background: rgba(255,255,255,0.1);
-    padding: 2px;
-    border: 1.5px solid #ffd700;
+    padding: 3px;
     flex-shrink: 0;
 }
 
@@ -213,6 +211,7 @@ h1, h2, h3, .gold-font { font-family: 'Poppins', sans-serif; font-weight: 700; }
     font-size: 13px;
     font-weight: 700;
     line-height: 1.3;
+    font-family: 'Poppins', serif;
     letter-spacing: 0.5px;
 }
 
@@ -223,14 +222,16 @@ h1, h2, h3, .gold-font { font-family: 'Poppins', sans-serif; font-weight: 700; }
 }
 
 .sidebar-nav { flex: 1; padding: 10px 0; overflow-y: auto; overflow-x: hidden; }
-.sidebar-section-label { padding: 10px 20px 4px; color: #f5c842; font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; position: sticky; top: 0; background: #011921; z-index: 10; }
+.sidebar-section-label { padding: 10px 20px 4px; color: rgba(255,255,255,0.45); font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; position: sticky; top: 0; background: #011921; color: #f5c842; z-index: 10; }
 .sidebar-nav a { display: flex; align-items: center; gap: 12px; padding: 11px 20px; color: rgba(255,255,255,0.85); text-decoration: none; font-size: 13px; font-weight: 500; transition: all 0.2s ease; border-left: 3px solid transparent; position: relative; }
 .sidebar-nav a:hover { background: rgba(255,255,255,0.13); color: #fff; border-left-color: rgba(255,255,255,0.8); padding-left: 26px; }
 .sidebar-nav a.active { background: rgba(255,255,255,0.22); color: #fff; border-left-color: #fff; font-weight: 700; }
+.sidebar-nav a.active::after { content: ''; position: absolute; right: 0; top: 50%; transform: translateY(-50%); width: 4px; height: 60%; background: #fff; border-radius: 4px 0 0 4px; }
 .sidebar-nav a i { width: 18px; text-align: center; font-size: 14px; flex-shrink: 0; opacity: 0.9; }
 .sidebar-divider { height: 1px; background: rgba(255,255,255,0.12); margin: 6px 16px; }
 .sidebar-user { padding: 14px 16px 18px; border-top: 1px solid rgba(255,255,255,0.18); background: rgba(0,0,0,0.12); flex-shrink: 0; }
 .sidebar-user-info { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.sidebar-user-info i { color: rgba(255,255,255,0.9); font-size: 26px; flex-shrink: 0; }
 .sidebar-user-info .user-details p { color: #fff; font-size: 12px; font-weight: 600; line-height: 1.3; }
 .sidebar-user-info .user-details span { color: rgba(255,255,255,0.55); font-size: 10px; }
 .sidebar-logout { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 9px 14px; background: rgba(239,68,68,0.75); color: #fff; border-radius: 8px; font-size: 12px; font-weight: 600; text-decoration: none; transition: background 0.2s; border: 1px solid rgba(239,68,68,0.4); }
@@ -279,7 +280,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
         $logo_found = false;
         foreach($logo_paths as $path) {
             if(file_exists($path)) {
-                echo '<img src="'.$path.'" alt="MAA GOURI JEWELLERS Logo" style="width:38px;height:38px;object-fit:cover;border-radius:50%;border:1.5px solid #ffd700;display:inline-block;margin-right:8px;">';
+                echo '<img src="'.$path.'" alt="MAA GOURI JEWELLERS Logo" style="height:38px;width:auto;max-width:44px;object-fit:contain;display:inline-block;margin-right:8px;">';
                 $logo_found = true; break;
             }
         }
@@ -293,10 +294,11 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
 
     <nav class="sidebar-nav">
         <div class="sidebar-section-label">Main Menu</div>
-        <a href="index.php"><i class="fas fa-home"></i> HOME</a>
+        <a href="index.php"><i class="fas fa-home"></i> DASHBOARD</a>
         <a href="billing.php"><i class="fas fa-receipt"></i> BILLING</a>
         <a href="stock.php"><i class="fas fa-boxes"></i> STOCK</a>
         <a href="customers.php"><i class="fas fa-users"></i> CUSTOMERS</a>
+        <a href="transfer.php"><i class="fas fa-exchange-alt"></i> TRANSFER</a>
 
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Analytics</div>
@@ -315,9 +317,7 @@ nav.nav-gold { background: linear-gradient(135deg, #011921, #03373b) !important;
     <!-- User Info + Logout -->
     <div class="sidebar-user">
         <div class="sidebar-user-info">
-            <svg width="28" height="28" viewBox="0 0 496 512" aria-hidden="true" focusable="false" style="flex-shrink:0;color:inherit;">
-                <path fill="currentColor" d="M248 8C111 8 0 119 0 256s111 248 248 248 248-111 248-248S385 8 248 8zm0 96a72 72 0 1 1 0 144 72 72 0 0 1 0-144zm0 344c-59.6 0-112.9-32.7-139.7-80.4 7.1-44 88.4-68.5 139.7-68.5 51.3 0 132.6 24.5 139.7 68.5C360.9 415.3 307.6 448 248 448z"></path>
-            </svg>
+            <i class="fas fa-user-circle"></i>
             <div class="user-details">
                 <p><?php echo htmlspecialchars($_SESSION['user_name'] ?? 'Admin'); ?></p>
                 <span><?php echo htmlspecialchars($_SESSION['user_mobile'] ?? 'Admin'); ?></span>

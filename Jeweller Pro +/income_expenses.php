@@ -77,7 +77,7 @@ $expense_categories = mysqli_query($conn, "SELECT category_name FROM expense_cat
 $income_by_cat = []; foreach($income_records as $r) { $income_by_cat[$r['category']] = ($income_by_cat[$r['category']] ?? 0) + $r['amount']; }
 $expense_by_cat = []; foreach($expense_records as $r) { $expense_by_cat[$r['category']] = ($expense_by_cat[$r['category']] ?? 0) + $r['amount']; }
 
-$logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-preview.png','moti-removebg-preview.png'];
+$logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-preview.png','moti-removebg-preview.png','radhey shyam logo.png'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -379,16 +379,21 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
    <nav class="sidebar-nav">
         <div class="sidebar-section-label">Main Menu</div>
 
-        <a href="index.php" ><i class="fas fa-home"></i> HOME</a>
+        <a href="index.php"><i class="fas fa-home"></i> DASHBOARD</a>
         <a href="billing.php"><i class="fas fa-receipt"></i> BILLING</a>
         <a href="stock.php"><i class="fas fa-boxes"></i> STOCK</a>
         <a href="customers.php"><i class="fas fa-users"></i> CUSTOMERS</a>
+        <a href="transfer.php"><i class="fas fa-exchange-alt"></i> TRANSFER</a>
 
-        <div class="sidebar-divider"></div><div class="sidebar-section-label">Analytics</div>
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-section-label">Analytics</div>
 
         <a href="reports.php"><i class="fas fa-chart-bar"></i> REPORTS</a>
         <a href="due_list.php"><i class="fas fa-hourglass-half"></i> DUE LIST</a>
         <a href="income_expenses.php" class="active"><i class="fas fa-chart-line"></i> INCOME &amp; EXP</a>
+
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-section-label">Tools</div>
 
         <a href="whatsapp_automation.php"><i class="fab fa-whatsapp"></i> WHATSAPP</a>
         <a href="purchase.php"><i class="fas fa-book"></i> PURCHASE</a>
