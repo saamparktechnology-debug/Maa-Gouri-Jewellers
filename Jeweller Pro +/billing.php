@@ -496,8 +496,14 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
     }
 
     $old_gold_amount = floatval($_POST['old_gold_amount'] ?? 0);
+    $old_gold_type   = mysqli_real_escape_string($conn, trim($_POST['old_gold_type'] ?? 'Old Gold'));
+    if (empty($old_gold_type)) $old_gold_type = 'Old Gold';
+
     $col_og = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoices LIKE 'old_gold_amount'")) > 0;
     if(!$col_og) mysqli_query($conn, "ALTER TABLE invoices ADD COLUMN old_gold_amount DECIMAL(10,2) DEFAULT 0");
+
+    $col_ogt = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoices LIKE 'old_gold_type'")) > 0;
+    if(!$col_ogt) mysqli_query($conn, "ALTER TABLE invoices ADD COLUMN old_gold_type VARCHAR(50) DEFAULT 'Old Gold'");
 
     // Auto-drop foreign key constraints on invoice_items to allow zero-stock product auto-deletion
     $fk_check = mysqli_query($conn, "SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'invoice_items' AND REFERENCED_TABLE_NAME IS NOT NULL");
@@ -554,8 +560,8 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
         }
     }
 
-    $invoice_query = "INSERT INTO invoices (invoice_no, customer_name, customer_mobile, customer_address, customer_gstin, gst_type, subtotal, gst_amount, total_amount, payment_status, payment_method, paid_amount, balance_amount, cash_paid, upi_paid, account_paid, due_date, created_by, huid_code, old_gold_amount)
-              VALUES ('$invoice_no', '$customer_name', '$customer_mobile', '$customer_address', '$customer_gstin', '$gst_type', $subtotal, $gst_amount, $total_amount, '$payment_status', '$payment_method', $paid_amount, $balance_amount, $cash_paid, $upi_paid, $account_paid, $due_date, $created_by_val, '$huid_code', $old_gold_amount)";
+    $invoice_query = "INSERT INTO invoices (invoice_no, customer_name, customer_mobile, customer_address, customer_gstin, gst_type, subtotal, gst_amount, total_amount, payment_status, payment_method, paid_amount, balance_amount, cash_paid, upi_paid, account_paid, due_date, created_by, huid_code, old_gold_amount, old_gold_type)
+              VALUES ('$invoice_no', '$customer_name', '$customer_mobile', '$customer_address', '$customer_gstin', '$gst_type', $subtotal, $gst_amount, $total_amount, '$payment_status', '$payment_method', $paid_amount, $balance_amount, $cash_paid, $upi_paid, $account_paid, $due_date, $created_by_val, '$huid_code', $old_gold_amount, '$old_gold_type')";
     $inv_exec = mysqli_query($conn, $invoice_query);
     if(!$inv_exec) {
         die("<div style='padding:30px;font-family:sans-serif;background:#fff1f2;color:#991b1b;border:2px solid #f87171;border-radius:12px;margin:40px auto;max-width:650px;'>
@@ -1599,11 +1605,18 @@ function submitPayment() {
                                     <span>Discount</span><span id="discountAmount">- &#8377;0.00</span>
                                 </div>
                                 <div class="flex justify-between items-center text-sm pt-1 pb-1" style="color:#b91c1c;border-top:1px dashed rgba(185,28,28,0.2);border-bottom:1px dashed rgba(185,28,28,0.2);">
-                                    <span class="font-semibold">Old Gold Exchange / Return (₹)</span>
-                                    <input type="number" id="oldGoldAmountInput" value="" step="1" min="0" placeholder="0" class="jewel-input rounded-lg px-2 py-1 text-sm text-right w-32 border-red-300 font-bold" oninput="calculateTotal()">
+                                    <div class="flex items-center gap-1">
+                                        <select id="oldGoldTypeSelect" class="jewel-input rounded px-1 py-0.5 text-xs font-bold border-red-300 bg-white" style="color:#b91c1c;" onchange="calculateTotal()">
+                                            <option value="Old Gold">Old Gold</option>
+                                            <option value="Old Silver">Old Silver</option>
+                                            <option value="Old Gold &amp; Silver">Old Gold &amp; Silver</option>
+                                        </select>
+                                        <span class="font-semibold text-xs">(₹)</span>
+                                    </div>
+                                    <input type="number" id="oldGoldAmountInput" value="" step="1" min="0" placeholder="0" class="jewel-input rounded-lg px-2 py-1 text-sm text-right w-28 border-red-300 font-bold" oninput="calculateTotal()">
                                 </div>
                                 <div class="flex justify-between text-sm" style="color:#b91c1c;display:none;" id="oldGoldRow">
-                                    <span>Old Gold Deduction</span><span id="oldGoldDisplayAmount">- &#8377;0.00</span>
+                                    <span id="oldGoldLabel">Old Gold Deduction</span><span id="oldGoldDisplayAmount">- &#8377;0.00</span>
                                 </div>
                                 <div class="flex justify-between text-sm" style="color:#2563eb;" id="cgstRow">
                                     <span>CGST</span><span id="cgstAmount">&#8377;0.00</span>
@@ -1630,6 +1643,7 @@ function submitPayment() {
                     <input type="hidden" name="pola" value="0">
                     <input type="hidden" name="discount" id="hiddenDiscount" value="0">
                     <input type="hidden" name="old_gold_amount" id="hiddenOldGold" value="0">
+                    <input type="hidden" name="old_gold_type" id="hiddenOldGoldType" value="Old Gold">
                     <input type="hidden" name="cash_paid" id="hiddenCashPaid" value="0">
                     <input type="hidden" name="upi_paid" id="hiddenUpiPaid" value="0">
                     <input type="hidden" name="is_split_payment" id="hiddenIsSplit" value="0">
@@ -2976,6 +2990,9 @@ function calculateTotal() {
     document.getElementById('makingChargeAmount').textContent = fmt(makingAmt);
     document.getElementById('hallmarkAmount').textContent = fmt(hallmark);
     document.getElementById('discountAmount').textContent = '- ' + fmt(discount);
+    const selectedOldType = document.getElementById('oldGoldTypeSelect')?.value || 'Old Gold';
+    if(document.getElementById('hiddenOldGoldType')) document.getElementById('hiddenOldGoldType').value = selectedOldType;
+    if(document.getElementById('oldGoldLabel')) document.getElementById('oldGoldLabel').textContent = selectedOldType + ' Deduction';
     if(document.getElementById('oldGoldDisplayAmount')) {
         document.getElementById('oldGoldDisplayAmount').textContent = '- ' + fmt(oldGold);
         document.getElementById('oldGoldRow').style.display = (oldGold > 0) ? '' : 'none';

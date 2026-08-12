@@ -78,6 +78,7 @@ $sgst_amount = $is_gst ? round($gst_total / 2, 2) : 0;
 $subtotal = floatval($inv['subtotal'] ?? 0);
 $discount = floatval($inv['discount'] ?? 0);
 $old_gold = floatval($inv['old_gold_amount'] ?? 0);
+$old_gold_type = !empty($inv['old_gold_type']) ? $inv['old_gold_type'] : 'Old Gold';
 $raw_total= floatval($inv['total_amount']);
 
 // Ensure net total deducts old_gold_amount if DB stored pre-deduction total
@@ -760,7 +761,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
 
                             <?php if($old_gold > 0): ?>
                             <div class="calc-line" style="color:#dc2626;font-weight:600;">
-                                <span>Less: Old Gold Return / Exchange</span>
+                                <span>Less: <?php echo htmlspecialchars($old_gold_type); ?> Return / Exchange</span>
                                 <span>(-) ₹<?php echo ind_format($old_gold); ?></span>
                             </div>
                             <?php endif; ?>
