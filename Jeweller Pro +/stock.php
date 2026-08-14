@@ -55,12 +55,39 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
     }
     elseif(isset($_POST['update_quantity'])) {
-        $id = $_POST['product_id'];
-        $quantity = $_POST['quantity'];
-        if(mysqli_query($conn, "UPDATE products SET quantity = quantity + $quantity WHERE id = $id")) {
-            $success = " Stock updated successfully!";
+        $id = intval($_POST['product_id']);
+        $quantity = floatval($_POST['quantity'] ?? 0);
+        $weight = floatval($_POST['weight'] ?? 0);
+        $input_unit = strtolower(trim($_POST['unit'] ?? 'pcs'));
+
+        $p_res = mysqli_query($conn, "SELECT quantity, unit, weight FROM products WHERE id = $id");
+        if ($p_res && $p_row = mysqli_fetch_assoc($p_res)) {
+            $db_qty = floatval($p_row['quantity']);
+            $db_unit = strtolower(trim($p_row['unit'] ?? 'pcs'));
+            $db_weight = floatval($p_row['weight'] ?? 0);
+
+            // Conversion logic: 1 pair = 2 pcs
+            if ($db_unit === $input_unit) {
+                $added_qty = $quantity;
+            } elseif ($db_unit === 'pcs' && $input_unit === 'pair') {
+                $added_qty = $quantity * 2;
+            } elseif ($db_unit === 'pair' && $input_unit === 'pcs') {
+                $added_qty = $quantity / 2;
+            } else {
+                $added_qty = $quantity;
+            }
+
+            $final_qty = $db_qty + $added_qty;
+            $final_weight = round($db_weight + $weight, 3);
+
+            $sql = "UPDATE products SET quantity = '$final_qty', weight = '$final_weight' WHERE id = $id";
+            if(mysqli_query($conn, $sql)) {
+                $success = " Stock updated successfully!";
+            } else {
+                $error = "Error updating stock: " . mysqli_error($conn);
+            }
         } else {
-            $error = "Error updating stock: " . mysqli_error($conn);
+            $error = "Product not found.";
         }
     }
     elseif(isset($_POST['update_product'])) {
@@ -1113,7 +1140,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                     <th class="text-left">Serial No</th>
                                     <th class="text-left">HUID</th>
                                     <th class="text-left">Weight</th>
-                                    <th class="text-left">Added On</th>
+                                    <th class="text-left">Added / Updated</th>
                                     <th class="text-center">Stock</th>
                                     <th class="text-center">Status</th>
                                     <th class="text-center" style="border-radius:0 12px 0 0;">Actions</th>
@@ -1154,12 +1181,16 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                         <?php echo htmlspecialchars($product['weight'] ?? 'N/A'); ?>
                                         <span class="text-xs" style="color:#9ca3af;">g</span>
                                     </td>
-                                    <td class="text-xs" style="color:#6b7280;">
-                                        <?php if(!empty($product['created_at'])): ?>
-                                            <span class="font-medium"><?php echo date('d M Y', strtotime($product['created_at'])); ?></span>
-                                        <?php else: ?>
-                                            <span style="color:#d1d5db;">-</span>
-                                        <?php endif; ?>
+                                    <td class="text-xs" style="color:#6b7280; line-height: 1.4;">
+                                         <?php if(!empty($product['created_at'])): ?>
+                                             <div><span class="font-semibold" style="color:#9ca3af;">Added:</span> <span class="font-medium"><?php echo date('d M Y', strtotime($product['created_at'])); ?></span></div>
+                                         <?php endif; ?>
+                                         <?php if(!empty($product['updated_at'])): ?>
+                                             <div class="mt-1" style="color:#b5730e;"><span class="font-semibold">Updated:</span> <span class="font-medium"><?php echo date('d M Y h:i A', strtotime($product['updated_at'])); ?></span></div>
+                                         <?php endif; ?>
+                                         <?php if(empty($product['created_at']) && empty($product['updated_at'])): ?>
+                                             <span style="color:#d1d5db;">-</span>
+                                         <?php endif; ?>
                                     </td>
                                     <td class="text-center font-bold text-sm" style="color:#800020;">
                                         <?php echo $qty; ?>
@@ -1175,7 +1206,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                             <button onclick="openEditModal(<?php echo $product['id']; ?>,'<?php echo addslashes($product['serial_no']); ?>','<?php echo addslashes($product['name']); ?>','<?php echo addslashes($product['item_name'] ?? ''); ?>','<?php echo $product['category']; ?>','<?php echo addslashes($product['weight'] ?? ''); ?>',<?php echo $product['price']; ?>,<?php echo $product['quantity']; ?>,'<?php echo addslashes($product['huid_code'] ?? ''); ?>','<?php echo addslashes($product['unit'] ?? 'pcs'); ?>')" class="btn-edit">
                                                 <i class="fas fa-edit"></i> Edit
                                             </button>
-                                            <button onclick="openUpdateModal(<?php echo $product['id']; ?>,'<?php echo addslashes($product['name']); ?>')" class="btn-addstock">
+                                            <button onclick="openUpdateModal(<?php echo $product['id']; ?>,'<?php echo addslashes($product['name']); ?>','<?php echo addslashes($product['unit'] ?? 'pcs'); ?>')" class="btn-addstock">
                                                 <i class="fas fa-plus"></i> Stock
                                             </button>
                                             <button onclick="openDeleteModal(<?php echo $product['id']; ?>,'<?php echo addslashes($product['name']); ?>')" class="btn-delete">
@@ -1422,9 +1453,22 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         <form method="POST">
             <input type="hidden" name="product_id" id="updateProductId">
             <p class="mb-3 text-sm" style="color:#7a4e0a;">Product: <strong id="updateProductName" style="color:#800020;"></strong></p>
+            <div class="mb-3 flex gap-2">
+                <div class="flex-1">
+                    <label> Add Qty/Pair</label>
+                    <input type="number" name="quantity" required class="jewel-input" placeholder="Enter quantity to add">
+                </div>
+                <div class="w-1/3">
+                    <label> Unit</label>
+                    <select name="unit" id="updateProductUnit" class="jewel-input">
+                        <option value="pcs">Pcs</option>
+                        <option value="pair">Pair</option>
+                    </select>
+                </div>
+            </div>
             <div class="mb-4">
-                <label> Add Quantity</label>
-                <input type="number" name="quantity" required class="jewel-input" placeholder="Enter quantity to add">
+                <label> Add Weight (grams)</label>
+                <input type="number" step="0.001" name="weight" class="jewel-input" placeholder="Enter weight to add">
             </div>
             <div class="flex gap-3">
                 <button type="submit" name="update_quantity" class="btn-jewel flex-1 text-center"> Add Stock</button>
@@ -1562,9 +1606,10 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
     function closeEditModal() { document.getElementById('editModal').classList.remove('flex'); }
 
-    function openUpdateModal(id, name) {
+    function openUpdateModal(id, name, unit) {
         document.getElementById('updateProductId').value = id;
         document.getElementById('updateProductName').innerText = name;
+        document.getElementById('updateProductUnit').value = unit;
         document.getElementById('updateModal').classList.add('flex');
     }
 

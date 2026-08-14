@@ -607,6 +607,8 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
         if(!$col_item_gross) mysqli_query($conn, "ALTER TABLE invoice_items ADD COLUMN gross_wt DECIMAL(10,3) DEFAULT 0");
         $col_item_net = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'net_wt'")) > 0;
         if(!$col_item_net) mysqli_query($conn, "ALTER TABLE invoice_items ADD COLUMN net_wt DECIMAL(10,3) DEFAULT 0");
+        $col_item_gst = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'gst_type'")) > 0;
+        if(!$col_item_gst) mysqli_query($conn, "ALTER TABLE invoice_items ADD COLUMN gst_type VARCHAR(20) DEFAULT 'non_gst'");
 
         if(is_array($items)) {
             foreach($items as $item) {
@@ -629,9 +631,11 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
                 $item_unit  = mysqli_real_escape_string($conn, $item['unit'] ?? 'g');
                 $item_gross = floatval($item['gross_wt'] ?? ($item_unit === 'g' ? $quantity : 0));
                 $item_net   = floatval($item['net_wt'] ?? ($item_unit === 'g' ? $quantity : 0));
+                $item_gst_type = mysqli_real_escape_string($conn, trim($item['gst_type'] ?? 'non_gst'));
+                if (empty($item_gst_type)) $item_gst_type = 'non_gst';
 
                 if($product_id === 'other' || !is_numeric($product_id)) {
-                    $item_query = "INSERT INTO invoice_items (invoice_id, product_id, product_name, serial_no, huid_code, hsn_code, quantity, price, total, making_charge, making_charge_pct, hallmark, discount, pcs, unit, gross_wt, net_wt) VALUES ($invoice_id, NULL, '".$manual_name."', '".$manual_serial."', '".$manual_huid."', '".$manual_hsn."', $quantity, $price, $total, $item_making_charge, $item_making_charge_pct, $item_hallmark, $item_discount, $item_pcs, '".$item_unit."', $item_gross, $item_net)";
+                    $item_query = "INSERT INTO invoice_items (invoice_id, product_id, product_name, serial_no, huid_code, hsn_code, quantity, price, total, making_charge, making_charge_pct, hallmark, discount, pcs, unit, gross_wt, net_wt, gst_type) VALUES ($invoice_id, NULL, '".$manual_name."', '".$manual_serial."', '".$manual_huid."', '".$manual_hsn."', $quantity, $price, $total, $item_making_charge, $item_making_charge_pct, $item_hallmark, $item_discount, $item_pcs, '".$item_unit."', $item_gross, $item_net, '".$item_gst_type."')";
                     mysqli_query($conn, $item_query);
                     continue;
                 }
@@ -639,9 +643,9 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
                 $pcs_deduct = floatval($item['pcs'] ?? $item['stock_deduct'] ?? 1);
                 if($pcs_deduct <= 0) $pcs_deduct = 1;
 
-                $item_query = "INSERT INTO invoice_items (invoice_id, product_id, product_name, serial_no, huid_code, hsn_code, quantity, price, total, making_charge, making_charge_pct, hallmark, discount, pcs, unit, gross_wt, net_wt)
-                               VALUES ($invoice_id, $pid, '".$manual_name."', '".$manual_serial."', '".$manual_huid."', '".$manual_hsn."', $quantity, $price, $total, $item_making_charge, $item_making_charge_pct, $item_hallmark, $item_discount, $item_pcs, '".$item_unit."', $item_gross, $item_net)";
-                mysqli_query($conn, $item_query);
+                $item_query = "INSERT INTO invoice_items (invoice_id, product_id, product_name, serial_no, huid_code, hsn_code, quantity, price, total, making_charge, making_charge_pct, hallmark, discount, pcs, unit, gross_wt, net_wt, gst_type)
+                               VALUES ($invoice_id, $pid, '".$manual_name."', '".$manual_serial."', '".$manual_huid."', '".$manual_hsn."', $quantity, $price, $total, $item_making_charge, $item_making_charge_pct, $item_hallmark, $item_discount, $item_pcs, '".$item_unit."', $item_gross, $item_net, '".$item_gst_type."')";
+                    mysqli_query($conn, $item_query);
 
                 $w_deduct = (isset($item['unit']) && $item['unit'] === 'g') ? floatval($item['quantity'] ?? 0) : 0;
                 

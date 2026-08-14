@@ -36,7 +36,7 @@ $select_pcs = $col_pcs_check ? "ii.pcs, ii.unit, ii.gross_wt, ii.net_wt," : "1 A
 
 $items_res = mysqli_query($conn, "
     SELECT ii.invoice_id, ii.product_id, ii.quantity, ii.price, ii.total,
-           ii.making_charge, ii.hallmark, ii.discount, $select_gst_type $select_pcs
+           ii.making_charge, ii.making_charge_pct, ii.hallmark, ii.discount, $select_gst_type $select_pcs
            COALESCE(ii.product_name, p.name) AS product_name,
            COALESCE(ii.serial_no, p.serial_no) AS serial_no,
            COALESCE(ii.huid_code, p.huid_code) AS huid_code,
@@ -73,7 +73,54 @@ if ($raw_gst_type === 'gst_3') {
 $cgst_rate   = $is_gst ? round($effective_gst_pct / 2, 2) : 0;
 $sgst_rate   = $is_gst ? round($effective_gst_pct / 2, 2) : 0;
 $cgst_amount = $is_gst ? round($gst_total / 2, 2) : 0;
-$sgst_amount = $is_gst ? round($gst_total / 2, 2) : 0;
+$sgst_amount = $is_gst ? ($gst_total - $cgst_amount) : 0;
+
+$taxable_18 = 0;
+$taxable_3 = 0;
+if (is_array($items)) {
+    foreach ($items as $it) {
+        $it_amt = floatval($it['total']);
+        $it_gst_type = trim($it['gst_type'] ?? '');
+        if ($it_gst_type === 'gst_18') {
+            $taxable_18 += $it_amt;
+        } else if ($it_gst_type === 'gst_3') {
+            $taxable_3 += $it_amt;
+        } else if ($it_gst_type === 'non_gst') {
+            // Do nothing
+        } else if ($is_gst && $effective_gst_pct > 0) {
+            if ($effective_gst_pct == 18) {
+                $taxable_18 += $it_amt;
+            } else if ($effective_gst_pct == 3) {
+                $taxable_3 += $it_amt;
+            }
+        }
+    }
+}
+
+$cgst_18_amt = 0; $sgst_18_amt = 0;
+$cgst_3_amt = 0; $sgst_3_amt = 0;
+
+if ($taxable_18 > 0) {
+    $cgst_18_amt = round($taxable_18 * 0.09, 2);
+    $sgst_18_amt = $cgst_18_amt;
+}
+if ($taxable_3 > 0) {
+    $cgst_3_amt = round($taxable_3 * 0.015, 2);
+    $sgst_3_amt = $cgst_3_amt;
+}
+
+// Adjust to match stored gst_total exactly if needed to avoid rounding mismatches
+$tot_calc = $cgst_18_amt + $cgst_3_amt + $sgst_18_amt + $sgst_3_amt;
+if ($is_gst && $gst_total > 0 && abs($tot_calc - $gst_total) <= 0.10) {
+    $diff = $gst_total - $tot_calc;
+    if ($cgst_18_amt > 0) {
+        $cgst_18_amt = round($cgst_18_amt + ($diff / 2), 2);
+        $sgst_18_amt = round($sgst_18_amt + ($diff / 2), 2);
+    } else if ($cgst_3_amt > 0) {
+        $cgst_3_amt = round($cgst_3_amt + ($diff / 2), 2);
+        $sgst_3_amt = round($sgst_3_amt + ($diff / 2), 2);
+    }
+}
 
 $subtotal = floatval($inv['subtotal'] ?? 0);
 $discount = floatval($inv['discount'] ?? 0);
@@ -227,18 +274,18 @@ if ($is_receipt) {
 /* Strict A4 Print Dimensions */
 @page {
     size: A4 portrait;
-    margin: 8mm 10mm 8mm 10mm;
+    margin: 5mm 6mm;
 }
 
 * { margin:0; padding:0; box-sizing:border-box; font-family:'Poppins', sans-serif; }
-body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
+body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
 
-.print-actions { max-width:820px; margin:0 auto 16px; display:flex; justify-content:space-between; align-items:center; }
-.btn-print { background:linear-gradient(135deg,#7a4e0a,#d68b16); color:#fff; padding:10px 24px; border-radius:8px; font-size:13px; font-weight:700; text-decoration:none; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 12px rgba(214,139,22,0.3); }
-.btn-back { background:#fff; color:#475569; padding:10px 18px; border-radius:8px; font-size:13px; font-weight:600; text-decoration:none; border:1px solid #cbd5e1; }
+.print-actions { max-width:820px; margin:0 auto 12px; display:flex; justify-content:space-between; align-items:center; }
+.btn-print { background:linear-gradient(135deg,#7a4e0a,#d68b16); color:#fff; padding:8px 20px; border-radius:8px; font-size:13px; font-weight:700; text-decoration:none; border:none; cursor:pointer; display:inline-flex; align-items:center; gap:8px; box-shadow:0 4px 12px rgba(214,139,22,0.3); }
+.btn-back { background:#fff; color:#475569; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; text-decoration:none; border:1px solid #cbd5e1; }
 
-.invoice-card { min-height: 275mm !important; 
-    width:210mm; max-width:820px; min-height:285mm; margin:0 auto; background:#fffbf4; border:3px solid #d68b16; border-radius:14px; padding:28px 32px; box-shadow:0 12px 36px rgba(0,0,0,0.18); position:relative; overflow:hidden;
+.invoice-card {
+    width:210mm; max-width:820px; min-height:285mm; margin:0 auto; background:#fffbf4; border:3px solid #d68b16; border-radius:14px; padding:20px 24px; box-shadow:0 12px 36px rgba(0,0,0,0.18); position:relative; overflow:hidden;
 }
 
 /* Full Page Coloured Logo Watermark (Rendered on top as a true watermark overlay) */
@@ -249,70 +296,70 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
 .invoice-content { position:relative; z-index:2; }
 
 /* Top Header */
-.top-header { display:flex; align-items:center; gap:18px; margin-bottom:16px; border-bottom:2.5px solid #d68b16; padding-bottom:14px; }
-.very-left-logo { width:85px; height:85px; object-fit:contain; border:none; box-shadow:none; background:transparent; flex-shrink:0; }
+.top-header { display:flex; align-items:center; gap:14px; margin-bottom:10px; border-bottom:2.5px solid #d68b16; padding-bottom:8px; }
+.very-left-logo { width:80px; height:80px; object-fit:contain; border:none; box-shadow:none; background:transparent; flex-shrink:0; }
 .shop-branding-text { flex:1; }
-.shop-title { font-family:'Poppins', sans-serif; font-size:24px; font-weight:700; color:#2b1b17; line-height:1.1; letter-spacing:0.5px; margin-bottom:4px; }
-.shop-details-line { font-size:11.5px; color:#523e2b; line-height:1.5; }
+.shop-title { font-family:'Poppins', sans-serif; font-size:22px; font-weight:700; color:#2b1b17; line-height:1.1; letter-spacing:0.5px; margin-bottom:2px; }
+.shop-details-line { font-size:11px; color:#523e2b; line-height:1.45; }
 .shop-details-line strong { color:#7a4e0a; }
 
 .header-right { text-align:right; flex-shrink:0; margin-left: auto;  }
-.tax-invoice-tag { font-size:18px; font-weight:700; color:#7a4e0a; font-family:'Poppins', sans-serif; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:4px; }
-.payment-status-pill { display:inline-block; padding:4px 14px; border-radius:20px; font-size:10.5px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; }
+.tax-invoice-tag { font-size:16px; font-weight:700; color:#7a4e0a; font-family:'Poppins', sans-serif; letter-spacing:1.5px; text-transform:uppercase; margin-bottom:2px; }
+.payment-status-pill { display:inline-block; padding:3px 12px; border-radius:20px; font-size:10px; font-weight:700; letter-spacing:0.5px; text-transform:uppercase; }
 .pill-paid { background:#dcfce7; color:#15803d; border:1px solid #86efac; }
 .pill-part { background:#fef3c7; color:#b45309; border:1px solid #fcd34d; }
 .pill-unpaid { background:#ffe4e6; color:#be123c; border:1px solid #fca5a5; }
 
 /* Meta Info Grid (Invoice No, Invoice Date, Due Date) */
-.meta-bar { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; background:rgba(247,238,215,0.72); border:1.5px solid #d68b16; border-radius:8px; padding:8px 16px; margin-bottom:16px; font-size:11.5px; }
+.meta-bar { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; background:rgba(247,238,215,0.72); border:1.5px solid #d68b16; border-radius:8px; padding:6px 12px; margin-bottom:10px; font-size:11px; }
 .meta-item { display:flex; flex-direction:column; }
-.meta-label { font-size:9.5px; color:#7a4e0a; text-transform:uppercase; font-weight:600; letter-spacing:0.5px; margin-bottom:1px; }
-.meta-value { font-weight:700; color:#2b1b17; font-size:13px; }
+.meta-label { font-size:9px; color:#7a4e0a; text-transform:uppercase; font-weight:600; letter-spacing:0.5px; margin-bottom:1px; }
+.meta-value { font-weight:700; color:#2b1b17; font-size:12.5px; }
 
 /* Bill To Block */
-.bill-to-card { background:rgba(255,255,255,0.75); border:1.5px solid #e5c98a; border-radius:8px; padding:12px 16px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:flex-start; box-shadow:0 2px 6px rgba(122,78,10,0.06); }
+.bill-to-card { background:rgba(255,255,255,0.75); border:1.5px solid #e5c98a; border-radius:8px; padding:10px 14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:flex-start; box-shadow:0 2px 6px rgba(122,78,10,0.06); }
 .bill-to-left { flex:1; }
-.bill-to-title { font-size:10.5px; font-weight:700; color:#7a4e0a; text-transform:uppercase; letter-spacing:1px; margin-bottom:3px; border-bottom:1px solid #f3e5c8; padding-bottom:3px; display:inline-block; }
-.customer-name-big { font-size:15px; font-weight:700; color:#1e293b; margin-top:2px; }
-.customer-address-text { font-size:11.5px; color:#475569; margin-top:3px; line-height:1.4; }
-.bill-to-right { text-align:right; font-size:11.5px; color:#475569; line-height:1.6; flex-shrink:0; }
+.bill-to-title { font-size:10px; font-weight:700; color:#7a4e0a; text-transform:uppercase; letter-spacing:1px; margin-bottom:2px; border-bottom:1px solid #f3e5c8; padding-bottom:2px; display:inline-block; }
+.customer-name-big { font-size:14px; font-weight:700; color:#1e293b; margin-top:2px; }
+.customer-address-text { font-size:11px; color:#475569; margin-top:2px; line-height:1.35; }
+.bill-to-right { text-align:right; font-size:11px; color:#475569; line-height:1.5; flex-shrink:0; }
 
 /* Items Table */
 .inv-table { width:100%; border-collapse:collapse; margin-bottom:0; background:rgba(255,255,255,0.75); border-radius:8px; overflow:hidden; border:1.5px solid #d68b16; }
 .inv-table thead tr { background:linear-gradient(135deg, #7a4e0a, #d68b16); color:#fff; }
-.inv-table th { padding:6px 8px; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; text-align:left; border-right:1px solid rgba(255,255,255,0.15); }
+.inv-table th { padding:4px 6px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; text-align:left; border-right:1px solid rgba(255,255,255,0.15); }
 .inv-table th.right { text-align:right; }
 .inv-table th.center { text-align:center; }
-.inv-table td { padding:6px 8px; font-size:11.5px; color:#334155; border-bottom:1px solid #f1e5cd; border-right:1px solid #f1e5cd; vertical-align:top; background:rgba(255,255,255,0.65); }
+.inv-table td { padding:4px 6px; font-size:11px; color:#334155; border-bottom:1px solid #f1e5cd; border-right:1px solid #f1e5cd; vertical-align:top; background:rgba(255,255,255,0.65); }
 .inv-table td.right { text-align:right; }
 .inv-table td.center { text-align:center; }
 .inv-table tbody tr:nth-child(even) td { background:rgba(250,245,232,0.65); }
 .item-desc { font-weight:600; color:#1e293b; }
-.item-sub { font-size:9.5px; color:#64748b; margin-top:1px; }
+.item-sub { font-size:9px; color:#64748b; margin-top:1px; }
 
 /* Subtotal row */
-.subtotal-row td { background:rgba(243,232,206,0.85) !important; font-weight:700; color:#2b1b17; border-top:2px solid #d68b16; border-bottom: 2.5px solid #ffd700; box-shadow: 0 0 12px rgba(255, 215, 0, 0.5); padding:8px 10px; }
+.subtotal-row td { background:rgba(243,232,206,0.85) !important; font-weight:700; color:#2b1b17; border-top:2px solid #d68b16; border-bottom: 2.5px solid #ffd700; box-shadow: 0 0 12px rgba(255, 215, 0, 0.5); padding:6px 8px; }
 
 /* Bottom Section */
-.bottom-section { display:grid; grid-template-columns:1.3fr 1fr; gap:16px; margin-top:0; align-items: stretch; }
-.bottom-left { display:flex; flex-direction:column; gap:12px; }
-.terms-box-title { font-size:11px; font-weight:700; color:#7a4e0a; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:3px; }
-.terms-text-content { font-size:10px; color:#475569; line-height:1.55; background:rgba(255,255,255,0.65); padding:8px 12px; border-radius:6px; border:1px solid #f1e5cd; }
+.bottom-section { display:grid; grid-template-columns:1.3fr 1fr; gap:14px; margin-top:0; align-items: stretch; }
+.bottom-left { display:flex; flex-direction:column; gap:10px; }
+.terms-box-title { font-size:10.5px; font-weight:700; color:#7a4e0a; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px; }
+.terms-text-content { font-size:9.5px; color:#475569; line-height:1.5; background:rgba(255,255,255,0.65); padding:6px 10px; border-radius:6px; border:1px solid #f1e5cd; }
 
 /* Signature Stamp Box (At Very Bottom) */
-.stamp-space-box { margin-top:16px; display:flex; justify-content:flex-start; }
-.signature-stamp-frame { width:165px; height:75px; border:1.5px dashed #d68b16; border-radius:8px; display:inline-flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(248,243,230,0.5); position:relative; }
-.stamp-label-text { font-size:9.5px; color:#7a4e0a; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-top:auto; padding-bottom:5px; text-align:center; }
+.stamp-space-box { margin-top:10px; display:flex; justify-content:flex-start; }
+.signature-stamp-frame { width:155px; height:65px; border:1.5px dashed #d68b16; border-radius:8px; display:inline-flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(248,243,230,0.5); position:relative; }
+.stamp-label-text { font-size:9px; color:#7a4e0a; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-top:auto; padding-bottom:4px; text-align:center; }
 
 /* Calculation Box (Right Side) */
-.calc-card { background:rgba(255,255,255,0.80); border:1.5px solid #d68b16; border-radius:8px; padding:14px 18px; box-shadow:0 2px 6px rgba(122,78,10,0.06); display:flex; flex-direction:column; gap:6px; }
-.calc-line { display:flex; justify-content:space-between; font-size:11.5px; color:#475569; }
+.calc-card { background:rgba(255,255,255,0.80); border:1.5px solid #d68b16; border-radius:8px; padding:10px 14px; box-shadow:0 2px 6px rgba(122,78,10,0.06); display:flex; flex-direction:column; gap:4px; }
+.calc-line { display:flex; justify-content:space-between; font-size:11px; color:#475569; }
 .calc-line strong { color:#1e293b; }
-.calc-total-box { background:linear-gradient(135deg, #7a4e0a, #d68b16); color:#fff; border-radius:6px; padding:8px 12px; display:flex; justify-content:space-between; align-items:center; margin:3px 0; }
-.calc-total-label { font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; }
-.calc-total-val { font-size:15px; font-weight:700; font-family:inherit; }
+.calc-total-box { background:linear-gradient(135deg, #7a4e0a, #d68b16); color:#fff; border-radius:6px; padding:6px 10px; display:flex; justify-content:space-between; align-items:center; margin:2px 0; }
+.calc-total-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; }
+.calc-total-val { font-size:14px; font-weight:700; font-family:inherit; }
 
-.amount-words-bar { background:rgba(243,232,206,0.96); border:1.5px solid #d68b16; border-radius:8px; padding:8px 14px; margin-top:14px; font-size:11px; color:#523e2b; }
+.amount-words-bar { background:rgba(243,232,206,0.96); border:1.5px solid #d68b16; border-radius:8px; padding:6px 12px; margin-top:10px; font-size:10.5px; color:#523e2b; }
 .amount-words-bar strong { color:#2b1b17; font-weight:700; }
 
 /* Strict A4 Printing Rules */
@@ -602,7 +649,7 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                             <th style="width:75px" class="right">Net Wt</th>
                             <th style="width:90px" class="right">Rate (₹/g)</th>
                             <th style="width:70px" class="right">Tax</th>
-                            <th style="width:105px" class="right">Total (₹)</th>
+                            <th style="width:105px" class="right">Total (Excl. GST)</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -632,13 +679,16 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                             $net_wt   = floatval($it['net_wt'] ?? ($is_piece ? 0 : $item_val));
                             $rate     = floatval($it['price']);
                             $amt      = floatval($it['total']);
-                            $it_gst_type = $it['gst_type'] ?? 'non_gst';
+                            $it_gst_type = trim($it['gst_type'] ?? '');
                             if ($it_gst_type === 'gst_18') {
                                 $item_tax_rate = 18;
                                 $tax_amt = round($amt * 0.18, 2);
                             } else if ($it_gst_type === 'gst_3') {
                                 $item_tax_rate = 3;
                                 $tax_amt = round($amt * 0.03, 2);
+                            } else if ($it_gst_type === 'non_gst') {
+                                $item_tax_rate = 0;
+                                $tax_amt = 0;
                             } else if ($is_gst && $effective_gst_pct > 0) {
                                 $item_tax_rate = $effective_gst_pct;
                                 $tax_amt = round($amt * ($effective_gst_pct / 100), 2);
@@ -646,6 +696,10 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                                 $item_tax_rate = 0;
                                 $tax_amt = 0;
                             }
+                            $making_charge_val = floatval($it['making_charge'] ?? 0);
+                            $hallmark_val = floatval($it['hallmark'] ?? 0);
+                            $discount_val = floatval($it['discount'] ?? 0);
+                            $base_val = $amt - $making_charge_val - $hallmark_val + $discount_val;
                         ?>
                         <tr>
                             <td class="center"><?php echo $idx + 1; ?></td>
@@ -654,12 +708,10 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                                 <?php if(!empty($huid)): ?>
                                 <div class="item-sub" style="color:#7a4e0a;font-weight:600;">HUID: <strong><?php echo htmlspecialchars($huid); ?></strong></div>
                                 <?php endif; ?>
-                                <!-- Serial number hidden for Maa Gouri -->
-
                             </td>
                             <?php if($is_gst): ?>
                             <td class="center" style="font-weight:600; color:#475569;">
-                                <?php echo ($tax_amt > 0 || $item_tax_rate > 0) ? '7113' : ''; ?>
+                                <?php echo ($tax_amt > 0 || $item_tax_rate > 0) ? htmlspecialchars($it['hsn_code'] ?? '') : ''; ?>
                             </td>
                             <?php endif; ?>
                             <td class="center"><strong><?php echo $item_pcs; ?> <?php echo (stripos($name, 'pair') !== false) ? 'Pairs' : 'Pcs'; ?></strong></td>
@@ -673,7 +725,17 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                                 <span style="color:#94a3b8;">0%</span>
                                 <?php endif; ?>
                             </td>
-                            <td class="right"><strong>₹<?php echo ind_format($amt); ?></strong></td>
+                            <td class="right" style="font-size: 11px; line-height: 1.35; white-space: nowrap;">
+                                <?php if($making_charge_val > 0 || $hallmark_val > 0 || $discount_val > 0): ?>
+                                <div style="font-size: 8px; color: #4b5563; font-weight: normal; margin-bottom: 2px; font-family: monospace;">
+                                    ₹<?php echo ind_format($base_val); ?> 
+                                    <?php if($making_charge_val > 0): ?>+₹<?php echo ind_format($making_charge_val); ?><?php endif; ?>
+                                    <?php if($hallmark_val > 0): ?>+₹<?php echo ind_format($hallmark_val); ?><?php endif; ?>
+                                    <?php if($discount_val > 0): ?>-₹<?php echo ind_format($discount_val); ?><?php endif; ?>
+                                </div>
+                                <?php endif; ?>
+                                <strong>₹<?php echo ind_format($amt); ?></strong>
+                            </td>
                         </tr>
                         <?php endforeach; ?>
                         <?php endif; ?>
@@ -711,50 +773,66 @@ body { background:#cbd5e1; padding:20px 0; color:#1e293b; }
                     </div>
 
                     <!-- Right Side: Taxable Amount, CGST 1.5%, SGST 1.5% (Actual GST Divided in Two), Total Amount, Received Amount, Previous Balance, Current Balance -->
-                    <div class="bottom-right">
-                        <div class="calc-card">
-                            <div class="calc-line">
-                                <span>Total Items Value</span>
-                                <span>₹<?php echo ind_format($subtotal - $total_making_charge - $total_hallmark + $total_item_discount); ?></span>
-                            </div>
-                            <?php if($total_making_charge > 0): ?>
-                            <div class="calc-line">
-                                <span>Total Making Charge</span>
-                                <span>₹<?php echo ind_format($total_making_charge); ?></span>
-                            </div>
-                            <?php endif; ?>
-                            <?php if($total_hallmark > 0): ?>
-                            <div class="calc-line">
-                                <span>Total Hallmark Charge</span>
-                                <span>₹<?php echo ind_format($total_hallmark); ?></span>
-                            </div>
-                            <?php endif; ?>
-                            <?php if($total_item_discount > 0): ?>
-                            <div class="calc-line" style="color:#b91c1c;">
-                                <span>Less: Item Discounts</span>
-                                <span>(-) ₹<?php echo ind_format($total_item_discount); ?></span>
-                            </div>
-                            <?php endif; ?>
-                            <div class="calc-line" style="border-top:1px dashed #cbd5e1;padding-top:4px;margin-top:2px;">
-                                <span>Taxable Amount</span>
-                                <span>₹<?php echo ind_format($subtotal); ?></span>
-                            </div>
+                                    <div class="calc-card">
+                            <!-- Detailed Product-wise Calculations -->
+                            <div style="font-weight: 700; color: #7a4e0a; margin-bottom: 8px; font-size: 10px; text-transform: uppercase; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; letter-spacing: 0.5px; text-align: left;">Product Calculations:</div>
+                            <?php 
+                            if (is_array($items)):
+                            foreach($items as $idx => $it): 
+                                $it_name = htmlspecialchars($it['product_name'] ?? 'Item');
+                                $it_amt = floatval($it['total']);
+                                $it_gst_type = trim($it['gst_type'] ?? '');
+                                
+                                if ($it_gst_type === 'gst_18') {
+                                    $it_tax_rate = 18;
+                                    $it_tax_amt = round($it_amt * 0.18, 2);
+                                } else if ($it_gst_type === 'gst_3') {
+                                    $it_tax_rate = 3;
+                                    $it_tax_amt = round($it_amt * 0.03, 2);
+                                } else if ($it_gst_type === 'non_gst') {
+                                    $it_tax_rate = 0;
+                                    $it_tax_amt = 0;
+                                } else if ($is_gst && $effective_gst_pct > 0) {
+                                    $it_tax_rate = $effective_gst_pct;
+                                    $it_tax_amt = round($it_amt * ($effective_gst_pct / 100), 2);
+                                } else {
+                                    $it_tax_rate = 0;
+                                    $it_tax_amt = 0;
+                                }
 
-                            <?php if($is_gst): ?>
-                            <div class="calc-line">
-                                <span>CGST (<?php echo $cgst_rate; ?>%)</span>
-                                <span>₹<?php echo ind_format($cgst_amount); ?></span>
-                            </div>
+                                $it_cgst = round($it_tax_amt / 2, 2);
+                                $it_sgst = $it_tax_amt - $it_cgst;
 
-                            <div class="calc-line">
-                                <span>SGST (<?php echo $sgst_rate; ?>%)</span>
-                                <span>₹<?php echo ind_format($sgst_amount); ?></span>
+                                $making_charge_val = floatval($it['making_charge'] ?? 0);
+                                $hallmark_val = floatval($it['hallmark'] ?? 0);
+                                $discount_val = floatval($it['discount'] ?? 0);
+                                $base_val = $it_amt - $making_charge_val - $hallmark_val + $discount_val;
+
+                                $it_total = $it_amt + $it_tax_amt;
+                            ?>
+                            <div style="font-size: 10px; color: #374151; margin-bottom: 10px; text-align: left; line-height: 1.4;">
+                                <strong style="color: #1f2937; font-size: 10.5px;"><?php echo ($idx+1).". ".$it_name; ?>:</strong>
+                                <div style="font-family: monospace; color: #4b5563; margin-top: 2px; font-size: 9.5px;">
+                                    ₹<?php echo ind_format($base_val); ?> <span style="color:#9ca3af;">(Metal)</span>
+                                    <?php if($making_charge_val > 0): ?> + ₹<?php echo ind_format($making_charge_val); ?> <span style="color:#9ca3af;">(MC)</span><?php endif; ?>
+                                    <?php if($hallmark_val > 0): ?> + ₹<?php echo ind_format($hallmark_val); ?> <span style="color:#9ca3af;">(HM)</span><?php endif; ?>
+                                    <?php if($discount_val > 0): ?> - ₹<?php echo ind_format($discount_val); ?> <span style="color:#b91c1c;">(Disc)</span><?php endif; ?>
+                                    <?php if($it_tax_amt > 0): ?>
+                                        + ₹<?php echo ind_format($it_cgst); ?> <span style="color:#9ca3af;">(CGST)</span>
+                                        + ₹<?php echo ind_format($it_sgst); ?> <span style="color:#9ca3af;">(SGST)</span>
+                                    <?php endif; ?>
+                                    = <strong style="color: #111827;">₹<?php echo ind_format($it_total); ?></strong>
+                                </div>
                             </div>
-                            <?php endif; ?>
+                            <?php 
+                            endforeach; 
+                            endif;
+                            ?>
+                            <div style="border-top: 1px solid #cbd5e1; margin-top: 6px; margin-bottom: 8px;"></div>
 
                             <?php if($discount > 0): ?>
                             <div class="calc-line" style="color:#b91c1c;">
-                                <span>Discount</span>
+                                <span>Less: Overall Discount</span>
                                 <span>(-) ₹<?php echo ind_format($discount); ?></span>
                             </div>
                             <?php endif; ?>

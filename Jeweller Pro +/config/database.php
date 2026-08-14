@@ -96,12 +96,13 @@ mysqli_query($conn, $create_products);
 
 // Ensure required columns exist on products table
 $products_cols = [
-    'serial_no' => "VARCHAR(50) NULL",
-    'weight'    => "VARCHAR(20) NULL",
-    'item_name' => "VARCHAR(255) DEFAULT ''",
-    'huid_code' => "VARCHAR(100) NULL",
-    'hsn_code'  => "VARCHAR(50) DEFAULT '7113'",
-    'unit'      => "VARCHAR(20) DEFAULT 'pcs'",
+    'serial_no'  => "VARCHAR(50) NULL",
+    'weight'     => "VARCHAR(20) NULL",
+    'item_name'  => "VARCHAR(255) DEFAULT ''",
+    'huid_code'  => "VARCHAR(100) NULL",
+    'hsn_code'   => "VARCHAR(50) DEFAULT '7113'",
+    'unit'       => "VARCHAR(20) DEFAULT 'pcs'",
+    'updated_at' => "TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP",
 ];
 
 foreach ($products_cols as $col_name => $col_definition) {
