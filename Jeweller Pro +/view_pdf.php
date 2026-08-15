@@ -138,9 +138,22 @@ $old_gold = floatval($inv['old_gold_amount'] ?? 0);
 $old_gold_type = !empty($inv['old_gold_type']) ? $inv['old_gold_type'] : 'Old Gold';
 $raw_total= floatval($inv['total_amount']);
 
+// Calculate Refund / Return Amount to Customer if Old Gold exceeds Total Bill
+$subtotal_with_gst = $subtotal + ($is_gst ? $gst_total : 0);
+$refund_amount = 0;
+if ($old_gold > $subtotal_with_gst) {
+    $refund_amount = round($old_gold - $subtotal_with_gst, 2);
+}
+
 // Ensure net total deducts old_gold_amount if DB stored pre-deduction total
-$calc_total = max(0, $subtotal + $gst_total - $old_gold);
+$calc_total = max(0, $subtotal_with_gst - $old_gold);
 $total = ($old_gold > 0 && abs($raw_total - $calc_total) > 1) ? $calc_total : $raw_total;
+
+if ($total == 0 && $refund_amount > 0) {
+    $total_words = num2words($refund_amount) . ' (Refundable / Return to Customer)';
+} else {
+    $total_words = num2words($total);
+}
 
 $paid     = floatval($inv['paid_amount'] ?? 0);
 $balance  = floatval($inv['balance_amount'] ?? 0);
@@ -474,7 +487,8 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                         <div class="shop-title"><?php echo $COMPANY['name']; ?></div>
                         <div class="shop-details-line">
                             <strong>GSTIN:</strong> <?php echo $COMPANY['gstin']; ?> &nbsp;|&nbsp; <strong>Ph No:</strong> +91-<?php echo $COMPANY['mobile']; ?><br>
-                            <strong>Address:</strong> <?php echo $COMPANY['address_line1']; ?>, <?php echo $COMPANY['address_line2']; ?>, <?php echo $COMPANY['state']; ?> (Code: <?php echo $COMPANY['state_code']; ?>)
+                            <strong>Address:</strong> <?php echo $COMPANY['address_line1']; ?>, <?php echo $COMPANY['address_line2']; ?>, <?php echo $COMPANY['state']; ?> (Code: <?php echo $COMPANY['state_code']; ?>)<br>
+                            <span style="color:#7a4e0a; font-weight:600;">Dealers in: <strong>Gold (18K, 22K, 24K) | Silver | Diamond</strong></span>
                         </div>
                     </div>
                     <div class="header-right">
@@ -606,7 +620,8 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                         <div class="shop-title"><?php echo $COMPANY['name']; ?></div>
                         <div class="shop-details-line">
                             <strong>GSTIN:</strong> <?php echo $COMPANY['gstin']; ?> &nbsp;|&nbsp; <strong>Ph No:</strong> +91-<?php echo $COMPANY['mobile']; ?><br>
-                            <strong>Address:</strong> <?php echo $COMPANY['address_line1']; ?>, <?php echo $COMPANY['address_line2']; ?>, <?php echo $COMPANY['state']; ?> (Code: <?php echo $COMPANY['state_code']; ?>)
+                            <strong>Address:</strong> <?php echo $COMPANY['address_line1']; ?>, <?php echo $COMPANY['address_line2']; ?>, <?php echo $COMPANY['state']; ?> (Code: <?php echo $COMPANY['state_code']; ?>)<br>
+                            <span style="color:#7a4e0a; font-weight:600;">Dealers in: <strong>Gold (18K, 22K, 24K) | Silver | Diamond</strong></span>
                         </div>
                     </div>
                     <div class="header-right">
@@ -726,11 +741,37 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                             $discount_val = floatval($it['discount'] ?? 0);
                             $base_val = $amt - $making_charge_val - $hallmark_val + $discount_val;
                             $total_base_metal += $base_val;
+
+                            $cat_disp = '';
+                            if (!empty($it['category'])) {
+                                $cat_disp = trim($it['category']);
+                            } else if (!empty($it['product_id'])) {
+                                $pid = intval($it['product_id']);
+                                $p_res = mysqli_query($conn, "SELECT category FROM products WHERE id = $pid LIMIT 1");
+                                if ($p_res && $p_row = mysqli_fetch_assoc($p_res)) {
+                                    $cat_disp = trim($p_row['category'] ?? '');
+                                }
+                            }
+                            if (empty($cat_disp)) {
+                                $name_lower = strtolower($name);
+                                if (preg_match('/(24k|22k|18k|14k)/i', $name, $m)) {
+                                    $cat_disp = 'Gold ' . strtoupper($m[1]);
+                                } else if (strpos($name_lower, 'silver') !== false) {
+                                    $cat_disp = 'Silver';
+                                } else if (strpos($name_lower, 'diamond') !== false) {
+                                    $cat_disp = 'Diamond';
+                                } else {
+                                    $cat_disp = 'Gold 22K';
+                                }
+                            }
                         ?>
                         <tr>
                             <td class="center"><?php echo $idx + 1; ?></td>
                             <td class="left">
-                                <div class="item-desc" style="font-size:10px; font-weight:700; color:#1e293b; line-height:1.2;"><?php echo $name; ?></div>
+                                <div class="item-desc" style="font-size:10px; font-weight:700; color:#1e293b; line-height:1.2;">
+                                    <?php echo $name; ?> 
+                                    <span style="color:#7a4e0a; font-size:9.5px; font-weight:600;">(<?php echo htmlspecialchars($cat_disp); ?>)</span>
+                                </div>
                                 <div class="item-sub" style="font-size:8px; color:#475569; margin-top:2px; line-height:1.35;">
                                     <?php if(!empty($huid)): ?><span style="color:#7a4e0a;font-weight:600;">HUID: <?php echo htmlspecialchars($huid); ?></span><?php endif; ?>
                                     <?php if($is_gst && !empty($it['hsn_code'])): ?> <?php if(!empty($huid)): ?>&bull;<?php endif; ?><span>HSN: <?php echo htmlspecialchars($it['hsn_code']); ?></span><?php endif; ?>
@@ -851,6 +892,13 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                             <span class="calc-total-label">Grand Total (Net Payable)</span>
                             <span class="calc-total-val">₹<?php echo ind_format($total); ?></span>
                         </div>
+
+                        <?php if($refund_amount > 0): ?>
+                        <div class="calc-line" style="color:#059669; font-weight:700; background:#ecfdf5; border:1px solid #a7f3d0; padding:5px 8px; border-radius:6px; margin:4px 0; font-size:11.5px;">
+                            <span>Return / Refund to Customer</span>
+                            <span>₹<?php echo ind_format($refund_amount); ?></span>
+                        </div>
+                        <?php endif; ?>
 
                             <div class="calc-line" style="margin-top:2px;">
                                 <span>Received Amount</span>
