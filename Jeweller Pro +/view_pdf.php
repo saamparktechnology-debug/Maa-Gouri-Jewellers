@@ -295,7 +295,7 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
 .btn-back { background:#fff; color:#475569; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; text-decoration:none; border:1px solid #cbd5e1; }
 
 .invoice-card {
-    width:210mm; max-width:820px; min-height:285mm; margin:0 auto; background:#fffbf4; border:3px solid #d68b16; border-radius:14px; padding:20px 24px; box-shadow:0 12px 36px rgba(0,0,0,0.18); position:relative; overflow:hidden;
+    width:210mm; max-width:820px; min-height:285mm; margin:0 auto; background:#fffbf4; border:3px solid #d68b16; border-radius:14px; padding:20px 24px; box-shadow:0 12px 36px rgba(0,0,0,0.18); position:relative; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between; box-sizing:border-box;
 }
 
 /* Full Page Coloured Logo Watermark (Rendered on top as a true watermark overlay) */
@@ -303,7 +303,7 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
     position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); width:520px; height:520px; object-fit:contain; opacity:0.12; pointer-events:none; z-index:99; filter:none;
 }
 
-.invoice-content { position:relative; z-index:2; }
+.invoice-content { position:relative; z-index:2; display:flex; flex-direction:column; flex:1; justify-content:space-between; }
 
 /* Top Header */
 .top-header { display:flex; align-items:center; gap:14px; margin-bottom:10px; border-bottom:2.5px solid #d68b16; padding-bottom:8px; }
@@ -376,7 +376,7 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
 /* Strict A4 Printing Rules */
 @page {
     size: A4 portrait;
-    margin: 5mm 8mm;
+    margin: 4mm 5mm;
 }
 @media print {
     * {
@@ -386,7 +386,7 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
     }
     html, body {
         width: 100% !important;
-        height: auto !important;
+        height: 100% !important;
         background: #fff !important;
         padding: 0 !important;
         margin: 0 !important;
@@ -395,15 +395,25 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
     .invoice-card { 
         width: 100% !important;
         max-width: 100% !important;
-        min-height: auto !important;
-        height: auto !important;
+        min-height: 280mm !important;
+        height: 280mm !important;
         background: #fffbf4 !important;
         border: 2px solid #d68b16 !important;
         border-radius: 10px !important;
         box-shadow: none !important;
-        padding: 16px 20px !important;
+        padding: 18px 22px !important;
         box-sizing: border-box !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
         page-break-inside: avoid;
+    }
+    .invoice-content {
+        display: flex !important;
+        flex-direction: column !important;
+        flex: 1 !important;
+        justify-content: space-between !important;
+        height: 100% !important;
     }
     .inv-table { 
         display: table !important; 
@@ -416,6 +426,7 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
         display: table-row !important; 
         page-break-inside: avoid; 
         page-break-after: auto; 
+    }
     .full-page-coloured-watermark { 
         position: absolute !important;
         top: 50% !important;
