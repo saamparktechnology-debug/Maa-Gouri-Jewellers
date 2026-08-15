@@ -75,6 +75,16 @@ $sgst_rate   = $is_gst ? round($effective_gst_pct / 2, 2) : 0;
 $cgst_amount = $is_gst ? round($gst_total / 2, 2) : 0;
 $sgst_amount = $is_gst ? ($gst_total - $cgst_amount) : 0;
 
+$has_explicit_item_gst = false;
+if (is_array($items)) {
+    foreach ($items as $it) {
+        if (in_array(trim($it['gst_type'] ?? ''), ['gst_3', 'gst_18'])) {
+            $has_explicit_item_gst = true;
+            break;
+        }
+    }
+}
+
 $taxable_18 = 0;
 $taxable_3 = 0;
 if (is_array($items)) {
@@ -85,12 +95,12 @@ if (is_array($items)) {
             $taxable_18 += $it_amt;
         } else if ($it_gst_type === 'gst_3') {
             $taxable_3 += $it_amt;
-        } else if ($it_gst_type === 'non_gst') {
-            // Do nothing
+        } else if ($it_gst_type === 'non_gst' && $has_explicit_item_gst) {
+            // Explicit non-gst item in a mixed bill
         } else if ($is_gst && $effective_gst_pct > 0) {
-            if ($effective_gst_pct == 18) {
+            if ($effective_gst_pct == 18 || round($effective_gst_pct) == 18) {
                 $taxable_18 += $it_amt;
-            } else if ($effective_gst_pct == 3) {
+            } else if ($effective_gst_pct == 3 || round($effective_gst_pct) == 3) {
                 $taxable_3 += $it_amt;
             }
         }
@@ -299,7 +309,7 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
 .top-header { display:flex; align-items:center; gap:14px; margin-bottom:10px; border-bottom:2.5px solid #d68b16; padding-bottom:8px; }
 .very-left-logo { width:80px; height:80px; object-fit:contain; border:none; box-shadow:none; background:transparent; flex-shrink:0; }
 .shop-branding-text { flex:1; }
-.shop-title { font-family:'Poppins', sans-serif; font-size:22px; font-weight:700; color:#2b1b17; line-height:1.1; letter-spacing:0.5px; margin-bottom:2px; }
+.shop-title { font-family:'Poppins', sans-serif; font-size:26px; font-weight:800; color:#2b1b17; line-height:1.1; letter-spacing:0.5px; margin-bottom:2px; }
 .shop-details-line { font-size:11px; color:#523e2b; line-height:1.45; }
 .shop-details-line strong { color:#7a4e0a; }
 
@@ -327,18 +337,19 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
 /* Items Table */
 .inv-table { width:100%; border-collapse:collapse; margin-bottom:0; background:rgba(255,255,255,0.75); border-radius:8px; overflow:hidden; border:1.5px solid #d68b16; }
 .inv-table thead tr { background:linear-gradient(135deg, #7a4e0a, #d68b16); color:#fff; }
-.inv-table th { padding:4px 6px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; text-align:left; border-right:1px solid rgba(255,255,255,0.15); }
-.inv-table th.right { text-align:right; }
+.inv-table th { padding:5px 4px; font-size:8.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.2px; text-align:center; vertical-align:middle; border-right:1px solid rgba(255,255,255,0.15); white-space:nowrap; }
+.inv-table th.right { text-align:right; padding-right:5px; }
 .inv-table th.center { text-align:center; }
-.inv-table td { padding:4px 6px; font-size:11px; color:#334155; border-bottom:1px solid #f1e5cd; border-right:1px solid #f1e5cd; vertical-align:top; background:rgba(255,255,255,0.65); }
-.inv-table td.right { text-align:right; }
+.inv-table td { padding:5px 4px; font-size:8.5px; color:#334155; border-bottom:1px solid #f1e5cd; border-right:1px solid #f1e5cd; vertical-align:middle; text-align:center; background:rgba(255,255,255,0.65); white-space:nowrap; }
+.inv-table td.left { text-align:left; padding-left:5px; white-space:normal; }
+.inv-table td.right { text-align:right; padding-right:5px; }
 .inv-table td.center { text-align:center; }
 .inv-table tbody tr:nth-child(even) td { background:rgba(250,245,232,0.65); }
 .item-desc { font-weight:600; color:#1e293b; }
-.item-sub { font-size:9px; color:#64748b; margin-top:1px; }
+.item-sub { font-size:8px; color:#64748b; margin-top:1px; }
 
 /* Subtotal row */
-.subtotal-row td { background:rgba(243,232,206,0.85) !important; font-weight:700; color:#2b1b17; border-top:2px solid #d68b16; border-bottom: 2.5px solid #ffd700; box-shadow: 0 0 12px rgba(255, 215, 0, 0.5); padding:6px 8px; }
+.subtotal-row td { background:rgba(243,232,206,0.85) !important; font-weight:700; color:#2b1b17; border-top:2px solid #d68b16; border-bottom: 2.5px solid #ffd700; box-shadow: 0 0 12px rgba(255, 215, 0, 0.5); padding:5px 4px; vertical-align:middle; white-space:nowrap; font-size:8.5px; }
 
 /* Bottom Section */
 .bottom-section { display:grid; grid-template-columns:1.3fr 1fr; gap:14px; margin-top:0; align-items: stretch; }
@@ -491,9 +502,9 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                         <?php if(!empty($inv['customer_address'])): ?>
                         <div class="customer-address-text"> Address: <?php echo htmlspecialchars($inv['customer_address']); ?></div>
                         <?php endif; ?>
+                        <div class="customer-address-text"> Ph No: <strong>+91-<?php echo htmlspecialchars($inv['customer_mobile'] ?? '-'); ?></strong></div>
                     </div>
                     <div class="bill-to-right">
-                         Ph No: <strong>+91-<?php echo htmlspecialchars($inv['customer_mobile'] ?? '-'); ?></strong><br>
                         <?php if(!empty($inv['customer_gstin'])): ?>
                          GSTIN: <strong><?php echo htmlspecialchars($inv['customer_gstin']); ?></strong><br>
                         <?php endif; ?>
@@ -622,9 +633,9 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                         <?php if(!empty($inv['customer_address'])): ?>
                         <div class="customer-address-text"> Address: <?php echo htmlspecialchars($inv['customer_address']); ?></div>
                         <?php endif; ?>
+                        <div class="customer-address-text"> Ph No: <strong>+91-<?php echo htmlspecialchars($inv['customer_mobile'] ?? '-'); ?></strong></div>
                     </div>
                     <div class="bill-to-right">
-                         Ph No: <strong>+91-<?php echo htmlspecialchars($inv['customer_mobile'] ?? '-'); ?></strong><br>
                         <?php if(!empty($inv['customer_gstin'])): ?>
                          GSTIN: <strong><?php echo htmlspecialchars($inv['customer_gstin']); ?></strong><br>
                         <?php endif; ?>
@@ -632,32 +643,35 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                         <div style="margin-top:2px;font-size:11.5px;color:#334155;line-height:1.4;">
                             <?php echo $COMPANY['address_line1']; ?><br>
                             <?php echo $COMPANY['address_line2']; ?><br>
-                            <?php echo $COMPANY['state']; ?> (Code: <?php echo $COMPANY['state_code']; ?>)
+                            <?php echo $COMPANY['state']; ?> (Code: <?php echo $COMPANY['state_code']; ?>)<br>
+                            Cont No: <strong>8927582290</strong>
                         </div>
                     </div>
                 </div>
 
-                <!-- 4. Items Table with Item Weights in Grams (Gross Wt & Net Wt) & Qty -->
+                <!-- 4. Items Table with Auto-Fitting Content Layout -->
                 <table class="inv-table">
                     <thead>
                         <tr>
-                            <th style="width:28px" class="center">No</th>
-                            <th>Items / Product Name</th>
-                            <?php if($is_gst): ?><th style="width:65px" class="center">HSN</th><?php endif; ?>
-                            <th style="width:50px" class="center">Qty</th>
-                            <th style="width:75px" class="right">Gross Wt</th>
-                            <th style="width:75px" class="right">Net Wt</th>
-                            <th style="width:90px" class="right">Rate (₹/g)</th>
-                            <th style="width:70px" class="right">Tax</th>
-                            <th style="width:105px" class="right">Total (Excl. GST)</th>
+                            <th class="center" style="width:24px;">No</th>
+                            <th style="text-align:left; padding-left:5px;">Items / Details</th>
+                            <th class="right">Rate (₹/g)</th>
+                            <th class="right">Actual Price</th>
+                            <th class="right">Making</th>
+                            <th class="right">Hallmark</th>
+                            <th class="right">Discount</th>
+                            <th class="right">GST</th>
+                            <th class="right">TOTAL</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if(empty($items)): ?>
                         <tr>
-                            <td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">No items added to this invoice.</td>
+                            <td colspan="9" style="text-align:center;padding:16px;color:#94a3b8;">No items added to this invoice.</td>
                         </tr>
-                        <?php else: foreach($items as $idx => $it):
+                        <?php else: 
+                        $total_base_metal = 0;
+                        foreach($items as $idx => $it):
                             $name     = htmlspecialchars($it['product_name'] ?? 'Item');
                             $serial   = trim($it['serial_no'] ?? '');
                             $huid     = trim($it['huid_code'] ?? '');
@@ -686,7 +700,7 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                             } else if ($it_gst_type === 'gst_3') {
                                 $item_tax_rate = 3;
                                 $tax_amt = round($amt * 0.03, 2);
-                            } else if ($it_gst_type === 'non_gst') {
+                            } else if ($it_gst_type === 'non_gst' && $has_explicit_item_gst) {
                                 $item_tax_rate = 0;
                                 $tax_amt = 0;
                             } else if ($is_gst && $effective_gst_pct > 0) {
@@ -700,55 +714,69 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                             $hallmark_val = floatval($it['hallmark'] ?? 0);
                             $discount_val = floatval($it['discount'] ?? 0);
                             $base_val = $amt - $making_charge_val - $hallmark_val + $discount_val;
+                            $total_base_metal += $base_val;
                         ?>
                         <tr>
                             <td class="center"><?php echo $idx + 1; ?></td>
-                            <td>
-                                <div class="item-desc"><?php echo $name; ?></div>
-                                <?php if(!empty($huid)): ?>
-                                <div class="item-sub" style="color:#7a4e0a;font-weight:600;">HUID: <strong><?php echo htmlspecialchars($huid); ?></strong></div>
+                            <td class="left">
+                                <div class="item-desc" style="font-size:10px; font-weight:700; color:#1e293b; line-height:1.2;"><?php echo $name; ?></div>
+                                <div class="item-sub" style="font-size:8px; color:#475569; margin-top:2px; line-height:1.35;">
+                                    <?php if(!empty($huid)): ?><span style="color:#7a4e0a;font-weight:600;">HUID: <?php echo htmlspecialchars($huid); ?></span><?php endif; ?>
+                                    <?php if($is_gst && !empty($it['hsn_code'])): ?> <?php if(!empty($huid)): ?>&bull;<?php endif; ?><span>HSN: <?php echo htmlspecialchars($it['hsn_code']); ?></span><?php endif; ?>
+                                    <br>
+                                    <span>Qty: <strong><?php echo $item_pcs; ?> Pcs</strong></span>
+                                    <?php if($net_wt > 0): ?> &bull; <span>Wt: <strong><?php echo number_format($net_wt, 3); ?>g</strong></span><?php endif; ?>
+                                </div>
+                            </td>
+                            <td class="right">₹<?php echo ind_format($rate); ?></td>
+                            <td class="right">₹<?php echo ind_format($base_val); ?></td>
+                            <td class="right">
+                                <?php if($making_charge_val > 0): ?>
+                                ₹<?php echo ind_format($making_charge_val); ?>
+                                <?php else: ?>
+                                <span style="color:#94a3b8;">-</span>
                                 <?php endif; ?>
                             </td>
-                            <?php if($is_gst): ?>
-                            <td class="center" style="font-weight:600; color:#475569;">
-                                <?php echo ($tax_amt > 0 || $item_tax_rate > 0) ? htmlspecialchars($it['hsn_code'] ?? '') : ''; ?>
+                            <td class="right">
+                                <?php if($hallmark_val > 0): ?>
+                                ₹<?php echo ind_format($hallmark_val); ?>
+                                <?php else: ?>
+                                <span style="color:#94a3b8;">-</span>
+                                <?php endif; ?>
                             </td>
-                            <?php endif; ?>
-                            <td class="center"><strong><?php echo $item_pcs; ?> <?php echo (stripos($name, 'pair') !== false) ? 'Pairs' : 'Pcs'; ?></strong></td>
-                            <td class="right"><strong><?php echo ($gross_wt > 0) ? number_format($gross_wt, 3).' g' : '-'; ?></strong></td>
-                            <td class="right"><strong><?php echo ($net_wt > 0) ? number_format($net_wt, 3).' g' : '-'; ?></strong></td>
-                            <td class="right">₹<?php echo ind_format($rate); ?></td>
+                            <td class="right" style="color:<?php echo $discount_val > 0 ? '#b91c1c' : '#475569'; ?>;">
+                                <?php if($discount_val > 0): ?>
+                                -₹<?php echo ind_format($discount_val); ?>
+                                <?php else: ?>
+                                <span style="color:#94a3b8;">-</span>
+                                <?php endif; ?>
+                            </td>
                             <td class="right">
                                 <?php if($is_gst && $tax_amt > 0): ?>
-                                ₹<?php echo ind_format($tax_amt); ?><br><span style="font-size:9px;color:#64748b;">(<?php echo $item_tax_rate; ?>%)</span>
+                                ₹<?php echo ind_format($tax_amt); ?><br><span style="font-size:8px;color:#64748b;">(<?php echo $item_tax_rate; ?>%)</span>
                                 <?php else: ?>
                                 <span style="color:#94a3b8;">0%</span>
                                 <?php endif; ?>
                             </td>
-                            <td class="right" style="font-size: 11px; line-height: 1.35; white-space: nowrap;">
-                                <?php if($making_charge_val > 0 || $hallmark_val > 0 || $discount_val > 0): ?>
-                                <div style="font-size: 8px; color: #4b5563; font-weight: normal; margin-bottom: 2px; font-family: monospace;">
-                                    ₹<?php echo ind_format($base_val); ?> 
-                                    <?php if($making_charge_val > 0): ?>+₹<?php echo ind_format($making_charge_val); ?><?php endif; ?>
-                                    <?php if($hallmark_val > 0): ?>+₹<?php echo ind_format($hallmark_val); ?><?php endif; ?>
-                                    <?php if($discount_val > 0): ?>-₹<?php echo ind_format($discount_val); ?><?php endif; ?>
-                                </div>
-                                <?php endif; ?>
-                                <strong>₹<?php echo ind_format($amt); ?></strong>
+                            <td class="right" style="font-size: 9.5px; font-weight: 700;">
+                                ₹<?php echo ind_format($amt + $tax_amt); ?>
                             </td>
                         </tr>
                         <?php endforeach; ?>
                         <?php endif; ?>
 
-                        <!-- 5. Subtotal Row with Total Qty & Weights in Grams -->
+                        <!-- 5. Subtotal Row -->
                         <tr class="subtotal-row">
-                            <td colspan="<?php echo $is_gst ? '3' : '2'; ?>" style="text-align:right;">SUBTOTAL WEIGHTS &amp; AMOUNT</td>
-                            <td class="center"><?php echo $total_pcs; ?> Qty</td>
-                            <td class="right"><?php echo number_format($total_gross_wt, 3); ?> g</td>
-                            <td class="right"><?php echo number_format($total_net_wt, 3); ?> g</td>
-                            <td></td>
-                            <td class="right">₹<?php echo ind_format($is_gst ? $gst_total : 0); ?></td>
-                            <td class="right">₹<?php echo ind_format($subtotal); ?></td>
+                            <td colspan="2" style="text-align:right; font-weight:700; font-size:9px; padding-right:6px;">SUBTOTALS</td>
+                            <td class="right" style="color:#64748b;">-</td>
+                            <td class="right" style="font-size:9px;">₹<?php echo ind_format($total_base_metal); ?></td>
+                            <td class="right" style="font-size:9px;">₹<?php echo ind_format($total_making_charge); ?></td>
+                            <td class="right" style="font-size:9px;">₹<?php echo ind_format($total_hallmark); ?></td>
+                            <td class="right" style="font-size:8.5px; color:<?php echo $total_item_discount > 0 ? '#b91c1c' : 'inherit'; ?>;">
+                                <?php echo ($total_item_discount > 0) ? '-₹'.ind_format($total_item_discount) : '-'; ?>
+                            </td>
+                            <td class="right" style="font-size:9px;">₹<?php echo ind_format($is_gst ? $gst_total : 0); ?></td>
+                            <td class="right" style="font-size:9.5px; font-weight:800;">₹<?php echo ind_format($subtotal + ($is_gst ? $gst_total : 0)); ?></td>
                         </tr>
                     </tbody>
                 </table>
@@ -772,82 +800,46 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                         </div>
                     </div>
 
-                    <!-- Right Side: Taxable Amount, CGST 1.5%, SGST 1.5% (Actual GST Divided in Two), Total Amount, Received Amount, Previous Balance, Current Balance -->
-                                    <div class="calc-card">
-                            <!-- Detailed Product-wise Calculations -->
-                            <div style="font-weight: 700; color: #7a4e0a; margin-bottom: 8px; font-size: 10px; text-transform: uppercase; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; letter-spacing: 0.5px; text-align: left;">Product Calculations:</div>
-                            <?php 
-                            if (is_array($items)):
-                            foreach($items as $idx => $it): 
-                                $it_name = htmlspecialchars($it['product_name'] ?? 'Item');
-                                $it_amt = floatval($it['total']);
-                                $it_gst_type = trim($it['gst_type'] ?? '');
-                                
-                                if ($it_gst_type === 'gst_18') {
-                                    $it_tax_rate = 18;
-                                    $it_tax_amt = round($it_amt * 0.18, 2);
-                                } else if ($it_gst_type === 'gst_3') {
-                                    $it_tax_rate = 3;
-                                    $it_tax_amt = round($it_amt * 0.03, 2);
-                                } else if ($it_gst_type === 'non_gst') {
-                                    $it_tax_rate = 0;
-                                    $it_tax_amt = 0;
-                                } else if ($is_gst && $effective_gst_pct > 0) {
-                                    $it_tax_rate = $effective_gst_pct;
-                                    $it_tax_amt = round($it_amt * ($effective_gst_pct / 100), 2);
-                                } else {
-                                    $it_tax_rate = 0;
-                                    $it_tax_amt = 0;
-                                }
+                    <!-- Right Side: Clean Product Totals Summary & Net Payable -->
+                    <div class="calc-card">
+                        <div style="font-weight: 700; color: #7a4e0a; margin-bottom: 8px; font-size: 10.5px; text-transform: uppercase; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; letter-spacing: 0.5px;">Product Totals Summary</div>
 
-                                $it_cgst = round($it_tax_amt / 2, 2);
-                                $it_sgst = $it_tax_amt - $it_cgst;
+                        <?php 
+                        if (is_array($items)):
+                        foreach($items as $idx => $it): 
+                            $it_name = htmlspecialchars($it['product_name'] ?? 'Item');
+                            $it_amt = floatval($it['total']);
+                            $it_gst_type = trim($it['gst_type'] ?? '');
+                            if ($it_gst_type === 'gst_18') $it_tax_amt = round($it_amt * 0.18, 2);
+                            else if ($it_gst_type === 'gst_3') $it_tax_amt = round($it_amt * 0.03, 2);
+                            else if ($it_gst_type === 'non_gst' && $has_explicit_item_gst) $it_tax_amt = 0;
+                            else if ($is_gst && $effective_gst_pct > 0) $it_tax_amt = round($it_amt * ($effective_gst_pct / 100), 2);
+                            else $it_tax_amt = 0;
 
-                                $making_charge_val = floatval($it['making_charge'] ?? 0);
-                                $hallmark_val = floatval($it['hallmark'] ?? 0);
-                                $discount_val = floatval($it['discount'] ?? 0);
-                                $base_val = $it_amt - $making_charge_val - $hallmark_val + $discount_val;
+                            $item_incl_total = $it_amt + $it_tax_amt;
+                        ?>
+                        <div class="calc-line" style="font-size:11px; margin-bottom:3px;">
+                            <span><?php echo ($idx+1).". ".$it_name; ?></span>
+                            <strong style="color:#1e293b;">₹<?php echo ind_format($item_incl_total); ?></strong>
+                        </div>
+                        <?php 
+                        endforeach; 
+                        endif;
+                        ?>
 
-                                $it_total = $it_amt + $it_tax_amt;
-                            ?>
-                            <div style="font-size: 10px; color: #374151; margin-bottom: 10px; text-align: left; line-height: 1.4;">
-                                <strong style="color: #1f2937; font-size: 10.5px;"><?php echo ($idx+1).". ".$it_name; ?>:</strong>
-                                <div style="font-family: monospace; color: #4b5563; margin-top: 2px; font-size: 9.5px;">
-                                    ₹<?php echo ind_format($base_val); ?> <span style="color:#9ca3af;">(Metal)</span>
-                                    <?php if($making_charge_val > 0): ?> + ₹<?php echo ind_format($making_charge_val); ?> <span style="color:#9ca3af;">(MC)</span><?php endif; ?>
-                                    <?php if($hallmark_val > 0): ?> + ₹<?php echo ind_format($hallmark_val); ?> <span style="color:#9ca3af;">(HM)</span><?php endif; ?>
-                                    <?php if($discount_val > 0): ?> - ₹<?php echo ind_format($discount_val); ?> <span style="color:#b91c1c;">(Disc)</span><?php endif; ?>
-                                    <?php if($it_tax_amt > 0): ?>
-                                        + ₹<?php echo ind_format($it_cgst); ?> <span style="color:#9ca3af;">(CGST)</span>
-                                        + ₹<?php echo ind_format($it_sgst); ?> <span style="color:#9ca3af;">(SGST)</span>
-                                    <?php endif; ?>
-                                    = <strong style="color: #111827;">₹<?php echo ind_format($it_total); ?></strong>
-                                </div>
-                            </div>
-                            <?php 
-                            endforeach; 
-                            endif;
-                            ?>
-                            <div style="border-top: 1px solid #cbd5e1; margin-top: 6px; margin-bottom: 8px;"></div>
+                        <div style="border-top: 1px solid #cbd5e1; margin-top: 6px; margin-bottom: 8px;"></div>
 
-                            <?php if($discount > 0): ?>
-                            <div class="calc-line" style="color:#b91c1c;">
-                                <span>Less: Overall Discount</span>
-                                <span>(-) ₹<?php echo ind_format($discount); ?></span>
-                            </div>
-                            <?php endif; ?>
+                        <?php if($old_gold > 0): ?>
+                        <div class="calc-line" style="color:#dc2626;font-weight:600;">
+                            <span>Less: <?php echo htmlspecialchars($old_gold_type); ?> Return / Exchange</span>
+                            <span>(-) ₹<?php echo ind_format($old_gold); ?></span>
+                        </div>
+                        <?php endif; ?>
 
-                            <?php if($old_gold > 0): ?>
-                            <div class="calc-line" style="color:#dc2626;font-weight:600;">
-                                <span>Less: <?php echo htmlspecialchars($old_gold_type); ?> Return / Exchange</span>
-                                <span>(-) ₹<?php echo ind_format($old_gold); ?></span>
-                            </div>
-                            <?php endif; ?>
-
-                            <div class="calc-total-box">
-                                <span class="calc-total-label">Grand Total (Net Payable)</span>
-                                <span class="calc-total-val">₹<?php echo ind_format($total); ?></span>
-                            </div>
+                        <div class="calc-total-box">
+                            <span class="calc-total-label">Grand Total (Net Payable)</span>
+                            <span class="calc-total-val">₹<?php echo ind_format($total); ?></span>
+                        </div>
 
                             <div class="calc-line" style="margin-top:2px;">
                                 <span>Received Amount</span>

@@ -412,8 +412,8 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
 
         if ($is_gst_invoice) {
             // --- GST TAX INVOICE SEQUENCE (Continues past sequence: 0450, 0451, 0452...) ---
-            $prefix = 'GST-' . $today . '-';
-            $q = mysqli_query($conn, "SELECT invoice_no FROM invoices WHERE (invoice_no LIKE 'GST-%' OR invoice_no LIKE 'INV-%')");
+            $prefix = 'INV-' . $today . '-';
+            $q = mysqli_query($conn, "SELECT invoice_no FROM invoices WHERE (invoice_no LIKE 'INV-%' OR invoice_no LIKE 'GST-%')");
             $existing_nums = [];
             if ($q) {
                 while ($row = mysqli_fetch_assoc($q)) {
@@ -1350,9 +1350,9 @@ function submitPayment() {
                         <div id="manualInvoiceDiv" style="display:none;">
                             <input type="text" name="manual_invoice_no" id="manualInvoiceNo"
                                 class="jewel-input w-full rounded-lg px-3 py-2 text-sm" placeholder="e.g. INV-2024-001">
-                            <p class="text-xs mt-1" style="color:#9ca3af;">&#9888;&#65039; If empty: Cash Memos auto-generate as CM-YYYYMMDD-XXXX and GST Tax Invoices as GST-YYYYMMDD-XXXX</p>
+                            <p class="text-xs mt-1" style="color:#9ca3af;">&#9888;&#65039; If empty: Cash Memos auto-generate as CM-YYYYMMDD-XXXX and GST Tax Invoices as INV-YYYYMMDD-XXXX</p>
                         </div>
-                        <div id="autoInvoiceInfo" class="text-xs font-semibold" style="color:#d68b16;">Auto-generated: Cash Memo (CM-YYYYMMDD-XXXX) | GST Tax Invoice (GST-YYYYMMDD-XXXX)</div>
+                        <div id="autoInvoiceInfo" class="text-xs font-semibold" style="color:#d68b16;">Auto-generated: Cash Memo (CM-YYYYMMDD-XXXX) | GST Tax Invoice (INV-YYYYMMDD-XXXX)</div>
                     </div>
 
                     <!-- Customer Details -->
