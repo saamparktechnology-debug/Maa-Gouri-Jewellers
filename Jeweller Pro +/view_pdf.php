@@ -752,25 +752,15 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                                     $cat_disp = trim($p_row['category'] ?? '');
                                 }
                             }
-                            if (empty($cat_disp)) {
-                                $name_lower = strtolower($name);
-                                if (preg_match('/(24k|22k|18k|14k)/i', $name, $m)) {
-                                    $cat_disp = 'Gold ' . strtoupper($m[1]);
-                                } else if (strpos($name_lower, 'silver') !== false) {
-                                    $cat_disp = 'Silver';
-                                } else if (strpos($name_lower, 'diamond') !== false) {
-                                    $cat_disp = 'Diamond';
-                                } else {
-                                    $cat_disp = 'Gold 22K';
-                                }
-                            }
                         ?>
                         <tr>
                             <td class="center"><?php echo $idx + 1; ?></td>
                             <td class="left">
                                 <div class="item-desc" style="font-size:10px; font-weight:700; color:#1e293b; line-height:1.2;">
                                     <?php echo $name; ?> 
+                                    <?php if (!empty($cat_disp)): ?>
                                     <span style="color:#7a4e0a; font-size:9.5px; font-weight:600;">(<?php echo htmlspecialchars($cat_disp); ?>)</span>
+                                    <?php endif; ?>
                                 </div>
                                 <div class="item-sub" style="font-size:8px; color:#475569; margin-top:2px; line-height:1.35;">
                                     <?php if(!empty($huid)): ?><span style="color:#7a4e0a;font-weight:600;">HUID: <?php echo htmlspecialchars($huid); ?></span><?php endif; ?>
