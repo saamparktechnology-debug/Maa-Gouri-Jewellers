@@ -523,7 +523,15 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
             $pid = $it['product_id'] ?? '';
             if ($pid !== 'other' && is_numeric($pid)) {
                 $pid_int = intval($pid);
-                $pcs_req = floatval($it['pcs'] ?? $it['stock_deduct'] ?? 1);
+                $u_check = strtolower(trim($it['unit'] ?? ''));
+                $is_pair_check = ($u_check === 'pair' || $u_check === 'pairs');
+                $raw_pcs_req = floatval($it['pcs'] ?? $it['stock_deduct'] ?? 1);
+                $q_val_req = floatval($it['quantity'] ?? 1);
+                if ($is_pair_check && $raw_pcs_req <= $q_val_req) {
+                    $pcs_req = $q_val_req * 2;
+                } else {
+                    $pcs_req = $raw_pcs_req;
+                }
                 if ($pcs_req <= 0) $pcs_req = 1;
                 $req_pcs_map[$pid_int] = ($req_pcs_map[$pid_int] ?? 0) + $pcs_req;
                 
@@ -626,9 +634,22 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
                 $manual_hsn = mysqli_real_escape_string($conn, trim($item['hsn'] ?? $item['hsn_code'] ?? ''));
                 if ($manual_hsn === '0') $manual_hsn = '';
 
-                $item_pcs   = intval($item['pcs'] ?? $item['stock_deduct'] ?? 1);
-                if ($item_pcs <= 0) $item_pcs = 1;
                 $item_unit  = mysqli_real_escape_string($conn, $item['unit'] ?? 'g');
+                $u_lower    = strtolower(trim($item_unit));
+                $is_pair    = ($u_lower === 'pair' || $u_lower === 'pairs');
+                $raw_pcs    = floatval($item['pcs'] ?? $item['stock_deduct'] ?? 1);
+                $q_val      = floatval($quantity > 0 ? $quantity : ($item['quantity'] ?? 1));
+
+                if ($is_pair && $raw_pcs <= $q_val) {
+                    $pcs_deduct = $q_val * 2;
+                    $item_pcs   = intval($q_val * 2);
+                } else {
+                    $pcs_deduct = $raw_pcs;
+                    $item_pcs   = intval($raw_pcs);
+                }
+                if ($pcs_deduct <= 0) $pcs_deduct = 1;
+                if ($item_pcs <= 0) $item_pcs = 1;
+
                 $item_gross = floatval($item['gross_wt'] ?? ($item_unit === 'g' ? $quantity : 0));
                 $item_net   = floatval($item['net_wt'] ?? ($item_unit === 'g' ? $quantity : 0));
                 $item_gst_type = mysqli_real_escape_string($conn, trim($item['gst_type'] ?? 'non_gst'));
@@ -640,8 +661,6 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
                     continue;
                 }
                 $pid = intval($product_id);
-                $pcs_deduct = floatval($item['pcs'] ?? $item['stock_deduct'] ?? 1);
-                if($pcs_deduct <= 0) $pcs_deduct = 1;
 
                 $item_query = "INSERT INTO invoice_items (invoice_id, product_id, product_name, serial_no, huid_code, hsn_code, quantity, price, total, making_charge, making_charge_pct, hallmark, discount, pcs, unit, gross_wt, net_wt, gst_type)
                                VALUES ($invoice_id, $pid, '".$manual_name."', '".$manual_serial."', '".$manual_huid."', '".$manual_hsn."', $quantity, $price, $total, $item_making_charge, $item_making_charge_pct, $item_hallmark, $item_discount, $item_pcs, '".$item_unit."', $item_gross, $item_net, '".$item_gst_type."')";
@@ -2501,10 +2520,10 @@ function submitGramItem() {
         hsn: hsn,
         quantity: weight > 0 ? weight : qty,
         unit: unit,
-        pcs: qty,
+        pcs: isPair ? (qty * 2) : qty,
         gross_wt: weight > 0 ? weight : 0,
         net_wt: weight > 0 ? weight : 0,
-        stock_deduct: qty,
+        stock_deduct: isPair ? (qty * 2) : qty,
         price: itemPrice,
         base_amount: baseAmount,
         mc_mode: currentMcMode,
@@ -2861,7 +2880,7 @@ function updateItemsList() {
         const chargeInputStyle = 'width:60px;padding:3px 4px;border:1px solid #e5c98a;border-radius:5px;font-size:11px;text-align:right;';
         const qtyDisp = (item.unit === 'g') 
                 ? (item.quantity + 'g' + ((item.pcs && item.pcs > 1) ? '<br><span style="font-size:10px;color:#9ca3af;">(' + item.pcs + ' pcs)</span>' : ''))
-                : (item.quantity > 0 ? item.quantity + ' ' + (item.unit || 'pcs') : '\u2014');
+                : (item.quantity > 0 ? item.quantity + ' ' + (item.unit || 'pcs') + ((item.unit === 'pair' || item.unit === 'pairs') ? '<br><span style="font-size:10px;color:#9ca3af;">(' + (item.pcs || (item.quantity * 2)) + ' pcs)</span>' : '') : '\u2014');
         html += '<tr>' +
             '<td class="px-2 py-2 text-xs text-center" style="color:#9ca3af;">' + (idx+1) + '</td>' +
             '<td class="px-2 py-2 text-xs" style="color:#374151;">' + icon + ' ' + htmlEsc(item.name) +
