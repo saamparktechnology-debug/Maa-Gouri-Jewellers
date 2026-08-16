@@ -47,7 +47,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
             mysqli_query($conn, "ALTER TABLE products ADD COLUMN unit VARCHAR(20) DEFAULT 'pcs'");
         }
 
-        $query = "INSERT INTO products (serial_no, name, item_name, category, weight, price, quantity, unit, huid_code, created_at) VALUES ('$serial_no', '$name', '$item_name', '$category', '$weight', '$price', '$quantity', '$unit', '$huid_code', NOW())";
+        $query = "INSERT INTO products (serial_no, name, item_name, category, weight, price, quantity, unit, huid_code, created_at, updated_at) VALUES ('$serial_no', '$name', '$item_name', '$category', '$weight', '$price', '$quantity', '$unit', '$huid_code', NOW(), NOW())";
         if(mysqli_query($conn, $query)) {
             $success = " Product added successfully! ";
         } else {
@@ -80,7 +80,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
             $final_qty = $db_qty + $added_qty;
             $final_weight = round($db_weight + $weight, 3);
 
-            $sql = "UPDATE products SET quantity = '$final_qty', weight = '$final_weight' WHERE id = $id";
+            $sql = "UPDATE products SET quantity = '$final_qty', weight = '$final_weight', updated_at = NOW() WHERE id = $id";
             if(mysqli_query($conn, $sql)) {
                 $success = " Stock updated successfully!";
             } else {
@@ -104,7 +104,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         $quantity = $_POST['quantity'];
         $unit = mysqli_real_escape_string($conn, $_POST['unit'] ?? 'pcs');
 
-        $query = "UPDATE products SET serial_no='$serial_no', name='$name', item_name='$item_name', category='$category', weight='$weight', price='$price', quantity='$quantity', unit='$unit', huid_code='$huid_code' WHERE id=$id";
+        $query = "UPDATE products SET serial_no='$serial_no', name='$name', item_name='$item_name', category='$category', weight='$weight', price='$price', quantity='$quantity', unit='$unit', huid_code='$huid_code', updated_at = NOW() WHERE id=$id";
         if(mysqli_query($conn, $query)) {
             $success = " Product updated successfully! ";
         } else {
@@ -1183,7 +1183,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                     </td>
                                     <td class="text-xs" style="color:#6b7280; line-height: 1.4;">
                                          <?php if(!empty($product['created_at'])): ?>
-                                             <div><span class="font-semibold" style="color:#9ca3af;">Added:</span> <span class="font-medium"><?php echo date('d M Y', strtotime($product['created_at'])); ?></span></div>
+                                             <div><span class="font-semibold" style="color:#9ca3af;">Added:</span> <span class="font-medium"><?php echo date('d M Y h:i A', strtotime($product['created_at'])); ?></span></div>
                                          <?php endif; ?>
                                          <?php if(!empty($product['updated_at'])): ?>
                                              <div class="mt-1" style="color:#b5730e;"><span class="font-semibold">Updated:</span> <span class="font-medium"><?php echo date('d M Y h:i A', strtotime($product['updated_at'])); ?></span></div>

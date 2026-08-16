@@ -72,6 +72,9 @@ if (!$conn) {
 
 // Set timezone
 date_default_timezone_set('Asia/Kolkata');
+if ($conn) {
+    @mysqli_query($conn, "SET time_zone = '+05:30'");
+}
 
 // Create tables if not exist
 $create_users = "CREATE TABLE IF NOT EXISTS users (

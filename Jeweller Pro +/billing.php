@@ -670,11 +670,11 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
                 
                 if ($w_deduct > 0) {
                     // Update weight first
-                    mysqli_query($conn, "UPDATE products SET weight = CAST(weight AS DECIMAL(10,3)) - $w_deduct WHERE id = $pid AND weight IS NOT NULL AND weight != ''");
+                    mysqli_query($conn, "UPDATE products SET weight = CAST(weight AS DECIMAL(10,3)) - $w_deduct, updated_at = NOW() WHERE id = $pid AND weight IS NOT NULL AND weight != ''");
                 }
                 
                 // 1. Deduct piece count from products.quantity
-                mysqli_query($conn, "UPDATE products SET quantity = quantity - $pcs_deduct WHERE id = $pid");
+                mysqli_query($conn, "UPDATE products SET quantity = quantity - $pcs_deduct, updated_at = NOW() WHERE id = $pid");
                 
                 if ($w_deduct > 0) {
                     // Check if there is still weight left but quantity became <= 0 (sold partial weight of last piece)
