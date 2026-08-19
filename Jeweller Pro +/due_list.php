@@ -20,6 +20,11 @@ $create_due_history = "CREATE TABLE IF NOT EXISTS due_update_history (
 )";
 mysqli_query($conn, $create_due_history);
 
+$chkCreatedCol = mysqli_query($conn, "SHOW COLUMNS FROM due_update_history LIKE 'created_at'");
+if ($chkCreatedCol && mysqli_num_rows($chkCreatedCol) == 0) {
+    @mysqli_query($conn, "ALTER TABLE due_update_history ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+}
+
 $chkModeCol = mysqli_query($conn, "SHOW COLUMNS FROM due_update_history LIKE 'payment_mode'");
 if ($chkModeCol && mysqli_num_rows($chkModeCol) == 0) {
     @mysqli_query($conn, "ALTER TABLE due_update_history ADD COLUMN payment_mode VARCHAR(50) DEFAULT 'Cash'");
@@ -144,6 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delet
 
 //  AJAX: fetch due update history for modal 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'ajax_history') {
+    while(ob_get_level()) ob_end_clean();
     header('Content-Type: application/json');
     $id = intval($_POST['id'] ?? 0);
     if ($id <= 0) {
@@ -151,15 +157,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'ajax_
         exit();
     }
 
-    $inv_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT invoice_no, COALESCE(paid_amount, 0) AS paid_amount FROM invoices WHERE id = $id LIMIT 1"));
+    $inv_res = mysqli_query($conn, "SELECT invoice_no, COALESCE(paid_amount, 0) AS paid_amount FROM invoices WHERE id = $id LIMIT 1");
+    if (!$inv_res) {
+        echo json_encode(['success' => false, 'message' => 'Invoice not found or DB error: ' . mysqli_error($conn)]);
+        exit();
+    }
+    $inv_row = mysqli_fetch_assoc($inv_res);
     $invoice_no = $inv_row['invoice_no'] ?? '';
     $running = floatval($inv_row['paid_amount'] ?? 0);
     $history = [];
 
-    $res = mysqli_query($conn, "SELECT id AS history_id, DATE_FORMAT(payment_date, '%d-%m-%Y') AS payment_date, amount_paid, previous_balance, new_balance
+    $res = @mysqli_query($conn, "SELECT id AS history_id, DATE_FORMAT(payment_date, '%d-%m-%Y') AS payment_date, amount_paid, previous_balance, new_balance
                                FROM due_update_history
                                WHERE invoice_id = $id
-                               ORDER BY payment_date ASC, created_at ASC");
+                               ORDER BY payment_date ASC, id ASC");
+    if (!$res) {
+        $res = @mysqli_query($conn, "SELECT id AS history_id, DATE_FORMAT(payment_date, '%d-%m-%Y') AS payment_date, amount_paid, previous_balance, new_balance
+                                   FROM due_update_history
+                                   WHERE invoice_id = $id
+                                   ORDER BY id ASC");
+    }
     if ($res) {
         while ($row = mysqli_fetch_assoc($res)) {
             $amt = floatval($row['amount_paid'] ?? 0);
@@ -1168,8 +1185,19 @@ function openHistoryModal(invoiceId, customerName) {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: params.toString()
     })
-    .then(function(res) { return res.json(); })
-    .then(function(data) {
+    .then(function(res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + res.statusText);
+        return res.text();
+    })
+    .then(function(text) {
+        var data;
+        try {
+            data = JSON.parse(text);
+        } catch(e) {
+            console.error('Invalid JSON from server:', text);
+            body.innerHTML = '<div style="padding:16px;color:#b91c1c;">Server Error response: ' + text.substring(0, 150) + '</div>';
+            return;
+        }
         if (!data.success) {
             body.innerHTML = '<div style="padding:16px;color:#b91c1c;">' + (data.message || 'Unable to load history.') + '</div>';
             return;
@@ -1203,7 +1231,8 @@ function openHistoryModal(invoiceId, customerName) {
         body.innerHTML = html;
     })
     .catch(function(err) {
-        body.innerHTML = '<div style="padding:16px;color:#b91c1c;">Error loading history.</div>';
+        console.error(err);
+        body.innerHTML = '<div style="padding:16px;color:#b91c1c;">Error: ' + (err.message || 'Error loading history.') + '</div>';
     });
 }
 
