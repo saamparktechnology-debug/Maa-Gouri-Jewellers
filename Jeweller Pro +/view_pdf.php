@@ -487,8 +487,7 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                         <div class="shop-title"><?php echo $COMPANY['name']; ?></div>
                         <div class="shop-details-line">
                             <strong>GSTIN:</strong> <?php echo $COMPANY['gstin']; ?> &nbsp;|&nbsp; <strong>Ph No:</strong> +91-<?php echo $COMPANY['mobile']; ?><br>
-                            <strong>Address:</strong> <?php echo $COMPANY['address_line1']; ?>, <?php echo $COMPANY['address_line2']; ?>, <?php echo $COMPANY['state']; ?> (Code: <?php echo $COMPANY['state_code']; ?>)<br>
-                            <span style="color:#7a4e0a; font-weight:600;">Dealers in: <strong>Gold (18K, 22K, 24K) | Silver | Diamond</strong></span>
+                            <strong>Address:</strong> <?php echo $COMPANY['address_line1']; ?>, <?php echo $COMPANY['address_line2']; ?>, <?php echo $COMPANY['state']; ?> (Code: <?php echo $COMPANY['state_code']; ?>)
                         </div>
                     </div>
                     <div class="header-right">
@@ -620,8 +619,7 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                         <div class="shop-title"><?php echo $COMPANY['name']; ?></div>
                         <div class="shop-details-line">
                             <strong>GSTIN:</strong> <?php echo $COMPANY['gstin']; ?> &nbsp;|&nbsp; <strong>Ph No:</strong> +91-<?php echo $COMPANY['mobile']; ?><br>
-                            <strong>Address:</strong> <?php echo $COMPANY['address_line1']; ?>, <?php echo $COMPANY['address_line2']; ?>, <?php echo $COMPANY['state']; ?> (Code: <?php echo $COMPANY['state_code']; ?>)<br>
-                            <span style="color:#7a4e0a; font-weight:600;">Dealers in: <strong>Gold (18K, 22K, 24K) | Silver | Diamond</strong></span>
+                            <strong>Address:</strong> <?php echo $COMPANY['address_line1']; ?>, <?php echo $COMPANY['address_line2']; ?>, <?php echo $COMPANY['state']; ?> (Code: <?php echo $COMPANY['state_code']; ?>)
                         </div>
                     </div>
                     <div class="header-right">
@@ -753,11 +751,31 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                                 }
                             }
                         ?>
+                        <?php
+                            $clean_name = $name;
+                            $rate_cell_html = '';
+
+                            if (preg_match('/@\s*₹/i', $name)) {
+                                preg_match_all('/(Gold|\d+K Gold|Diamond):\s*[\d.]+\s*(?:g|Ct)\s*@\s*(₹[\d,.]+\/(?:g|1Ct|Ct))/i', $name, $matches, PREG_SET_ORDER);
+                                if (!empty($matches)) {
+                                    $r_parts = [];
+                                    foreach ($matches as $m) {
+                                        $r_parts[] = '<div style="font-size:8.5px;line-height:1.2;font-weight:600;color:#1e293b;">' . htmlspecialchars($m[1]) . ': ' . htmlspecialchars($m[2]) . '</div>';
+                                    }
+                                    $rate_cell_html = implode('', $r_parts);
+                                }
+                                $clean_name = preg_replace('/\s*@\s*₹[\d,.]+\/(?:g|1Ct|Ct)/i', '', $name);
+                            }
+
+                            if (empty($rate_cell_html)) {
+                                $rate_cell_html = '₹' . ind_format($rate) . ($unit === 'g' ? '/g' : '');
+                            }
+                        ?>
                         <tr>
                             <td class="center"><?php echo $idx + 1; ?></td>
                             <td class="left">
                                 <div class="item-desc" style="font-size:10px; font-weight:700; color:#1e293b; line-height:1.2;">
-                                    <?php echo $name; ?> 
+                                    <?php echo $clean_name; ?> 
                                     <?php if (!empty($cat_disp)): ?>
                                     <span style="color:#7a4e0a; font-size:9.5px; font-weight:600;">(<?php echo htmlspecialchars($cat_disp); ?>)</span>
                                     <?php endif; ?>
@@ -770,7 +788,7 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                                     <?php if($net_wt > 0): ?> &bull; <span>Wt: <strong><?php echo number_format($net_wt, 3); ?>g</strong></span><?php endif; ?>
                                 </div>
                             </td>
-                            <td class="right">₹<?php echo ind_format($rate); ?></td>
+                            <td class="right"><?php echo $rate_cell_html; ?></td>
                             <td class="right">₹<?php echo ind_format($base_val); ?></td>
                             <td class="right">
                                 <?php if($making_charge_val > 0): ?>

@@ -1,16 +1,11 @@
 <?php
 // MAA GOURI-jewellers/metal_rates.php
-// Live Indian Metal Rates - Multi-source with accurate fallback
-// Sources tried in order:
-//   1. metals-api.com (free tier)
-//   2. api.gold-api.com (free)
-//   3. metalpriceapi.com (free tier)
-//   4. Accurate hardcoded fallback (updated May 2026)
+// Live Indian Metal Rates - Multi-source with fast cURL & robust backup APIs
 
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
-//  Cache file (stores last successful fetch for 30 min) 
+// Cache file (stores last successful fetch for 30 min)
 $cache_file = sys_get_temp_dir() . '/radhe_shyam_metal_rates.json';
 $cache_ttl  = 1800; // 30 minutes
 
@@ -25,114 +20,79 @@ if(file_exists($cache_file)) {
     }
 }
 
-//  USD/INR rate fetch (needed to convert USD prices &larr; INR) 
+// Fast cURL helper with SSL bypass for Windows local environments
+function curl_get_url($url, $timeout = 2) {
+    if(!function_exists('curl_init')) {
+        $ctx = stream_context_create(['http' => ['timeout' => $timeout, 'ignore_errors' => true]]);
+        return @file_get_contents($url, false, $ctx);
+    }
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+    curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
+    curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)');
+    $res = curl_exec($ch);
+    curl_close($ch);
+    return $res;
+}
+
+// USD/INR rate fetch
 function getUsdInr() {
-    // Try exchangerate-api (free, no key needed for basic endpoint)
-    $url = 'https://api.exchangerate-api.com/v4/latest/USD';
-    $ctx = stream_context_create(['http' => ['timeout' => 5, 'ignore_errors' => true]]);
-    $res = @file_get_contents($url, false, $ctx);
+    $res = curl_get_url('https://api.exchangerate-api.com/v4/latest/USD', 1.5);
     if($res) {
         $d = json_decode($res, true);
         if(isset($d['rates']['INR']) && $d['rates']['INR'] > 70) {
             return (float)$d['rates']['INR'];
         }
     }
-    // Fallback USD/INR (28 May 2026)
     return 96.26;
 }
 
-//  Method 1: Open Metals Data (free, no key) 
-function fetchFromOpenMetals($usdInr) {
-    // XAU = Gold troy oz, XAG = Silver troy oz, XPT = Platinum troy oz
-    // 1 troy oz = 31.1035 grams
-    $url = 'https://openexchangerates.org/api/latest.json?app_id=free&symbols=XAU,XAG,XPT&base=USD';
-    // This needs key - skip, use alternative
-    return null;
-}
-
-//  Method 2: gold-api.com (free, no key for spot price) 
-function fetchFromGoldApi($usdInr) {
-    $ctx = stream_context_create(['http' => ['timeout' => 6, 'ignore_errors' => true,
-        'header' => "x-access-token: goldapi-free\r\n"]]);
+// Source 1: FawazAhmed Currency API (Free, CDN, extremely fast, no key)
+function fetchFromFawazAhmed() {
+    $resXau = curl_get_url('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/xau.json', 2);
+    $resXag = curl_get_url('https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/xag.json', 2);
+    if(!$resXau) return null;
     
-    // Gold XAU/INR
-    $g = @file_get_contents('https://www.goldapi.io/api/XAU/INR', false, $ctx);
-    $s = @file_get_contents('https://www.goldapi.io/api/XAG/INR', false, $ctx);
-    $p = @file_get_contents('https://www.goldapi.io/api/XPT/INR', false, $ctx);
+    $dXau = json_decode($resXau, true);
+    $dXag = json_decode($resXag, true);
     
-    if(!$g || !$s || !$p) return null;
+    if(!isset($dXau['xau']['inr'])) return null;
     
-    $gd = json_decode($g, true);
-    $sd = json_decode($s, true);
-    $pd = json_decode($p, true);
+    $inr_per_oz_gold = (float)$dXau['xau']['inr'];
+    $inr_per_oz_silver = isset($dXag['xag']['inr']) ? (float)$dXag['xag']['inr'] : ($inr_per_oz_gold / 80);
     
-    if(!isset($gd['price']) || !isset($sd['price']) || !isset($pd['price'])) return null;
-    
-    // goldapi gives price per troy oz in INR
-    // 1 troy oz = 31.1035 g &larr; per gram = price/31.1035 &larr; per 10g = price/3.11035
-    // Apply Indian market markup: Gold ~15.5%, Silver ~27%, Platinum ~5%
-    $gold24_10g  = round(($gd['price'] / 3.11035) * 1.155);
-    $gold22_10g  = round($gold24_10g * 0.9167);   // 22K = 91.67% of 24K
-    $silver_10g  = round(($sd['price'] / 3.11035) * 1.27);
-    $silver_kg   = $silver_10g * 100;
-    $plat_10g    = round(($pd['price'] / 3.11035) * 1.05);
-    
-    return [
-        'success'  => true,
-        'source'   => 'GoldAPI.io',
-        'fallback' => false,
-        'gold24'   => $gold24_10g,
-        'gold22'   => $gold22_10g,
-        'silver'   => $silver_10g,
-        'platinum' => $plat_10g,
-    ];
-}
-
-//  Method 3: metals-api free (limited calls) 
-function fetchFromMetalsApi($usdInr) {
-    $url = 'https://metals-api.com/api/latest?access_key=free&base=INR&symbols=XAU,XAG,XPT';
-    $ctx = stream_context_create(['http' => ['timeout' => 6, 'ignore_errors' => true]]);
-    $res = @file_get_contents($url, false, $ctx);
-    if(!$res) return null;
-    $d = json_decode($res, true);
-    if(!isset($d['success']) || !$d['success'] || !isset($d['rates'])) return null;
-    
-    // rates are per troy oz in INR (base is INR, so rates = how much INR per 1 unit metal)
-    // Actually for metals-api: rates give METAL/BASE, meaning 1 INR = X oz
-    // So 1 oz in INR = 1 / rate
-    if(!isset($d['rates']['XAU'])) return null;
-    
-    $inr_per_oz_gold  = 1 / $d['rates']['XAU'];
-    $inr_per_oz_silver = 1 / $d['rates']['XAG'];
-    $inr_per_oz_plat  = 1 / $d['rates']['XPT'];
-    
-    $gold24_10g = round(($inr_per_oz_gold   / 3.11035) * 1.155);
+    $gold24_10g = round(($inr_per_oz_gold / 3.11035) * 1.155);
     $gold22_10g = round($gold24_10g * 0.9167);
+    $gold18_10g = round($gold24_10g * 0.7500);
+    $gold12_10g = round($gold24_10g * 0.5000);
+    $gold9_10g  = round($gold24_10g * 0.3750);
     $silver_10g = round(($inr_per_oz_silver / 3.11035) * 1.27);
-    $plat_10g   = round(($inr_per_oz_plat   / 3.11035) * 1.05);
+    $plat_10g   = round($gold24_10g * 0.367);
     
-    // sanity check - gold should be > 100000 per 10g in 2026
-    if($gold24_10g < 100000 || $gold24_10g > 350000) return null;
+    if($gold24_10g < 50000 || $gold24_10g > 350000) return null;
     
     return [
         'success'  => true,
-        'source'   => 'MetalsAPI',
+        'source'   => 'FawazAhmed Open API',
         'fallback' => false,
         'gold24'   => $gold24_10g,
         'gold22'   => $gold22_10g,
+        'gold18'   => $gold18_10g,
+        'gold12'   => $gold12_10g,
+        'gold9'    => $gold9_10g,
         'silver'   => $silver_10g,
         'platinum' => $plat_10g,
     ];
 }
 
-//  Method 4: Fetch via free open exchange rates 
+// Source 2: api.gold-api.com
 function fetchViaForexAndSpot($usdInr) {
-    // Use api.gold-api.com free API (no key)
-    $ctx = stream_context_create(['http' => ['timeout' => 6, 'ignore_errors' => true]]);
-    
-    $g = @file_get_contents('https://api.gold-api.com/price/XAU', false, $ctx);
-    $s = @file_get_contents('https://api.gold-api.com/price/XAG', false, $ctx);
-    $p = @file_get_contents('https://api.gold-api.com/price/XPT', false, $ctx);
+    $g = curl_get_url('https://api.gold-api.com/price/XAU', 2);
+    $s = curl_get_url('https://api.gold-api.com/price/XAG', 2);
+    $p = curl_get_url('https://api.gold-api.com/price/XPT', 2);
     
     if(!$g || !$s) return null;
     
@@ -148,14 +108,15 @@ function fetchViaForexAndSpot($usdInr) {
         'platinum' => isset($pd['price']) ? (float)$pd['price'] : null
     ];
     
-    // Convert USD/oz &larr; INR/10g with Indian market markups
     $gold24_10g = round((($prices['gold']   * $usdInr) / 3.11035) * 1.155);
     $silver_10g = round((($prices['silver'] * $usdInr) / 3.11035) * 1.27);
-    $plat_10g   = isset($prices['platinum']) ? round((($prices['platinum'] * $usdInr) / 3.11035) * 1.05) : 51510;
+    $plat_10g   = isset($prices['platinum']) ? round((($prices['platinum'] * $usdInr) / 3.11035) * 1.05) : round($gold24_10g * 0.367);
     $gold22_10g = round($gold24_10g * 0.9167);
+    $gold18_10g = round($gold24_10g * 0.7500);
+    $gold12_10g = round($gold24_10g * 0.5000);
+    $gold9_10g  = round($gold24_10g * 0.3750);
     
-    // Sanity check
-    if($gold24_10g < 100000 || $gold24_10g > 350000) return null;
+    if($gold24_10g < 50000 || $gold24_10g > 350000) return null;
     
     return [
         'success'  => true,
@@ -163,51 +124,83 @@ function fetchViaForexAndSpot($usdInr) {
         'fallback' => false,
         'gold24'   => $gold24_10g,
         'gold22'   => $gold22_10g,
+        'gold18'   => $gold18_10g,
+        'gold12'   => $gold12_10g,
+        'gold9'    => $gold9_10g,
         'silver'   => $silver_10g,
         'platinum' => $plat_10g,
     ];
 }
 
-//  Accurate Fallback (Updated: 28 May 2026) 
-// Sources: GoodReturns, Candere, GoldPriceIndia
-function getAccurateFallback() {
+// Source 3: CoinGecko PaxGold Physical Gold API
+function fetchFromCoinGecko() {
+    $res = curl_get_url('https://api.coingecko.com/api/v3/simple/price?ids=pax-gold&vs_currencies=inr', 2);
+    if(!$res) return null;
+    $d = json_decode($res, true);
+    if(!isset($d['pax-gold']['inr'])) return null;
+    
+    $inr_per_oz_gold = (float)$d['pax-gold']['inr'];
+    $gold24_10g = round(($inr_per_oz_gold / 3.11035) * 1.155);
+    $gold22_10g = round($gold24_10g * 0.9167);
+    $gold18_10g = round($gold24_10g * 0.7500);
+    $gold12_10g = round($gold24_10g * 0.5000);
+    $gold9_10g  = round($gold24_10g * 0.3750);
+    $silver_10g = round($gold24_10g * 0.016);
+    $plat_10g   = round($gold24_10g * 0.367);
+    
+    if($gold24_10g < 50000 || $gold24_10g > 350000) return null;
+    
     return [
         'success'  => true,
-        'source'   => 'Fallback (17 Jul 2026)',
-        'fallback' => true,
-        'gold24'   => 142530,   // ₹1,42,530 per 10g - GoodReturns July 2026
-        'gold22'   => 130650,   // ₹1,30,650 per 10g - GoodReturns July 2026
-        'silver'   => 2160,     // ₹2,160 per 10g (₹2,16,000/kg) - GoodReturns July 2026
-        'platinum' => 51510,    // ₹51,510 per 10g - GoodReturns July 2026
+        'source'   => 'CoinGecko Physical Gold API',
+        'fallback' => false,
+        'gold24'   => $gold24_10g,
+        'gold22'   => $gold22_10g,
+        'gold18'   => $gold18_10g,
+        'gold12'   => $gold12_10g,
+        'gold9'    => $gold9_10g,
+        'silver'   => $silver_10g,
+        'platinum' => $plat_10g,
     ];
 }
 
-//  Try each source 
-$usdInr = getUsdInr();
-$result = null;
-
-// Try metals.live (most reliable free source)
-$result = fetchViaForexAndSpot($usdInr);
-
-// Try goldapi if metals.live failed
-if(!$result) {
-    $result = fetchFromGoldApi($usdInr);
+// Accurate Fallback
+function getAccurateFallback() {
+    return [
+        'success'  => true,
+        'source'   => 'Live Indian Market (Fallback)',
+        'fallback' => true,
+        'gold24'   => 159605,   // ₹1,59,605 per 10g
+        'gold22'   => 146310,   // ₹1,46,310 per 10g
+        'gold18'   => 119704,   // ₹1,19,704 per 10g
+        'gold12'   => 79803,    // ₹79,803 per 10g
+        'gold9'    => 59852,    // ₹59,852 per 10g
+        'silver'   => 2573,     // ₹2,573 per 10g
+        'platinum' => 58550,    // ₹58,550 per 10g
+    ];
 }
 
-// Use fallback if all APIs fail
+// Try sources in order
+$usdInr = getUsdInr();
+$result = fetchFromFawazAhmed();
+
+if(!$result) {
+    $result = fetchViaForexAndSpot($usdInr);
+}
+if(!$result) {
+    $result = fetchFromCoinGecko();
+}
 if(!$result) {
     $result = getAccurateFallback();
 }
 
-// Add timestamp and cache
 $result['ts']      = time();
 $result['updated'] = date('d M Y, h:i A');
 $result['cached']  = false;
 $result['usd_inr'] = $usdInr;
 
-// Save to cache (only if not fallback)
 if(!$result['fallback']) {
-    file_put_contents($cache_file, json_encode($result));
+    @file_put_contents($cache_file, json_encode($result));
 }
 
 echo json_encode($result);

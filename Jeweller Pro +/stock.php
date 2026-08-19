@@ -46,8 +46,24 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         if(mysqli_num_rows($chk3) == 0) {
             mysqli_query($conn, "ALTER TABLE products ADD COLUMN unit VARCHAR(20) DEFAULT 'pcs'");
         }
+        $chk4 = mysqli_query($conn, "SHOW COLUMNS FROM products LIKE 'diamond_cent'");
+        if(mysqli_num_rows($chk4) == 0) {
+            mysqli_query($conn, "ALTER TABLE products ADD COLUMN diamond_cent VARCHAR(50) DEFAULT ''");
+        }
+        $chk5 = mysqli_query($conn, "SHOW COLUMNS FROM products LIKE 'metal_kt'");
+        if(mysqli_num_rows($chk5) == 0) {
+            mysqli_query($conn, "ALTER TABLE products ADD COLUMN metal_kt VARCHAR(50) DEFAULT ''");
+        }
+        $chk6 = mysqli_query($conn, "SHOW COLUMNS FROM products LIKE 'metal_weight'");
+        if(mysqli_num_rows($chk6) == 0) {
+            mysqli_query($conn, "ALTER TABLE products ADD COLUMN metal_weight VARCHAR(50) DEFAULT ''");
+        }
 
-        $query = "INSERT INTO products (serial_no, name, item_name, category, weight, price, quantity, unit, huid_code, created_at, updated_at) VALUES ('$serial_no', '$name', '$item_name', '$category', '$weight', '$price', '$quantity', '$unit', '$huid_code', NOW(), NOW())";
+        $diamond_cent = mysqli_real_escape_string($conn, trim($_POST['diamond_cent'] ?? ''));
+        $metal_kt     = mysqli_real_escape_string($conn, trim($_POST['metal_kt'] ?? ''));
+        $metal_weight = mysqli_real_escape_string($conn, trim($_POST['metal_weight'] ?? ''));
+
+        $query = "INSERT INTO products (serial_no, name, item_name, category, weight, price, quantity, unit, huid_code, diamond_cent, metal_kt, metal_weight, created_at, updated_at) VALUES ('$serial_no', '$name', '$item_name', '$category', '$weight', '$price', '$quantity', '$unit', '$huid_code', '$diamond_cent', '$metal_kt', '$metal_weight', NOW(), NOW())";
         if(mysqli_query($conn, $query)) {
             $success = " Product added successfully! ";
         } else {
@@ -103,8 +119,11 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         $price = $_POST['price'];
         $quantity = $_POST['quantity'];
         $unit = mysqli_real_escape_string($conn, $_POST['unit'] ?? 'pcs');
+        $diamond_cent = mysqli_real_escape_string($conn, trim($_POST['diamond_cent'] ?? ''));
+        $metal_kt     = mysqli_real_escape_string($conn, trim($_POST['metal_kt'] ?? ''));
+        $metal_weight = mysqli_real_escape_string($conn, trim($_POST['metal_weight'] ?? ''));
 
-        $query = "UPDATE products SET serial_no='$serial_no', name='$name', item_name='$item_name', category='$category', weight='$weight', price='$price', quantity='$quantity', unit='$unit', huid_code='$huid_code', updated_at = NOW() WHERE id=$id";
+        $query = "UPDATE products SET serial_no='$serial_no', name='$name', item_name='$item_name', category='$category', weight='$weight', price='$price', quantity='$quantity', unit='$unit', huid_code='$huid_code', diamond_cent='$diamond_cent', metal_kt='$metal_kt', metal_weight='$metal_weight', updated_at = NOW() WHERE id=$id";
         if(mysqli_query($conn, $query)) {
             $success = " Product updated successfully! ";
         } else {
@@ -1030,8 +1049,11 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             <select name="category" id="addCategorySelect" required class="jewel-input" onchange="updateItemTypes('addCategorySelect','addItemSelect','addCustomItem')">
                                 <option value="">-- Select Category --</option>
                                 <optgroup label=" Gold">
+                                    <option value="Gold 24K">Gold 24K</option>
                                     <option value="Gold 22K">Gold 22K</option>
                                     <option value="Gold 18K">Gold 18K</option>
+                                    <option value="Gold 12K">Gold 12K</option>
+                                    <option value="Gold 9K">Gold 9K</option>
                                 </optgroup>
                                 <optgroup label=" Silver">
                                     <option value="Silver">Silver</option>
@@ -1055,6 +1077,32 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             </select>
                             <div class="custom-item-input mt-2" id="addCustomItem">
                                 <input type="text" name="item_name_custom" placeholder="Custom item name..." class="jewel-input">
+                            </div>
+                        </div>
+
+                        <!-- Diamond Specific Fields -->
+                        <div id="addDiamondFieldsContainer" class="hidden mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                            <div class="text-xs font-bold text-amber-900 mb-2">💎 Diamond & Gold Details</div>
+                            <div class="mb-2">
+                                <label class="block text-xs font-semibold text-amber-800 mb-1">Diamond Cent (Ct)</label>
+                                <input type="number" step="0.01" name="diamond_cent" id="addDiamondCent" placeholder="e.g. 25 (Cent)" class="jewel-input">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-xs font-semibold text-amber-800 mb-1">Gold Purity (KT)</label>
+                                    <select name="metal_kt" id="addMetalKt" class="jewel-input">
+                                        <option value="24K">24K Gold</option>
+                                        <option value="22K">22K Gold</option>
+                                        <option value="18K">18K Gold</option>
+                                        <option value="12K">12K Gold</option>
+                                        <option value="9K">9K Gold</option>
+                                        <option value="Platinum">Platinum</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold text-amber-800 mb-1">Gold Weight (gms)</label>
+                                    <input type="number" step="0.001" name="metal_weight" id="addMetalWeight" placeholder="e.g. 3.500" class="jewel-input">
+                                </div>
                             </div>
                         </div>
 
@@ -1166,7 +1214,19 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                     <td class="serial-number-col"><?php echo $serial++; ?></td>
                                     <td>
                                         <div class="font-semibold" style="color:#800020;"><?php echo htmlspecialchars($product['name']); ?></div>
-                                        <div class="text-xs" style="color:#7a4e0a;"><?php echo htmlspecialchars($product['category'] ?? ''); ?></div>
+                                        <div class="text-xs flex flex-wrap gap-1 items-center mt-0.5" style="color:#7a4e0a;">
+                                            <span><?php echo htmlspecialchars($product['category'] ?? ''); ?></span>
+                                            <?php if(!empty($product['diamond_cent'])): ?>
+                                                <span class="px-1.5 py-0.5 rounded text-xs font-bold" style="background:rgba(214,139,22,0.15);color:#b5730e;border:1px solid rgba(214,139,22,0.3);">
+                                                    💎 <?php echo htmlspecialchars($product['diamond_cent']); ?> Ct
+                                                </span>
+                                            <?php endif; ?>
+                                            <?php if(!empty($product['metal_kt']) || !empty($product['metal_weight'])): ?>
+                                                <span class="px-1.5 py-0.5 rounded text-xs font-medium" style="background:rgba(181,115,14,0.08);color:#7a4e0a;border:1px solid rgba(181,115,14,0.2);">
+                                                    🪙 <?php echo htmlspecialchars($product['metal_kt'] ?? ''); ?><?php if(!empty($product['metal_weight'])) echo ' (' . htmlspecialchars($product['metal_weight']) . 'g)'; ?>
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
                                     </td>
                                     <td>
                                         <div class="font-medium text-sm" style="color:#b5730e;"><?php echo htmlspecialchars($product['item_name'] ?? '-'); ?></div>
@@ -1203,7 +1263,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                     </td>
                                     <td class="text-center">
                                         <div class="action-btns flex flex-wrap gap-1 justify-center">
-                                            <button onclick="openEditModal(<?php echo $product['id']; ?>,'<?php echo addslashes($product['serial_no']); ?>','<?php echo addslashes($product['name']); ?>','<?php echo addslashes($product['item_name'] ?? ''); ?>','<?php echo $product['category']; ?>','<?php echo addslashes($product['weight'] ?? ''); ?>',<?php echo $product['price']; ?>,<?php echo $product['quantity']; ?>,'<?php echo addslashes($product['huid_code'] ?? ''); ?>','<?php echo addslashes($product['unit'] ?? 'pcs'); ?>')" class="btn-edit">
+                                            <button onclick="openEditModal(<?php echo $product['id']; ?>,'<?php echo addslashes($product['serial_no']); ?>','<?php echo addslashes($product['name']); ?>','<?php echo addslashes($product['item_name'] ?? ''); ?>','<?php echo $product['category']; ?>','<?php echo addslashes($product['weight'] ?? ''); ?>',<?php echo $product['price']; ?>,<?php echo $product['quantity']; ?>,'<?php echo addslashes($product['huid_code'] ?? ''); ?>','<?php echo addslashes($product['unit'] ?? 'pcs'); ?>','<?php echo addslashes($product['diamond_cent'] ?? ''); ?>','<?php echo addslashes($product['metal_kt'] ?? ''); ?>','<?php echo addslashes($product['metal_weight'] ?? ''); ?>')" class="btn-edit">
                                                 <i class="fas fa-edit"></i> Edit
                                             </button>
                                             <button onclick="openUpdateModal(<?php echo $product['id']; ?>,'<?php echo addslashes($product['name']); ?>','<?php echo addslashes($product['unit'] ?? 'pcs'); ?>')" class="btn-addstock">
@@ -1394,8 +1454,11 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 <select name="category" id="editProductCategory" required class="jewel-input" onchange="updateItemTypes('editProductCategory','editProductItemName','editCustomItem')">
                     <option value="">-- Select Category --</option>
                     <optgroup label=" Gold">
+                        <option value="Gold 24K">Gold 24K</option>
                         <option value="Gold 22K">Gold 22K</option>
                         <option value="Gold 18K">Gold 18K</option>
+                        <option value="Gold 12K">Gold 12K</option>
+                        <option value="Gold 9K">Gold 9K</option>
                     </optgroup>
                     <optgroup label=" Silver">
                         <option value="Silver">Silver</option>
@@ -1415,6 +1478,32 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                 </select>
                 <div class="custom-item-input mt-2" id="editCustomItem">
                     <input type="text" name="item_name_custom" id="editItemCustomInput" placeholder="Custom item name..." class="jewel-input">
+                </div>
+            </div>
+
+            <!-- Diamond Specific Fields -->
+            <div id="editDiamondFieldsContainer" class="hidden mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                <div class="text-xs font-bold text-amber-900 mb-2">💎 Diamond & Gold Details</div>
+                <div class="mb-2">
+                    <label class="block text-xs font-semibold text-amber-800 mb-1">Diamond Cent (Ct)</label>
+                    <input type="number" step="0.01" name="diamond_cent" id="editDiamondCent" placeholder="e.g. 25 (Cent)" class="jewel-input">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-semibold text-amber-800 mb-1">Gold Purity (KT)</label>
+                        <select name="metal_kt" id="editMetalKt" class="jewel-input">
+                            <option value="24K">24K Gold</option>
+                            <option value="22K">22K Gold</option>
+                            <option value="18K">18K Gold</option>
+                            <option value="12K">12K Gold</option>
+                            <option value="9K">9K Gold</option>
+                            <option value="Platinum">Platinum</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-amber-800 mb-1">Gold Weight (gms)</label>
+                        <input type="number" step="0.001" name="metal_weight" id="editMetalWeight" placeholder="e.g. 3.500" class="jewel-input">
+                    </div>
                 </div>
             </div>
             <div class="mb-3">
@@ -1518,8 +1607,11 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
     /* ---------- Item types ---------- */
     const itemsByCategory = {
+        'Gold 24K': ['Coin','Bar','Guinea','Necklace','Chur','Bala','Chain','Tops','Single Loket','Double Loket','Churi','Jhuladul','Jhumka','Ladies Ring','Gold Choker','Gents Ring','Gents Breslet','Ladies Breslet','Tika','Takti','Mantasa','Pearl Choker','Bauti Chur','Soket Bauti','Breslet Noya','Stell Noya','Baby Ring','Bali','Pitaring','Baby Breslet','Pearl Sitahar','Nose Pin','Other'],
         'Gold 22K': ['Necklace','Chur','Bala','Chain','Tops','Single Loket','Double Loket','Churi','Jhuladul','Jhumka','Ladies Ring','Gold Choker','Gents Ring','Gents Breslet','Ladies Breslet','Tika','Takti','Mantasa','Pearl Choker','Bauti Chur','Soket Bauti','Breslet Noya','Stell Noya','Baby Ring','Bali','Pitaring','Baby Breslet','Pearl Sitahar','Nose Pin','Other'],
         'Gold 18K': ['Necklace','Chur','Bala','Chain','Tops','Single Loket','Double Loket','Churi','Jhuladul','Jhumka','Ladies Ring','Gold Choker','Gents Ring','Gents Breslet','Ladies Breslet','Tika','Takti','Mantasa','Pearl Choker','Bauti Chur','Soket Bauti','Breslet Noya','Stell Noya','Baby Ring','Bali','Pitaring','Baby Breslet','Pearl Sitahar','Nose Pin','Other'],
+        'Gold 12K': ['Necklace','Chur','Bala','Chain','Tops','Single Loket','Double Loket','Churi','Jhuladul','Jhumka','Ladies Ring','Gold Choker','Gents Ring','Gents Breslet','Ladies Breslet','Tika','Takti','Mantasa','Pearl Choker','Bauti Chur','Soket Bauti','Breslet Noya','Stell Noya','Baby Ring','Bali','Pitaring','Baby Breslet','Pearl Sitahar','Nose Pin','Other'],
+        'Gold 9K':  ['Necklace','Chur','Bala','Chain','Tops','Single Loket','Double Loket','Churi','Jhuladul','Jhumka','Ladies Ring','Gold Choker','Gents Ring','Gents Breslet','Ladies Breslet','Tika','Takti','Mantasa','Pearl Choker','Bauti Chur','Soket Bauti','Breslet Noya','Stell Noya','Baby Ring','Bali','Pitaring','Baby Breslet','Pearl Sitahar','Nose Pin','Other'],
         'Silver':   ['Thali','Bati','Glass','Spoon','Showpiece','B.B.C Silver','Mix Silver','Other'],
         'Stone':    ['Natural Pearl','Gomed','Red Coral','Nila','Panna','Jerkon','Amethist','Cats Eye','Other'],
         'Diamond':  ['Ladies Ring','Gents Ring','Tops','Mangal Sutra','Nose Pin','Necklace','Other'],
@@ -1535,6 +1627,17 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         customDiv.classList.remove('show');
         const inp = customDiv.querySelector('input');
         if(inp) inp.value = '';
+
+        // Toggle Diamond Extra Fields Container
+        const diamondContainerId = (catSelectId === 'addCategorySelect') ? 'addDiamondFieldsContainer' : 'editDiamondFieldsContainer';
+        const dContainer = document.getElementById(diamondContainerId);
+        if (dContainer) {
+            if (cat === 'Diamond') {
+                dContainer.classList.remove('hidden');
+            } else {
+                dContainer.classList.add('hidden');
+            }
+        }
 
         if(!cat || !itemsByCategory[cat]) {
             itemSel.innerHTML = '<option value="">-- Select Category First --</option>';
@@ -1573,7 +1676,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     }
 
     /* ---------- Modals ---------- */
-    function openEditModal(id, serial_no, name, item_name, category, weight, price, quantity, huid_code, unit) {
+    function openEditModal(id, serial_no, name, item_name, category, weight, price, quantity, huid_code, unit, diamond_cent, metal_kt, metal_weight) {
         document.getElementById('editProductId').value = id;
         document.getElementById('editProductSerial').value = serial_no;
         document.getElementById('editProductName').value = name;
@@ -1583,6 +1686,15 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         document.getElementById('editProductHuid').value = huid_code || '';
         if (document.getElementById('editProductUnit')) {
             document.getElementById('editProductUnit').value = (unit === 'pair') ? 'pair' : 'pcs';
+        }
+        if (document.getElementById('editDiamondCent')) {
+            document.getElementById('editDiamondCent').value = diamond_cent || '';
+        }
+        if (document.getElementById('editMetalKt')) {
+            document.getElementById('editMetalKt').value = metal_kt || '18K';
+        }
+        if (document.getElementById('editMetalWeight')) {
+            document.getElementById('editMetalWeight').value = metal_weight || '';
         }
 
         const catSel = document.getElementById('editProductCategory');

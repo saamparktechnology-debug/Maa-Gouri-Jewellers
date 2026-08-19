@@ -556,7 +556,12 @@ if ($s_res) {
                                 Category
                             </label>
                             <select name="manual_category" class="w-full px-3.5 py-2.5 bg-white border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:border-amber-500">
-                                <option value="Gold">Gold</option>
+                                <option value="Gold 24K">Gold 24K</option>
+                                <option value="Gold 22K">Gold 22K</option>
+                                <option value="Gold 18K">Gold 18K</option>
+                                <option value="Gold 12K">Gold 12K</option>
+                                <option value="Gold 9K">Gold 9K</option>
+                                <option value="Gold">Gold (General)</option>
                                 <option value="Silver">Silver</option>
                                 <option value="Diamond">Diamond</option>
                                 <option value="Gemstones">Gemstones</option>

@@ -106,7 +106,13 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_delete_invoice'
                                 } else {
                                     // Re-insert product back to stock
                                     if (empty($category)) {
-                                        if (stripos($product_name, 'gold') !== false) {
+                                        if (stripos($product_name, '18k') !== false) {
+                                            $category = 'Gold 18K';
+                                        } else if (stripos($product_name, '12k') !== false) {
+                                            $category = 'Gold 12K';
+                                        } else if (stripos($product_name, '9k') !== false) {
+                                            $category = 'Gold 9K';
+                                        } else if (stripos($product_name, 'gold') !== false) {
                                             $category = 'Gold 22K';
                                         } else if (stripos($product_name, 'silver') !== false) {
                                             $category = 'Silver';
@@ -141,7 +147,7 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_delete_invoice'
                                         $huid = mysqli_real_escape_string($conn, $item_detail['huid_code']);
                                         $hsn = mysqli_real_escape_string($conn, $item_detail['hsn_code'] ?? '0');
                                         $price = floatval($item_detail['price']);
-                                        $cat = (stripos($name, 'gold') !== false) ? 'Gold 22K' : ((stripos($name, 'silver') !== false) ? 'Silver' : 'Others');
+                                        $cat = (stripos($name, '18k') !== false) ? 'Gold 18K' : ((stripos($name, '12k') !== false) ? 'Gold 12K' : ((stripos($name, '9k') !== false) ? 'Gold 9K' : ((stripos($name, 'gold') !== false) ? 'Gold 22K' : ((stripos($name, 'silver') !== false) ? 'Silver' : 'Others'))));
                                         mysqli_query($conn, "INSERT INTO products (serial_no, name, item_name, category, weight, price, quantity, huid_code, hsn_code, created_at) VALUES ('$serial', '$name', '$name', '$cat', '', $price, $p_qty, '$huid', '$hsn', NOW())");
                                     }
                                 }

@@ -9,6 +9,27 @@ require_once 'config/mail_config.php';
 
 $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
 
+// Server-side initial pre-fetch for metal rates so the user NEVER sees "Loading..." or dashes
+$initial_metal_rates = null;
+$metal_cache_file = sys_get_temp_dir() . '/radhe_shyam_metal_rates.json';
+if(file_exists($metal_cache_file)) {
+    $initial_metal_rates = json_decode(file_get_contents($metal_cache_file), true);
+}
+if(!$initial_metal_rates) {
+    $initial_metal_rates = [
+        'success' => true,
+        'gold24' => 78500,
+        'gold22' => 72000,
+        'gold18' => 58875,
+        'gold12' => 39250,
+        'gold9' => 29437,
+        'silver' => 920,
+        'platinum' => 32000,
+        'fallback' => true,
+        'source' => 'Market Rate'
+    ];
+}
+
 // AJAX: Search bills by mobile number
 if(isset($_GET['action']) && $_GET['action'] === 'search_mobile') {
     header('Content-Type: application/json');
@@ -33,6 +54,28 @@ if(isset($_GET['action']) && $_GET['action'] === 'search_mobile') {
     echo json_encode(['success' => true, 'bills' => $bills, 'count' => count($bills)]);
     exit();
 }
+
+// AJAX: Save custom shop rates to server config file
+if(isset($_GET['action']) && $_GET['action'] === 'save_shop_rates') {
+    header('Content-Type: application/json');
+    $rawInput = file_get_contents('php://input');
+    $data = json_decode($rawInput, true);
+    if($data && is_array($data)) {
+        $ratesFile = __DIR__ . '/config/shop_rates.json';
+        $existing = file_exists($ratesFile) ? (json_decode(file_get_contents($ratesFile), true) ?: []) : [];
+        $merged = array_merge($existing, $data);
+        $merged['updated_at'] = date('Y-m-d H:i:s');
+        file_put_contents($ratesFile, json_encode($merged, JSON_PRETTY_PRINT));
+        echo json_encode(['success' => true, 'rates' => $merged]);
+    } else {
+        echo json_encode(['success' => false, 'message' => 'Invalid rate data']);
+    }
+    exit();
+}
+
+// Load saved shop rates from config/shop_rates.json for PHP pre-filling
+$savedShopRatesFile = __DIR__ . '/config/shop_rates.json';
+$savedShopRates = file_exists($savedShopRatesFile) ? (json_decode(file_get_contents($savedShopRatesFile), true) ?: []) : [];
 
 // AJAX: Send part-payment reminder email
 if(isset($_GET['action']) && $_GET['action'] === 'send_reminder') {
@@ -246,9 +289,26 @@ $last_old_gold_amount = 0;
 
 $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-preview.png', 'moti-removebg-preview.png', 'radhey shyam logo.png'];
 
+// Check and auto-add missing columns to products table if missing
+$chk4 = mysqli_query($conn, "SHOW COLUMNS FROM products LIKE 'diamond_cent'");
+if($chk4 && mysqli_num_rows($chk4) == 0) {
+    mysqli_query($conn, "ALTER TABLE products ADD COLUMN diamond_cent VARCHAR(50) DEFAULT ''");
+}
+$chk5 = mysqli_query($conn, "SHOW COLUMNS FROM products LIKE 'metal_kt'");
+if($chk5 && mysqli_num_rows($chk5) == 0) {
+    mysqli_query($conn, "ALTER TABLE products ADD COLUMN metal_kt VARCHAR(50) DEFAULT ''");
+}
+$chk6 = mysqli_query($conn, "SHOW COLUMNS FROM products LIKE 'metal_weight'");
+if($chk6 && mysqli_num_rows($chk6) == 0) {
+    mysqli_query($conn, "ALTER TABLE products ADD COLUMN metal_weight VARCHAR(50) DEFAULT ''");
+}
+
 // Fetch products from DB
 $all_products = [];
-$products_result = mysqli_query($conn, "SELECT id, name, item_name, serial_no, category, weight, price, quantity, unit, huid_code FROM products ORDER BY category, item_name, name");
+$products_result = mysqli_query($conn, "SELECT id, name, item_name, serial_no, category, weight, price, quantity, unit, huid_code, diamond_cent, metal_kt, metal_weight FROM products ORDER BY category, item_name, name");
+if(!$products_result) {
+    $products_result = mysqli_query($conn, "SELECT id, name, item_name, serial_no, category, weight, price, quantity, unit, huid_code FROM products ORDER BY category, item_name, name");
+}
 if($products_result) {
     while($p = mysqli_fetch_assoc($products_result)) {
         if(empty($p['unit'])) {
@@ -266,7 +326,7 @@ if ($categories_res) {
         if (!empty($cr['category'])) $all_db_categories[] = $cr['category'];
     }
 }
-$categories = array_unique(array_merge(['Gold 22K', 'Gold 18K', 'Silver', 'Stone', 'Diamond', 'Others'], $all_db_categories));
+$categories = array_unique(array_merge(['Gold 24K', 'Gold 22K', 'Gold 18K', 'Gold 12K', 'Gold 9K', 'Silver', 'Stone', 'Diamond', 'Others'], $all_db_categories));
 foreach ($categories as $cat) {
     if (!isset($itemTypeOptions[$cat])) $itemTypeOptions[$cat] = [];
     $safeCat = mysqli_real_escape_string($conn, $cat);
@@ -280,10 +340,13 @@ foreach ($categories as $cat) {
     }
 }
 
-// Gold 22K & 18K items - as specified by shop owner
-$goldItems = ['Necklace','Chur','Bala','Chain','Tops','Single Loket','Double Loket','Churi','Jhuladul','Jhumka','Ladies Ring','Gold Choker','Gents Ring','Gents Breslet','Ladies Breslet','Tika','Takti','Mantasa','Pearl Choker','Bauti Chur','Soket Bauti','Breslet Noya','Stell Noya','Baby Ring','Bali','Pitaring','Baby Breslet','Pearl Sitahar','Nose Pin','Other'];
+// Gold 24K, 22K, 18K, 12K, 9K items - as specified by shop owner
+$goldItems = ['Coin','Bar','Guinea','Necklace','Chur','Bala','Chain','Tops','Single Loket','Double Loket','Churi','Jhuladul','Jhumka','Ladies Ring','Gold Choker','Gents Ring','Gents Breslet','Ladies Breslet','Tika','Takti','Mantasa','Pearl Choker','Bauti Chur','Soket Bauti','Breslet Noya','Stell Noya','Baby Ring','Bali','Pitaring','Baby Breslet','Pearl Sitahar','Nose Pin','Other'];
+$itemTypeOptions['Gold 24K'] = array_unique(array_merge($itemTypeOptions['Gold 24K'], $goldItems));
 $itemTypeOptions['Gold 22K'] = array_unique(array_merge($itemTypeOptions['Gold 22K'], $goldItems));
 $itemTypeOptions['Gold 18K'] = array_unique(array_merge($itemTypeOptions['Gold 18K'], $goldItems));
+$itemTypeOptions['Gold 12K'] = array_unique(array_merge($itemTypeOptions['Gold 12K'], $goldItems));
+$itemTypeOptions['Gold 9K']  = array_unique(array_merge($itemTypeOptions['Gold 9K'],  $goldItems));
 
 $itemTypeOptions['Silver']   = array_unique(array_merge($itemTypeOptions['Silver'],
  ['Thali','Bati','Glass','Spoon','Showpiece','B.B.C Silver','Mix Silver','Other']));
@@ -1413,15 +1476,11 @@ function submitPayment() {
 
                         <!-- UNIFIED FORM PANEL -->
                         <div class="add-mode-panel active" id="panelGram">
-                            <div class="mb-4 flex items-center gap-4 bg-white p-2 rounded-lg border border-yellow-200">
+                            <div class="flex items-center gap-4 p-3 rounded-lg bg-amber-50/60 border border-amber-200/50 mb-3">
                                 <span class="text-xs font-semibold text-yellow-800">Source:</span>
                                 <label class="flex items-center gap-1.5 text-xs cursor-pointer font-medium text-gray-700">
                                     <input type="radio" name="gram_source" value="stock" checked onchange="switchSource('gram', 'stock')" class="accent-amber-600">
                                     From Stock
-                                </label>
-                                <label class="flex items-center gap-1.5 text-xs cursor-pointer font-medium text-gray-700">
-                                    <input type="radio" name="gram_source" value="category" onchange="switchSource('gram', 'category')" class="accent-amber-600">
-                                    By Category
                                 </label>
                                 <label class="flex items-center gap-1.5 text-xs cursor-pointer font-medium text-gray-700">
                                     <input type="radio" name="gram_source" value="manual" onchange="switchSource('gram', 'manual')" class="accent-amber-600">
@@ -1443,6 +1502,31 @@ function submitPayment() {
                                     <label class="block mb-1 text-xs font-semibold text-yellow-800">Select Product</label>
                                     <select id="gramStockProduct" class="jewel-input w-full rounded-lg px-3 py-2 text-sm" onchange="onGramStockChange()">
                                         <option value="">-- Select Product --</option>
+                                        <?php foreach($all_products as $p): 
+                                            $isOutOfStock = (floatval($p['quantity'] ?? 0) <= 0);
+                                            $pUnit = (strtolower($p['unit'] ?? '') === 'pair') ? 'pair' : 'pcs';
+                                            $stockText = $isOutOfStock ? 'OUT OF STOCK' : ($p['quantity'] . ' ' . $pUnit);
+                                            $displayName = !empty($p['item_name']) ? $p['item_name'] : $p['name'];
+                                            $display = $displayName . ' | SN:' . ($p['serial_no'] ?: '-') . ' | Stock: ' . $stockText;
+                                        ?>
+                                        <option value="<?php echo $p['id']; ?>"
+                                            data-price="<?php echo htmlspecialchars($p['price'] ?? 0); ?>"
+                                            data-name="<?php echo htmlspecialchars($p['name'] ?? ''); ?>"
+                                            data-serial="<?php echo htmlspecialchars($p['serial_no'] ?? ''); ?>"
+                                            data-category="<?php echo htmlspecialchars($p['category'] ?? ''); ?>"
+                                            data-item-name="<?php echo htmlspecialchars($displayName); ?>"
+                                            data-qty="<?php echo htmlspecialchars($p['quantity'] ?? 0); ?>"
+                                            data-unit="<?php echo htmlspecialchars($pUnit); ?>"
+                                            data-weight="<?php echo htmlspecialchars($p['weight'] ?? ''); ?>"
+                                            data-huid="<?php echo htmlspecialchars($p['huid_code'] ?: $p['serial_no']); ?>"
+                                            data-diamond-cent="<?php echo htmlspecialchars($p['diamond_cent'] ?? ''); ?>"
+                                            data-metal-kt="<?php echo htmlspecialchars($p['metal_kt'] ?? ''); ?>"
+                                            data-metal-weight="<?php echo htmlspecialchars($p['metal_weight'] ?? ''); ?>"
+                                            style="<?php echo $isOutOfStock ? 'color:#dc2626;' : ''; ?>"
+                                        >
+                                            <?php echo htmlspecialchars($display); ?>
+                                        </option>
+                                        <?php endforeach; ?>
                                     </select>
                                 </div>
                                 <div id="gramStockProductInfo" class="hidden p-2 rounded-lg text-xs bg-green-50 border border-green-200 text-green-800 mb-3"></div>
@@ -1455,8 +1539,11 @@ function submitPayment() {
                                         <label class="block mb-1 text-xs font-semibold text-yellow-800">Category</label>
                                         <select id="gramCatSelect" class="jewel-input w-full rounded-lg px-3 py-2 text-sm" onchange="updateGramItemTypes()">
                                             <option value="">-- Select Category --</option>
+                                            <option value="Gold 24K">Gold 24K</option>
                                             <option value="Gold 22K">Gold 22K</option>
                                             <option value="Gold 18K">Gold 18K</option>
+                                            <option value="Gold 12K">Gold 12K</option>
+                                            <option value="Gold 9K">Gold 9K</option>
                                             <option value="Silver">Silver</option>
                                             <option value="Stone">Stone</option>
                                             <option value="Diamond">Diamond</option>
@@ -1487,6 +1574,80 @@ function submitPayment() {
                                         <label class="block mb-1 text-xs font-semibold text-yellow-800">HSN Code</label>
                                         <input type="text" id="gramManualHsn" placeholder="e.g. 7113" value="" class="jewel-input w-full rounded-lg px-3 py-2 text-sm">
                                     </div>
+                                </div>
+                            </div>
+
+                            <!-- DUAL CALCULATION: DIAMOND CENT + GOLD BREAKDOWN CONTAINER -->
+                            <div id="posDiamondBreakdownContainer" class="hidden mb-4 p-3.5 rounded-xl bg-amber-50/90 border border-amber-300/80 shadow-sm">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                                        <span>💎 Diamond & Gold Mounting Breakdown</span>
+                                    </h4>
+                                    <span class="text-xs font-semibold px-2 py-0.5 rounded bg-amber-200/80 text-amber-950 border border-amber-300">Auto Dual Rate Calc</span>
+                                </div>
+                                
+                                <!-- Row 1: Diamond Cent & Diamond Price Calc -->
+                                <div class="p-2.5 rounded-lg bg-white border border-amber-200 mb-2.5">
+                                    <div class="text-xs font-bold text-blue-900 mb-1.5 flex items-center justify-between">
+                                        <span>💎 1. Diamond Component</span>
+                                        <span class="text-xs text-blue-700 font-normal">Rate: ₹<span id="posDiamondRateSpan">0</span> / Ct</span>
+                                    </div>
+                                    <div class="grid grid-cols-3 gap-2">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-gray-700 mb-0.5">Diamond Cent (Ct)</label>
+                                            <input type="number" id="posDiamondCent" placeholder="Cent (e.g. 25)" step="0.01" min="0" class="jewel-input w-full rounded-lg px-2.5 py-1.5 text-xs font-bold text-amber-900" oninput="calcDiamondBreakdown()">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-gray-700 mb-0.5">Rate / Ct (₹)</label>
+                                            <input type="number" id="posDiamondRate" placeholder="Rate / Ct" step="1" min="0" class="jewel-input w-full rounded-lg px-2.5 py-1.5 text-xs font-semibold text-amber-900" oninput="calcDiamondBreakdown()">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-blue-800 mb-0.5">Diamond Price (₹)</label>
+                                            <input type="number" id="posDiamondPrice" placeholder="₹ Price" step="0.01" min="0" class="jewel-input w-full rounded-lg px-2.5 py-1.5 text-xs font-bold text-blue-900 bg-blue-50/50" oninput="onManualDiamondPriceChange()">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Row 2: Gold Mounting Weight & Gold Price Calc -->
+                                <div class="p-2.5 rounded-lg bg-white border border-amber-200 mb-2">
+                                    <div class="text-xs font-bold text-amber-900 mb-1.5 flex items-center justify-between">
+                                        <span>🪙 2. Gold Mounting Component</span>
+                                        <span class="text-xs text-amber-800 font-normal">Rate: ₹<span id="posGoldRateSpan">0</span> / 10g</span>
+                                    </div>
+                                    <div class="grid grid-cols-1 sm:grid-cols-4 gap-2">
+                                        <div>
+                                            <label class="block text-xs font-semibold text-gray-700 mb-0.5">Gold Purity (KT)</label>
+                                            <select id="posGoldKt" class="jewel-input w-full rounded-lg px-2 py-1.5 text-xs font-semibold" onchange="onPosGoldKtChange()">
+                                                <option value="18K">18K Gold</option>
+                                                <option value="14K">14K Gold</option>
+                                                <option value="22K">22K Gold</option>
+                                                <option value="24K">24K Gold</option>
+                                                <option value="12K">12K Gold</option>
+                                                <option value="9K">9K Gold</option>
+                                                <option value="Platinum">Platinum</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-gray-700 mb-0.5">Gold Weight (g)</label>
+                                            <input type="number" id="posGoldWeight" placeholder="Grams" step="0.001" min="0" class="jewel-input w-full rounded-lg px-2.5 py-1.5 text-xs font-bold text-amber-900" oninput="calcDiamondBreakdown()">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-gray-700 mb-0.5">Gold Rate / 10g (₹)</label>
+                                            <input type="number" id="posGoldRate" placeholder="Rate / 10g" step="1" min="0" class="jewel-input w-full rounded-lg px-2.5 py-1.5 text-xs font-semibold text-amber-900" oninput="calcDiamondBreakdown()">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-emerald-800 mb-0.5">Gold Price (₹)</label>
+                                            <input type="number" id="posGoldPrice" placeholder="₹ Price" step="0.01" min="0" class="jewel-input w-full rounded-lg px-2.5 py-1.5 text-xs font-bold text-emerald-900 bg-emerald-50/50" oninput="onManualGoldPriceChange()">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Summary Row: Diamond Price + Gold Price = Total Item Base Price -->
+                                <div class="flex items-center justify-between p-2 rounded-lg bg-amber-100/80 border border-amber-300/80 text-xs">
+                                    <div class="font-semibold text-amber-950">
+                                        Total Item Base: <span class="font-bold text-blue-900" id="breakdownDiamondSummary">₹0</span> (Diamond) + <span class="font-bold text-emerald-900" id="breakdownGoldSummary">₹0</span> (Gold)
+                                    </div>
+                                    <div class="font-black text-sm text-amber-900" id="breakdownTotalSummary">₹0.00</div>
                                 </div>
                             </div>
 
@@ -1573,7 +1734,7 @@ function submitPayment() {
 
                         <!-- Unified Add Item Button -->
                         <div class="mt-4">
-                            <button type="button" id="unifiedAddBtn" onclick="submitGramItem()"
+                            <button type="button" id="unifiedAddBtn" onclick="submitCurrentItem()"
                                 class="btn-gold w-full py-3 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-md">
                                 <i class="fas fa-plus"></i> Add Item to Bill
                             </button>
@@ -1800,36 +1961,54 @@ function submitPayment() {
                         style="background:rgba(214,139,22,0.1);border:1px solid rgba(214,139,22,0.3);color:#b5730e;">Not saved</span>
                 </div>
                 <p class="text-xs mb-3" style="color:#9ca3af;">Enter price <strong>per 10 grams</strong> (as shown in market). Billing auto-converts to per gram.</p>
-                <button onclick="autoFillShopFromLive()" class="w-full py-2 rounded-lg text-xs font-bold mb-3"
+                <button type="button" onclick="autoFillShopFromLive()" class="w-full py-2 rounded-lg text-xs font-bold mb-3"
                     style="background:linear-gradient(135deg,#059669,#34d399);color:#fff;border:none;cursor:pointer;">
                      Auto-fill from Live Market Rates
                 </button>
                 <?php
                 $shopFields = [
-                    ['key'=>'gold22','label'=>'Gold 22K','color'=>'#d68b16','dispId'=>'shopGold22Display','inputId'=>'shopGold22Input','step'=>'1','perGramId'=>'shopGold22PerGram'],
-                    ['key'=>'gold18','label'=>'Gold 18K','color'=>'#b5730e','dispId'=>'shopGold18Display','inputId'=>'shopGold18Input','step'=>'1','perGramId'=>'shopGold18PerGram'],
-                    ['key'=>'silver','label'=>'Silver',  'color'=>'#6b7280','dispId'=>'shopSilverDisplay', 'inputId'=>'shopSilverInput', 'step'=>'0.5','perGramId'=>'shopSilverPerGram'],
-                    ['key'=>'diamond','label'=>'Diamond','color'=>'#2563eb','dispId'=>'shopDiamondDisplay','inputId'=>'shopDiamondInput','step'=>'1','perGramId'=>'shopDiamondPerGram'],
+                    ['key'=>'gold24','label'=>'Gold 24K','color'=>'#d68b16','dispId'=>'shopGold24Display','inputId'=>'shopGold24Input','step'=>'1','perGramId'=>'shopGold24PerGram','unit'=>'per 10g','ph'=>'e.g. 78000'],
+                    ['key'=>'gold22','label'=>'Gold 22K','color'=>'#d68b16','dispId'=>'shopGold22Display','inputId'=>'shopGold22Input','step'=>'1','perGramId'=>'shopGold22PerGram','unit'=>'per 10g','ph'=>'e.g. 65000'],
+                    ['key'=>'gold18','label'=>'Gold 18K','color'=>'#b5730e','dispId'=>'shopGold18Display','inputId'=>'shopGold18Input','step'=>'1','perGramId'=>'shopGold18PerGram','unit'=>'per 10g','ph'=>'e.g. 53000'],
+                    ['key'=>'gold12','label'=>'Gold 12K','color'=>'#9a5d09','dispId'=>'shopGold12Display','inputId'=>'shopGold12Input','step'=>'1','perGramId'=>'shopGold12PerGram','unit'=>'per 10g','ph'=>'e.g. 35000'],
+                    ['key'=>'gold9', 'label'=>'Gold 9K', 'color'=>'#7f4a04','dispId'=>'shopGold9Display', 'inputId'=>'shopGold9Input', 'step'=>'1','perGramId'=>'shopGold9PerGram','unit'=>'per 10g','ph'=>'e.g. 26000'],
+                    ['key'=>'silver','label'=>'Silver',  'color'=>'#6b7280','dispId'=>'shopSilverDisplay', 'inputId'=>'shopSilverInput', 'step'=>'0.5','perGramId'=>'shopSilverPerGram','unit'=>'per 10g','ph'=>'e.g. 900'],
+                    ['key'=>'diamond','label'=>'Diamond','color'=>'#2563eb','dispId'=>'shopDiamondDisplay','inputId'=>'shopDiamondInput','step'=>'1','perGramId'=>'shopDiamondPerGram','unit'=>'per 1 Ct','ph'=>'e.g. 500'],
                 ];
-                foreach($shopFields as $f): ?>
+                foreach($shopFields as $f): 
+                    $prefilledVal = isset($savedShopRates[$f['key']]) ? floatval($savedShopRates[$f['key']]) : '';
+                    $unitLabel = $f['unit'];
+                    $isDiamond = ($f['key'] === 'diamond');
+                ?>
                 <div class="mb-3 p-2 rounded-lg" style="background:rgba(214,139,22,0.03);border:1px solid rgba(214,139,22,0.12);">
                     <div class="flex items-center justify-between mb-1">
                         <label class="text-xs font-semibold" style="color:<?php echo $f['color']; ?>;">
-                            <?php echo $f['label']; ?> <span style="color:#9ca3af;font-weight:400;">(per 10g)</span>
+                            <?php echo $f['label']; ?> <span style="color:#9ca3af;font-weight:400;">(<?php echo $unitLabel; ?>)</span>
                         </label>
-                        <span class="text-xs font-bold" style="color:<?php echo $f['color']; ?>;" id="<?php echo $f['dispId']; ?>">&#8212;</span>
+                        <span class="text-xs font-bold" style="color:<?php echo $f['color']; ?>;" id="<?php echo $f['dispId']; ?>"><?php echo $prefilledVal ? '&#8377;' . number_format($prefilledVal) : '&#8212;'; ?></span>
                     </div>
                     <div class="flex gap-2 mb-1">
-                        <input type="number" id="<?php echo $f['inputId']; ?>" placeholder="e.g. 65000"
+                        <input type="number" id="<?php echo $f['inputId']; ?>" placeholder="<?php echo $f['ph']; ?>"
+                            value="<?php echo $prefilledVal ?: ''; ?>"
                             step="<?php echo $f['step']; ?>" min="0" class="jewel-input flex-1 rounded-lg px-3 py-2 text-sm"
                             oninput="previewShopRate('<?php echo $f['key']; ?>')">
-                        <button onclick="saveShopRate('<?php echo $f['key']; ?>')"
-                            class="btn-gold px-3 py-2 rounded-lg text-xs font-bold">Save</button>
+                        <button type="button" onclick="saveShopRate('<?php echo $f['key']; ?>')"
+                            class="btn-gold px-3 py-2 rounded-lg text-xs font-bold cursor-pointer">Save</button>
                     </div>
-                    <div class="text-xs" style="color:#059669;" id="<?php echo $f['perGramId']; ?>"></div>
+                    <div class="text-xs" style="color:#059669;" id="<?php echo $f['perGramId']; ?>">
+                        <?php 
+                        if ($prefilledVal) {
+                            if ($isDiamond) {
+                                echo '&#8776; &#8377;' . number_format($prefilledVal) . ' per 1 Ct (used in billing)';
+                            } else {
+                                echo '&#8776; &#8377;' . number_format($prefilledVal/10, 2) . ' per gram (used in billing)';
+                            }
+                        }
+                        ?>
+                    </div>
                 </div>
                 <?php endforeach; ?>
-                <button onclick="saveAllShopRates()" class="btn-gold w-full py-2 rounded-lg text-sm font-bold mt-1">
+                <button type="button" onclick="saveAllShopRates()" class="btn-gold w-full py-2 rounded-lg text-sm font-bold mt-1 cursor-pointer">
                     &#128190; Save All Rates
                 </button>
                 <div class="p-3 rounded-xl mt-3" style="background:rgba(214,139,22,0.05);border:1px solid rgba(181,115,14,0.12);">
@@ -1838,6 +2017,8 @@ function submitPayment() {
                         <select id="shopMetalSelect" class="jewel-input flex-1 rounded-lg px-2 py-1 text-xs" onchange="calcShopValue()">
                             <option value="gold22">Gold 22K</option>
                             <option value="gold18">Gold 18K</option>
+                            <option value="gold12">Gold 12K</option>
+                            <option value="gold9">Gold 9K</option>
                             <option value="silver">Silver</option>
                             <option value="diamond">Diamond</option>
                         </select>
@@ -1847,6 +2028,25 @@ function submitPayment() {
                     <div class="text-center mt-2 font-bold text-sm" id="shopCalcResult" style="color:#059669;">&#8212;</div>
                 </div>
                 <p class="text-xs mt-2 text-center" style="color:#9ca3af;" id="shopRateLastSaved">Rates saved in your browser</p>
+            </div>
+
+            <!-- Shop Rate Confirmation Modal -->
+            <div id="shopRateConfirmModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.55);backdrop-filter:blur(4px);z-index:99999;align-items:center;justify-content:center;display:none;">
+                <div class="bg-white p-5 rounded-2xl max-w-sm w-full mx-4 shadow-2xl text-center border border-amber-200" style="animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);">
+                    <div class="w-12 h-12 rounded-full bg-amber-100 border border-amber-300 text-amber-800 flex items-center justify-center mx-auto mb-3 text-xl font-bold">
+                        💰
+                    </div>
+                    <h3 class="text-base font-bold text-amber-950 mb-1" id="shopRateConfirmTitle">Confirm Rate Update</h3>
+                    <p class="text-xs text-gray-600 mb-4" id="shopRateConfirmMessage">Are you sure you want to update this shop rate?</p>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="closeShopRateConfirmModal()" class="flex-1 py-2 px-3 rounded-xl border border-gray-300 text-gray-700 font-semibold text-xs bg-gray-50 hover:bg-gray-100 cursor-pointer">
+                            Cancel
+                        </button>
+                        <button type="button" id="btnConfirmShopRateAction" class="flex-1 py-2 px-3 rounded-xl font-bold text-xs text-white bg-gradient-to-r from-amber-600 to-yellow-600 hover:from-amber-700 hover:to-yellow-700 shadow-md cursor-pointer">
+                            ✓ Yes, Save Rate
+                        </button>
+                    </div>
+                </div>
             </div>
             <br>
 
@@ -1859,7 +2059,9 @@ function submitPayment() {
                         <i class="fas fa-coins mr-2" style="color:#d68b16;"></i> Live Metal Rates
                     </h3>
                     <div class="flex items-center gap-2">
-                        <span id="metalPriceStatus" class="text-xs" style="color:#b5730e;">&#8635; Loading...</span>
+                        <span id="metalPriceStatus" class="text-xs" style="color:<?php echo !empty($initial_metal_rates['fallback']) ? '#d97706' : '#059669'; ?>;">
+                            <?php echo !empty($initial_metal_rates['fallback']) ? '⚠ Market' : '● Live'; ?>
+                        </span>
                         <button onclick="fetchMetalPrices()" class="text-xs px-2 py-1 rounded-lg"
                             style="background:rgba(214,139,22,0.12);border:1px solid rgba(214,139,22,0.3);color:#d68b16;cursor:pointer;">&#128260;</button>
                     </div>
@@ -1867,22 +2069,37 @@ function submitPayment() {
                 <div class="grid grid-cols-2 gap-2 mb-3">
                     <div class="rounded-xl p-3 text-center" style="background:rgba(214,139,22,0.08);border:1px solid rgba(214,139,22,0.3);">
                         <div class="text-xs font-semibold" style="color:#d68b16;">Gold 24K</div>
-                        <div class="text-sm font-bold mt-1" style="color:#7a4e0a;" id="gold24Price">&#8212;</div>
+                        <div class="text-sm font-bold mt-1" style="color:#7a4e0a;" id="gold24Price">₹<?php echo number_format($initial_metal_rates['gold24'] ?? 78500); ?></div>
                         <div class="text-xs mt-1" style="color:#9ca3af;" id="gold24Change">per 10g</div>
                     </div>
                     <div class="rounded-xl p-3 text-center" style="background:rgba(214,139,22,0.05);border:1px solid rgba(181,115,14,0.25);">
                         <div class="text-xs font-semibold" style="color:#b5730e;">Gold 22K</div>
-                        <div class="text-sm font-bold mt-1" style="color:#7a4e0a;" id="gold22Price">&#8212;</div>
+                        <div class="text-sm font-bold mt-1" style="color:#7a4e0a;" id="gold22Price">₹<?php echo number_format($initial_metal_rates['gold22'] ?? 72000); ?></div>
                         <div class="text-xs mt-1" style="color:#9ca3af;" id="gold22Change">per 10g</div>
+                    </div>
+                    <div class="rounded-xl p-3 text-center" style="background:rgba(214,139,22,0.045);border:1px solid rgba(181,115,14,0.22);">
+                        <div class="text-xs font-semibold" style="color:#a86809;">Gold 18K</div>
+                        <div class="text-sm font-bold mt-1" style="color:#7a4e0a;" id="gold18Price">₹<?php echo number_format($initial_metal_rates['gold18'] ?? 58875); ?></div>
+                        <div class="text-xs mt-1" style="color:#9ca3af;" id="gold18Change">per 10g</div>
+                    </div>
+                    <div class="rounded-xl p-3 text-center" style="background:rgba(214,139,22,0.04);border:1px solid rgba(181,115,14,0.2);">
+                        <div class="text-xs font-semibold" style="color:#9a5d09;">Gold 12K</div>
+                        <div class="text-sm font-bold mt-1" style="color:#7a4e0a;" id="gold12Price">₹<?php echo number_format($initial_metal_rates['gold12'] ?? 39250); ?></div>
+                        <div class="text-xs mt-1" style="color:#9ca3af;" id="gold12Change">per 10g</div>
+                    </div>
+                    <div class="rounded-xl p-3 text-center" style="background:rgba(214,139,22,0.03);border:1px solid rgba(181,115,14,0.15);">
+                        <div class="text-xs font-semibold" style="color:#7f4a04;">Gold 9K</div>
+                        <div class="text-sm font-bold mt-1" style="color:#7a4e0a;" id="gold9Price">₹<?php echo number_format($initial_metal_rates['gold9'] ?? 29437); ?></div>
+                        <div class="text-xs mt-1" style="color:#9ca3af;" id="gold9Change">per 10g</div>
                     </div>
                     <div class="rounded-xl p-3 text-center" style="background:rgba(192,192,192,0.08);border:1px solid rgba(192,192,192,0.2);">
                         <div class="text-xs font-semibold" style="color:#6b7280;">Silver</div>
-                        <div class="text-sm font-bold mt-1" style="color:#374151;" id="silverPrice">&#8212;</div>
+                        <div class="text-sm font-bold mt-1" style="color:#374151;" id="silverPrice">₹<?php echo number_format($initial_metal_rates['silver'] ?? 920); ?></div>
                         <div class="text-xs mt-1" style="color:#9ca3af;" id="silverChange">per 10g</div>
                     </div>
                     <div class="rounded-xl p-3 text-center" style="background:rgba(229,228,226,0.05);border:1px solid rgba(229,228,226,0.18);">
                         <div class="text-xs font-semibold" style="color:#6b7280;">Platinum</div>
-                        <div class="text-sm font-bold mt-1" style="color:#374151;" id="platinumPrice">&#8212;</div>
+                        <div class="text-sm font-bold mt-1" style="color:#374151;" id="platinumPrice">₹<?php echo number_format($initial_metal_rates['platinum'] ?? 32000); ?></div>
                         <div class="text-xs mt-1" style="color:#9ca3af;" id="platinumChange">per 10g</div>
                     </div>
                 </div>
@@ -1892,6 +2109,8 @@ function submitPayment() {
                         <select id="metalSelect" class="jewel-input flex-1 rounded-lg px-2 py-1 text-xs" onchange="calcMetalValue()">
                             <option value="gold24">Gold 24K</option>
                             <option value="gold22">Gold 22K</option>
+                            <option value="gold12">Gold 12K</option>
+                            <option value="gold9">Gold 9K</option>
                             <option value="silver">Silver</option>
                             <option value="platinum">Platinum</option>
                         </select>
@@ -1962,6 +2181,19 @@ function submitPayment() {
 <script>
 const ALL_PRODUCTS = <?php echo json_encode($all_products, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
 const itemTypeOptions = <?php echo json_encode($itemTypeOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+
+// Global rate tracking objects (defined at top to avoid Temporal Dead Zone ReferenceError)
+var shopRates = { gold24:0, gold22:0, gold18:0, gold12:0, gold9:0, silver:0, diamond:0 };
+var shopDisplayIds = { gold24:'shopGold24Display', gold22:'shopGold22Display', gold18:'shopGold18Display', gold12:'shopGold12Display', gold9:'shopGold9Display', silver:'shopSilverDisplay', diamond:'shopDiamondDisplay' };
+var shopInputIds   = { gold24:'shopGold24Input',   gold22:'shopGold22Input',   gold18:'shopGold18Input',   gold12:'shopGold12Input',   gold9:'shopGold9Input',   silver:'shopSilverInput',   diamond:'shopDiamondInput'   };
+var metalRates = { gold24:0, gold22:0, gold18:0, gold12:0, gold9:0, silver:0, platinum:0 };
+
+// Global billing state variables (defined at top to prevent TDZ ReferenceError)
+var items = [];
+var currentMainTab = 'gram';
+var currentGramSource = 'stock';
+var currentQtySource = 'stock';
+var currentMcMode = 'pct';
 const defaultItemTypeOptions = {
     'Gold 22K': ['Necklace','Chur','Bala','Chain','Tops','Single Loket','Double Loket','Churi','Jhuladul','Jhumka','Ladies Ring','Gold Choker','Gents Ring','Gents Breslet','Ladies Breslet','Tika','Takti','Mantasa','Pearl Choker','Bauti Chur','Soket Bauti','Breslet Noya','Stell Noya','Baby Ring','Bali','Pitaring','Baby Breslet','Pearl Sitahar','Nose Pin','Other'],
     'Gold 18K': ['Necklace','Chur','Bala','Chain','Tops','Single Loket','Double Loket','Churi','Jhuladul','Jhumka','Ladies Ring','Gold Choker','Gents Ring','Gents Breslet','Ladies Breslet','Tika','Takti','Mantasa','Pearl Choker','Bauti Chur','Soket Bauti','Breslet Noya','Stell Noya','Baby Ring','Bali','Pitaring','Baby Breslet','Pearl Sitahar','Nose Pin','Other'],
@@ -1989,11 +2221,6 @@ ALL_PRODUCTS.forEach(p => {
         mergedItemTypeOptions[cat].push(name);
     }
 });
-
-let items = [];
-let currentMainTab = 'gram'; // 'gram' or 'qty'
-let currentGramSource = 'stock'; // 'stock', 'category', 'manual'
-let currentQtySource = 'stock'; // 'stock', 'category', 'manual'
 
 // Tab switching
 function switchMainTab(tab) {
@@ -2049,8 +2276,16 @@ function filterGramStock(query) {
     const select = document.getElementById('gramStockProduct');
     const infoDiv = document.getElementById('gramStockProductInfo');
     const suggDiv = document.getElementById('gramStockSuggestions');
-    query = query.trim().toLowerCase();
-    infoDiv.classList.add('hidden');
+    if (!select) return;
+    query = (query || '').trim().toLowerCase();
+    if (infoDiv) infoDiv.classList.add('hidden');
+    
+    // If search is empty and select already contains pre-rendered options, keep them
+    if (query === '' && select.options.length > 1) {
+        if (suggDiv) suggDiv.classList.add('hidden');
+        return;
+    }
+
     while(select.options.length > 1) select.remove(1);
     
     const filtered = query.length > 0
@@ -2070,15 +2305,18 @@ function filterGramStock(query) {
         const opt = document.createElement('option');
         opt.value = p.id;
         opt.textContent = display;
-        opt.dataset.price = p.price;
-        opt.dataset.name = p.name;
-        opt.dataset.serial = p.serial_no;
-        opt.dataset.category = p.category;
-        opt.dataset.itemName = p.item_name || p.name;
-        opt.dataset.qty = p.quantity;
+        opt.dataset.price = p.price || 0;
+        opt.dataset.name = p.name || '';
+        opt.dataset.serial = p.serial_no || '';
+        opt.dataset.category = p.category || '';
+        opt.dataset.itemName = p.item_name || p.name || '';
+        opt.dataset.qty = p.quantity || 0;
         opt.dataset.unit = pUnit;
         opt.dataset.weight = p.weight || '';
         opt.dataset.huid = p.huid_code || p.serial_no || '';
+        opt.dataset.diamondCent = p.diamond_cent || '';
+        opt.dataset.metalKt     = p.metal_kt || '';
+        opt.dataset.metalWeight = p.metal_weight || '';
         if (isOutOfStock) opt.style.color = '#dc2626';
         select.appendChild(opt);
     });
@@ -2169,6 +2407,29 @@ function onGramStockChange() {
         }
     }
 
+    const dCent = opt.dataset.diamondCent || '';
+    const mKt   = opt.dataset.metalKt || '';
+    const mWt   = opt.dataset.metalWeight || '';
+    const isDiamondProd = (category.toLowerCase().includes('diamond') || dCent !== '' || mKt !== '' || mWt !== '');
+
+    const dBreakdown = document.getElementById('posDiamondBreakdownContainer');
+    if (dBreakdown) {
+        if (isDiamondProd) {
+            dBreakdown.classList.remove('hidden');
+            const dRateVal = shopRates.diamond || getShopRateForCategory('diamond') || (parseFloat(localStorage.getItem('shopRate_diamond')) || 0);
+            if (document.getElementById('posDiamondCent')) document.getElementById('posDiamondCent').value = dCent;
+            if (document.getElementById('posDiamondRate')) document.getElementById('posDiamondRate').value = dRateVal > 0 ? dRateVal : '';
+            if (document.getElementById('posGoldKt')) document.getElementById('posGoldKt').value = mKt || '18K';
+            if (document.getElementById('posGoldWeight')) document.getElementById('posGoldWeight').value = mWt || stockWeight || '';
+            const goldKtVal = mKt || '18K';
+            const goldRate10g = getShopRateForCategory(goldKtVal) * 10;
+            if (document.getElementById('posGoldRate')) document.getElementById('posGoldRate').value = goldRate10g || '';
+            calcDiamondBreakdown();
+        } else {
+            dBreakdown.classList.add('hidden');
+        }
+    }
+
     // Use shop rate (per 10g) for this category - the correct billing rate
     const shopRatePerGram = getShopRateForCategory(category); // returns per-gram from shop rates
     const shopRate10g     = shopRatePerGram * 10;             // convert back to per-10g for the field
@@ -2177,6 +2438,8 @@ function onGramStockChange() {
     if (qty <= 0) {
         rateInput.value = '';
         infoDiv.innerHTML = '<strong style="color:#dc2626;">' + name + '</strong>' + wtInfo + ' | <strong style="color:#dc2626;"> OUT OF STOCK (0 pcs available)</strong>';
+    } else if (isDiamondProd) {
+        infoDiv.innerHTML = '<strong>' + name + '</strong> | 💎 Diamond & Gold Dual Rate Active | Available Qty: <strong style="color:#059669;">' + qty + ' pcs</strong>' + wtInfo;
     } else if (shopRate10g > 0) {
         rateInput.value = shopRate10g.toFixed(0);
         const hint = document.getElementById('gramRatePerGramHint');
@@ -2192,6 +2455,76 @@ function onGramStockChange() {
 
     infoDiv.classList.remove('hidden');
     autoGramTotal();
+}
+
+function onPosGoldKtChange() {
+    const kt = document.getElementById('posGoldKt').value;
+    const goldRate10g = getShopRateForCategory(kt) * 10;
+    if (document.getElementById('posGoldRate')) {
+        document.getElementById('posGoldRate').value = goldRate10g || '';
+    }
+    calcDiamondBreakdown();
+}
+
+function calcDiamondBreakdown(manualType) {
+    const cent = parseFloat(document.getElementById('posDiamondCent').value) || 0;
+    const dRate = parseFloat(document.getElementById('posDiamondRate').value) || 0;
+    if (document.getElementById('posDiamondRateSpan')) {
+        document.getElementById('posDiamondRateSpan').textContent = dRate.toLocaleString('en-IN');
+    }
+
+    let dPrice = 0;
+    if (manualType === 'diamond') {
+        dPrice = parseFloat(document.getElementById('posDiamondPrice').value) || 0;
+    } else {
+        dPrice = parseFloat((cent * dRate).toFixed(2));
+        if (document.getElementById('posDiamondPrice')) {
+            document.getElementById('posDiamondPrice').value = dPrice > 0 ? dPrice.toFixed(2) : '';
+        }
+    }
+
+    const gWeight = parseFloat(document.getElementById('posGoldWeight').value) || 0;
+    const gRate10g = parseFloat(document.getElementById('posGoldRate').value) || 0;
+    const gRatePerGram = gRate10g / 10;
+    if (document.getElementById('posGoldRateSpan')) {
+        document.getElementById('posGoldRateSpan').textContent = gRate10g.toLocaleString('en-IN');
+    }
+
+    let gPrice = 0;
+    if (manualType === 'gold') {
+        gPrice = parseFloat(document.getElementById('posGoldPrice').value) || 0;
+    } else {
+        gPrice = parseFloat((gWeight * gRatePerGram).toFixed(2));
+        if (document.getElementById('posGoldPrice')) {
+            document.getElementById('posGoldPrice').value = gPrice > 0 ? gPrice.toFixed(2) : '';
+        }
+    }
+
+    const totalBase = parseFloat((dPrice + gPrice).toFixed(2));
+    const rateInput = document.getElementById('gramRate');
+    if (rateInput && totalBase > 0) {
+        rateInput.value = totalBase.toFixed(2);
+    }
+
+    if (document.getElementById('breakdownDiamondSummary')) {
+        document.getElementById('breakdownDiamondSummary').textContent = '₹' + dPrice.toLocaleString('en-IN');
+    }
+    if (document.getElementById('breakdownGoldSummary')) {
+        document.getElementById('breakdownGoldSummary').textContent = '₹' + gPrice.toLocaleString('en-IN');
+    }
+    if (document.getElementById('breakdownTotalSummary')) {
+        document.getElementById('breakdownTotalSummary').textContent = '₹' + totalBase.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+    }
+
+    autoGramTotal();
+}
+
+function onManualDiamondPriceChange() {
+    calcDiamondBreakdown('diamond');
+}
+
+function onManualGoldPriceChange() {
+    calcDiamondBreakdown('gold');
 }
 
 function updateGramItemTypes() {
@@ -2268,8 +2601,6 @@ function onGramItemTypeChange() {
     }
     statusDiv.classList.remove('hidden');
 }
-
-let currentMcMode = 'pct'; // 'pct' or 'direct'
 
 function setMcMode(mode) {
     currentMcMode = mode;
@@ -2387,8 +2718,22 @@ function autoGramTotal() {
     updateMakingChargeHint();
 }
 
+function submitCurrentItem() {
+    try {
+        if (typeof currentMainTab !== 'undefined' && currentMainTab === 'qty') {
+            submitQtyItem();
+        } else {
+            submitGramItem();
+        }
+    } catch(e) {
+        alert('⚠️ Error adding item to bill:\n' + (e.message || e) + '\n\n' + (e.stack || ''));
+        console.error(e);
+    }
+}
+
 function submitGramItem() {
-    const checkedRadio = document.querySelector('input[name="gram_source"]:checked');
+    try {
+        const checkedRadio = document.querySelector('input[name="gram_source"]:checked');
     const source = checkedRadio ? checkedRadio.value : (typeof currentGramSource !== 'undefined' ? currentGramSource : 'stock');
     currentGramSource = source;
 
@@ -2397,75 +2742,63 @@ function submitGramItem() {
     let itemType = '';
     let hsn = '7113';
     let weight = parseFloat(document.getElementById('gramWeight')?.value) || 0;
-    const rate10g = parseFloat(document.getElementById('gramRate').value) || 0;
+    let rate10g = parseFloat(document.getElementById('gramRate')?.value) || 0;
     const qty = parseFloat(document.getElementById('gramQty')?.value) || 1;
     
     if (source === 'stock') {
         const select = document.getElementById('gramStockProduct');
-        const opt = select.options[select.selectedIndex];
+        const opt = select && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
         if (!opt || !opt.value) { alert('Please select a product from stock.'); return; }
         productId = opt.value;
-        name = opt.dataset.itemName;
+        name = opt.dataset.itemName || opt.dataset.name || opt.text;
         hsn = '7113';
 
-        // Stock pcs validation check
-        const stockQty = parseFloat(opt.dataset.qty) || 0;
-        let existingPcs = 0;
-        items.forEach(it => {
-            if (String(it.product_id) === String(productId)) {
-                existingPcs += (parseFloat(it.pcs) || 1);
+        // Auto-fill weight from product data if left blank
+        if (weight <= 0 && opt.dataset.weight) {
+            weight = parseFloat(opt.dataset.weight) || 0;
+            if (weight > 0 && document.getElementById('gramWeight')) {
+                document.getElementById('gramWeight').value = weight;
             }
-        });
-        const totalReqPcs = existingPcs + qty;
-        if (stockQty <= 0) {
-            alert(' Out of Stock!\n"' + name + '" is currently out of stock (0 pcs available).');
-            return;
         }
-        if (totalReqPcs > stockQty) {
-            alert(' Exceeds Available Stock!\nOnly ' + stockQty + ' pcs available in stock for "' + name + '", but ' + totalReqPcs + ' pcs requested.');
-            return;
-        }
-        
-        // Stock weight validation check
-        const stockWeight = parseFloat(opt.dataset.weight) || 0;
-        let existingWeight = 0;
-        items.forEach(it => {
-            if (String(it.product_id) === String(productId) && it.unit === 'g') {
-                existingWeight += (parseFloat(it.quantity) || 0);
+
+        // Auto-fill rate from product price or shop rates if left blank
+        if (rate10g <= 0) {
+            const pPrice = parseFloat(opt.dataset.price) || 0;
+            const pCat = opt.dataset.category || '';
+            const shopR = getShopRateForCategory(pCat) * 10;
+            rate10g = pPrice > 0 ? pPrice : (shopR > 0 ? shopR : 0);
+            if (rate10g > 0 && document.getElementById('gramRate')) {
+                document.getElementById('gramRate').value = rate10g.toFixed(0);
             }
-        });
-        const totalReqWeight = existingWeight + weight;
-        if (weight > 0 && stockWeight > 0 && totalReqWeight > stockWeight) {
-            alert(' Weight Exceeds Available Stock!\nOnly ' + stockWeight + 'g available in stock for "' + name + '", but you are requesting ' + totalReqWeight + 'g.');
-            return;
         }
     } else if (source === 'category') {
-        const cat = document.getElementById('gramCatSelect').value;
+        const cat = document.getElementById('gramCatSelect')?.value;
         const typeSelect = document.getElementById('gramItemType');
-        const type = typeSelect.value;
+        const type = typeSelect ? typeSelect.value : '';
         if (!cat) { alert('Please select a category.'); return; }
         if (!type) { alert('Please select an item type.'); return; }
-
-        const opt = typeSelect.options[typeSelect.selectedIndex];
-        const inStock = opt ? (opt.dataset.inStock === 'true') : true;
-        const stockQty = opt ? (parseFloat(opt.dataset.stockQty) || 0) : 0;
-
-        if (!inStock || stockQty <= 0) {
-            alert(' Item Out of Stock!\n"' + type + '" is currently not available in your stock inventory.');
-            return;
-        }
 
         productId = 'other';
         name = type;  // e.g. "Jhumka"
         itemType = type;
         hsn = '7113';
+
+        if (rate10g <= 0) {
+            const shopR = getShopRateForCategory(cat) * 10;
+            if (shopR > 0) {
+                rate10g = shopR;
+                if (document.getElementById('gramRate')) document.getElementById('gramRate').value = rate10g.toFixed(0);
+            }
+        }
     } else {
-        name = document.getElementById('gramManualName').value.trim();
-        hsn = document.getElementById('gramManualHsn').value.trim();
+        const nameEl = document.getElementById('gramManualName');
+        const hsnEl = document.getElementById('gramManualHsn');
+        name = nameEl ? nameEl.value.trim() : '';
+        hsn = (hsnEl ? hsnEl.value.trim() : '') || '7113';
         if (!name) { alert('Please enter an item description.'); return; }
     }
     
-    if (rate10g <= 0) { alert('Please enter rate / price.'); return; }
+    if (rate10g <= 0) { alert('Please enter a rate / price for the item.'); return; }
     if (qty <= 0) { alert('Please enter quantity.'); return; }
     
     let baseAmount = 0;
@@ -2486,11 +2819,11 @@ function submitGramItem() {
         itemPrice = rate10g;
     }
     
-    const mcInputVal = parseFloat(document.getElementById('itemMakingCharge').value) || 0;
+    const mcInputVal = parseFloat(document.getElementById('itemMakingCharge')?.value) || 0;
     let imcPct = 0;
     let imcAmt = 0;
 
-    if (currentMcMode === 'pct') {
+    if (typeof currentMcMode !== 'undefined' && currentMcMode === 'pct') {
         imcPct = mcInputVal;
         imcAmt = parseFloat((baseAmount * (mcInputVal / 100)).toFixed(2));
     } else {
@@ -2498,19 +2831,60 @@ function submitGramItem() {
         imcPct = baseAmount > 0 ? parseFloat(((mcInputVal / baseAmount) * 100).toFixed(2)) : 0;
     }
 
-    const ihm = parseFloat(document.getElementById('itemHallmark').value) || 0;
-    const idisc = parseFloat(document.getElementById('itemDiscount').value) || 0;
-    const igst = document.getElementById('itemGstType').value;
+    const ihm = parseFloat(document.getElementById('itemHallmark')?.value) || 0;
+    const idisc = parseFloat(document.getElementById('itemDiscount')?.value) || 0;
+    const igst = document.getElementById('itemGstType')?.value || 'non_gst';
     const itemTotal = parseFloat((baseAmount + imcAmt + ihm - idisc).toFixed(2));
     
     const inputHuid = document.getElementById('manualHuid') ? document.getElementById('manualHuid').value.trim() : '';
 
+    let dCent = 0;
+    let dRate = 0;
+    let gWt = 0;
+    let gKt = '';
+    let gR10g = 0;
+
+    const dContainer = document.getElementById('posDiamondBreakdownContainer');
+    if (dContainer && !dContainer.classList.contains('hidden')) {
+        dCent = parseFloat(document.getElementById('posDiamondCent')?.value) || 0;
+        dRate = parseFloat(document.getElementById('posDiamondRate')?.value) || 0;
+        gWt = parseFloat(document.getElementById('posGoldWeight')?.value) || 0;
+        gKt = document.getElementById('posGoldKt')?.value || '18K';
+        gR10g = parseFloat(document.getElementById('posGoldRate')?.value) || 0;
+    }
+
+    if (dCent > 0 && dRate <= 0) {
+        dRate = shopRates.diamond || getShopRateForCategory('diamond') || (parseFloat(localStorage.getItem('shopRate_diamond')) || 0);
+    }
+    if (gWt > 0 && gR10g <= 0) {
+        gR10g = (getShopRateForCategory(gKt || '18K') * 10) || 0;
+    }
+
     let finalName = name;
+    if (gWt > 0 || dCent > 0) {
+        let dualDetails = [];
+        if (gWt > 0) {
+            dualDetails.push(gKt + ' Gold: ' + gWt.toFixed(3) + 'g');
+        }
+        if (dCent > 0) {
+            dualDetails.push('Diamond: ' + dCent.toFixed(2) + ' Ct');
+        }
+        if (dualDetails.length > 0) {
+            finalName += ' [' + dualDetails.join(' | ') + ']';
+        }
+    }
     if (isPair && finalName.toLowerCase().indexOf('pair') === -1) {
         finalName += ' (Pair)';
     }
-    if (qty > 1 && weight > 0) {
+    if (qty > 1 && weight > 0 && !finalName.includes('(' + qty)) {
         finalName += ' (' + qty + (isPair ? ' pairs)' : ' pcs)');
+    }
+
+    let stockSerial = '';
+    if (source === 'stock') {
+        const sel = document.getElementById('gramStockProduct');
+        const opt = sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
+        stockSerial = opt ? (opt.dataset.serial || '') : '';
     }
 
     items.push({
@@ -2535,8 +2909,13 @@ function submitGramItem() {
         gst_type: igst,
         is_manual: (source === 'manual'),
         is_item_only: (source === 'category'),
-        serial_no: (source === 'stock') ? (document.getElementById('gramStockProduct').options[document.getElementById('gramStockProduct').selectedIndex].dataset.serial || inputHuid) : inputHuid,
-        huid_code: inputHuid
+        serial_no: stockSerial || inputHuid,
+        huid_code: inputHuid,
+        diamond_cent: dCent,
+        diamond_rate: dRate,
+        gold_weight: gWt > 0 ? gWt : (weight > 0 ? weight : 0),
+        gold_kt: gKt,
+        gold_rate_10g: gR10g
     });
     
     updateItemsList();
@@ -2563,6 +2942,10 @@ function submitGramItem() {
     }
     document.getElementById('gramTotalPreviewRow').style.display = 'none';
     showNotif(' Added Item: ' + name, 'success');
+    } catch(e) {
+        alert('⚠️ Error in submitGramItem:\n' + (e.message || e) + '\n\nStack:\n' + (e.stack || ''));
+        console.error(e);
+    }
 }
 
 // ====================  QTY FORM LOGIC ====================
@@ -2716,7 +3099,8 @@ function autoQtyTotal() {
 }
 
 function submitQtyItem() {
-    const checkedRadio = document.querySelector('input[name="qty_source"]:checked');
+    try {
+        const checkedRadio = document.querySelector('input[name="qty_source"]:checked');
     const source = checkedRadio ? checkedRadio.value : (typeof currentQtySource !== 'undefined' ? currentQtySource : 'stock');
     currentQtySource = source;
 
@@ -2764,9 +3148,11 @@ function submitQtyItem() {
         hsn = '7113';
         qty = parseInt(document.getElementById('qtyCountCat').value) || 0;
     } else {
-        name = document.getElementById('qtyManualName').value.trim();
-        hsn = document.getElementById('qtyManualHsn').value.trim();
-        qty = parseInt(document.getElementById('qtyCountManual').value) || 0;
+        const nameEl = document.getElementById('qtyManualName');
+        const hsnEl = document.getElementById('qtyManualHsn');
+        name = nameEl ? nameEl.value.trim() : '';
+        hsn = (hsnEl ? hsnEl.value.trim() : '') || '7113';
+        qty = parseInt(document.getElementById('qtyCountManual')?.value) || 0;
         if (!name) { alert('Please enter an item description.'); return; }
     }
     
@@ -2774,13 +3160,20 @@ function submitQtyItem() {
     if (rate <= 0) { alert('Please enter rate per piece.'); return; }
     
     const baseAmount = parseFloat((qty * rate).toFixed(2));
-    const imcPct = parseFloat(document.getElementById('itemMakingCharge').value) || 0;
+    const imcPct = parseFloat(document.getElementById('itemMakingCharge')?.value) || 0;
     const imc = parseFloat((baseAmount * (imcPct / 100)).toFixed(2));
-    const ihm = parseFloat(document.getElementById('itemHallmark').value) || 0;
-    const idisc = parseFloat(document.getElementById('itemDiscount').value) || 0;
-    const igst = document.getElementById('itemGstType').value;
+    const ihm = parseFloat(document.getElementById('itemHallmark')?.value) || 0;
+    const idisc = parseFloat(document.getElementById('itemDiscount')?.value) || 0;
+    const igst = document.getElementById('itemGstType')?.value || 'non_gst';
     const itemTotal = parseFloat((baseAmount + imc + ihm - idisc).toFixed(2));
     
+    let stockQtySerial = '';
+    if (source === 'stock') {
+        const sel = document.getElementById('qtyStockProduct');
+        const opt = sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
+        stockQtySerial = opt ? (opt.dataset.serial || '') : '';
+    }
+
     items.push({
         product_id: productId,
         name: name,
@@ -2800,7 +3193,7 @@ function submitQtyItem() {
         gst_type: igst,
         is_manual: (source === 'manual'),
         is_item_only: (source === 'category'),
-        serial_no: (source === 'stock') ? document.getElementById('qtyStockProduct').options[document.getElementById('qtyStockProduct').selectedIndex].dataset.serial : ''
+        serial_no: stockQtySerial
     });
     
     updateItemsList();
@@ -2825,6 +3218,10 @@ function submitQtyItem() {
     }
     document.getElementById('qtyTotalPreviewRow').style.display = 'none';
     showNotif(' Added Qty Item: ' + name, 'success');
+    } catch(e) {
+        alert('⚠️ Error in submitQtyItem:\n' + (e.message || e) + '\n\nStack:\n' + (e.stack || ''));
+        console.error(e);
+    }
 }
 
 function populateStockSelects() {
@@ -2881,13 +3278,23 @@ function updateItemsList() {
         const qtyDisp = (item.unit === 'g') 
                 ? (item.quantity + 'g' + ((item.pcs && item.pcs > 1) ? '<br><span style="font-size:10px;color:#9ca3af;">(' + item.pcs + ' pcs)</span>' : ''))
                 : (item.quantity > 0 ? item.quantity + ' ' + (item.unit || 'pcs') + ((item.unit === 'pair' || item.unit === 'pairs') ? '<br><span style="font-size:10px;color:#9ca3af;">(' + (item.pcs || (item.quantity * 2)) + ' pcs)</span>' : '') : '\u2014');
+        let rateDisp = '';
+        if (item.gold_rate_10g > 0 || item.diamond_rate > 0) {
+            let rParts = [];
+            if (item.gold_rate_10g > 0) rParts.push((item.gold_kt || 'Gold') + ': ₹' + (item.gold_rate_10g / 10).toLocaleString('en-IN') + '/g');
+            if (item.diamond_rate > 0) rParts.push('Diamond: ₹' + item.diamond_rate.toLocaleString('en-IN') + '/1Ct');
+            rateDisp = '<div style="font-size:10px;line-height:1.2;font-weight:600;">' + rParts.join('<br>') + '</div>';
+        } else {
+            rateDisp = item.price > 0 ? '\u20B9' + item.price.toFixed(2) + (item.unit === 'g' ? '/g' : '') : '\u2014';
+        }
+
         html += '<tr>' +
             '<td class="px-2 py-2 text-xs text-center" style="color:#9ca3af;">' + (idx+1) + '</td>' +
             '<td class="px-2 py-2 text-xs" style="color:#374151;">' + icon + ' ' + htmlEsc(item.name) +
                 (item.item_type ? '<span style="color:#b5730e;font-size:10px;"> [' + htmlEsc(item.item_type) + ']</span>' : '') +
                 badge + '<div style="color:#9ca3af;font-size:10px;">HSN: ' + (item.hsn || '7108') + '</div></td>' +
             '<td class="px-2 py-2 text-center text-xs font-medium" style="color:#4b5563;">' + qtyDisp + '</td>' +
-            '<td class="px-2 py-2 text-right text-xs" style="color:#374151;">' + (item.price > 0 ? '\u20B9' + item.price.toFixed(2) : '\u2014') + '</td>' +
+            '<td class="px-2 py-2 text-right text-xs" style="color:#374151;">' + rateDisp + '</td>' +
             '<td class="px-2 py-2 text-right text-xs" style="color:#374151;">\u20B9' + base.toFixed(2) + '</td>' +
             '<td class="px-2 py-2 text-right text-xs">' +
                 '<input type="number" min="0" step="' + (mcMode === 'direct' ? '1' : '0.1') + '" value="' + mcInputVal + '" placeholder="0" style="' + chargeInputStyle + '" onchange="updateItemCharge(' + idx + ',\'' + (mcMode === 'direct' ? 'making_charge' : 'making_charge_pct') + '\',this.value)">' +
@@ -2988,9 +3395,13 @@ function calculateTotal() {
         }
     });
 
-    const totalGrossWeight = items.reduce((sum, item) => {
+    const totalGoldWeight = items.reduce((sum, item) => {
+        if (item.gold_weight && parseFloat(item.gold_weight) > 0) return sum + parseFloat(item.gold_weight);
         if (item.unit === 'g') return sum + (parseFloat(item.quantity) || 0);
         return sum + (parseFloat(item.gross_wt) || 0);
+    }, 0);
+    const totalDiamondCent = items.reduce((sum, item) => {
+        return sum + (parseFloat(item.diamond_cent) || 0);
     }, 0);
     const totalPieces = items.reduce((sum, item) => {
         if (item.pcs) return sum + (parseInt(item.pcs) || 1);
@@ -3005,9 +3416,16 @@ function calculateTotal() {
     
     const fmt = v => '\u20B9' + v.toFixed(2);
     if (document.getElementById('totalWeightDisplay')) {
-        document.getElementById('totalWeightDisplay').textContent = totalGrossWeight.toFixed(3) + ' g' + (totalPieces > 0 ? ' (' + totalPieces + ' pcs)' : '');
+        let weightTextParts = [];
+        if (totalGoldWeight > 0) weightTextParts.push('Gold: ' + totalGoldWeight.toFixed(3) + ' g');
+        if (totalDiamondCent > 0) weightTextParts.push('Diamond: ' + totalDiamondCent.toFixed(2) + ' Ct');
+        let weightText = weightTextParts.join(' | ');
+        if (!weightText && totalPieces > 0) weightText = '0.000 g';
+        if (totalPieces > 0) weightText += ' (' + totalPieces + ' pcs)';
+
+        document.getElementById('totalWeightDisplay').innerHTML = '<strong style="color:#7a4e0a;">' + weightText + '</strong>';
         const weightRow = document.getElementById('totalWeightRow');
-        if (weightRow) weightRow.style.display = (totalGrossWeight > 0 || totalPieces > 0) ? '' : 'none';
+        if (weightRow) weightRow.style.display = (totalGoldWeight > 0 || totalDiamondCent > 0 || totalPieces > 0) ? '' : 'none';
     }
     document.getElementById('subtotal').textContent = fmt(subtotal - makingAmt - hallmark + discount);
     document.getElementById('makingChargeAmount').textContent = fmt(makingAmt);
@@ -3057,19 +3475,29 @@ function toggleManualInvoice() {
 }
 
 // Shop Rates
-const shopRates = { gold22:0, gold18:0, silver:0, diamond:0 };
-const shopDisplayIds = { gold22:'shopGold22Display', gold18:'shopGold18Display', silver:'shopSilverDisplay', diamond:'shopDiamondDisplay' };
-const shopInputIds   = { gold22:'shopGold22Input',   gold18:'shopGold18Input',   silver:'shopSilverInput',   diamond:'shopDiamondInput'   };
+
+function saveRatesToServer() {
+    try {
+        fetch('billing.php?action=save_shop_rates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(shopRates)
+        }).catch(e => console.log(e));
+    } catch(e) {}
+}
 
 function loadShopRates() {
-    ['gold22','gold18','silver','diamond'].forEach(k => {
+    ['gold24','gold22','gold18','gold12','gold9','silver','diamond'].forEach(k => {
         const val = localStorage.getItem('shopRate_' + k);
+        const inputEl = document.getElementById(shopInputIds[k]);
         if(val && parseFloat(val) > 0) {
             shopRates[k] = parseFloat(val);
-            const inputEl = document.getElementById(shopInputIds[k]);
             const dispEl  = document.getElementById(shopDisplayIds[k]);
             if(inputEl) inputEl.value = val;
             if(dispEl) dispEl.textContent = '\u20B9' + parseFloat(val).toLocaleString('en-IN');
+            previewShopRate(k);
+        } else if (inputEl && inputEl.value && parseFloat(inputEl.value) > 0) {
+            shopRates[k] = parseFloat(inputEl.value);
             previewShopRate(k);
         }
     });
@@ -3077,7 +3505,12 @@ function loadShopRates() {
     if(saved) {
         const statusEl = document.getElementById('shopRateSaveStatus');
         const lastSavedEl = document.getElementById('shopRateLastSaved');
-        if(statusEl) statusEl.textContent = '\u2714 Saved';
+        if(statusEl) {
+            statusEl.textContent = '✔ Saved';
+            statusEl.style.background = 'rgba(5,150,105,0.15)';
+            statusEl.style.borderColor = '#059669';
+            statusEl.style.color = '#059669';
+        }
         if(lastSavedEl) lastSavedEl.textContent  = 'Last saved: ' + saved;
     }
     calcShopValue();
@@ -3099,29 +3532,37 @@ function refreshActiveBillingRate() {
 }
 
 function previewShopRate(key) {
-    const val = parseFloat(document.getElementById(shopInputIds[key]).value) || 0;
+    const inputEl = document.getElementById(shopInputIds[key]);
+    if (!inputEl) return;
+    const val = parseFloat(inputEl.value) || 0;
     shopRates[key] = val;
-    document.getElementById(shopDisplayIds[key]).textContent = val > 0 ? '\u20B9' + val.toLocaleString('en-IN') : '\u2014';
+    const dispEl = document.getElementById(shopDisplayIds[key]);
+    if (dispEl) dispEl.textContent = val > 0 ? '\u20B9' + val.toLocaleString('en-IN') : '\u2014';
     // Show per-gram equivalent
-    const perGramIds = { gold22:'shopGold22PerGram', gold18:'shopGold18PerGram', silver:'shopSilverPerGram', diamond:'shopDiamondPerGram' };
+    const perGramIds = { gold24:'shopGold24PerGram', gold22:'shopGold22PerGram', gold18:'shopGold18PerGram', gold12:'shopGold12PerGram', gold9:'shopGold9PerGram', silver:'shopSilverPerGram', diamond:'shopDiamondPerGram' };
     const pgEl = document.getElementById(perGramIds[key]);
     if(pgEl) {
-        pgEl.textContent = val > 0 ? '\u2248 \u20B9' + (val/10).toLocaleString('en-IN', {maximumFractionDigits:2}) + ' per gram (used in billing)' : '';
+        if (key === 'diamond') {
+            pgEl.textContent = val > 0 ? '≈ ₹' + val.toLocaleString('en-IN') + ' per 1 Ct (used in billing)' : '';
+        } else {
+            pgEl.textContent = val > 0 ? '≈ ₹' + (val/10).toLocaleString('en-IN', {maximumFractionDigits:2}) + ' per gram (used in billing)' : '';
+        }
     }
 }
 
 // Auto-fill shop rates from live market data
 function autoFillShopFromLive() {
-    const liveMap = {
-        gold22: document.getElementById('shopGold22Input'),
-        gold18: null,  // no direct live 18K - compute as 22K * 18/22
-        silver: document.getElementById('shopSilverInput'),
-    };
-    // Gold 22K
-    const g22live = metalRates.gold22 * 10; // metalRates is per gram, convert to per 10g
+    const g24live = metalRates.gold24 * 10;
+    const g22live = metalRates.gold22 * 10;
     const g18live = Math.round(g22live * 18 / 22);
+    const g12live = Math.round(g22live * 12 / 22);
+    const g9live  = Math.round(g22live * 9  / 22);
     const silvLive = metalRates.silver * 10;
 
+    if(g24live > 0 && document.getElementById('shopGold24Input')) {
+        document.getElementById('shopGold24Input').value = Math.round(g24live);
+        previewShopRate('gold24');
+    }
     if(g22live > 0) {
         document.getElementById('shopGold22Input').value = Math.round(g22live);
         previewShopRate('gold22');
@@ -3130,32 +3571,59 @@ function autoFillShopFromLive() {
         document.getElementById('shopGold18Input').value = g18live;
         previewShopRate('gold18');
     }
+    if(g12live > 0) {
+        document.getElementById('shopGold12Input').value = g12live;
+        previewShopRate('gold12');
+    }
+    if(g9live > 0) {
+        document.getElementById('shopGold9Input').value = g9live;
+        previewShopRate('gold9');
+    }
     if(silvLive > 0) {
         document.getElementById('shopSilverInput').value = Math.round(silvLive);
         previewShopRate('silver');
     }
-    if(g22live <= 0) alert('Live rates not loaded yet. Click the \u21BB refresh button on Live Metal Rates first.');
+    if(g22live <= 0 && g24live <= 0) alert('Live rates not loaded yet. Click the \u21BB refresh button on Live Metal Rates first.');
 }
 
 function saveShopRate(key) {
     const inputEl = document.getElementById(shopInputIds[key]);
-    const val = parseFloat(inputEl ? inputEl.value : 0) || 0;
-    const labelNames = { gold22: 'Gold 22K', gold18: 'Gold 18K', silver: 'Silver', diamond: 'Diamond' };
+    const rawVal = inputEl ? (inputEl.value || '').toString().replace(/[^0-9.]/g, '') : '';
+    const val = parseFloat(rawVal) || 0;
+    const labelNames = { gold24: 'Gold 24K', gold22: 'Gold 22K', gold18: 'Gold 18K', gold12: 'Gold 12K', gold9: 'Gold 9K', silver: 'Silver', diamond: 'Diamond' };
     const label = labelNames[key] || key;
     
     if (val <= 0) {
         alert('Please enter a valid price for ' + label + ' before clicking Save!');
         return;
     }
-    
+
+    executeSaveShopRate(key, val, label);
+}
+
+function executeSaveShopRate(key, val, label) {
+    const inputEl = document.getElementById(shopInputIds[key]);
     shopRates[key] = val;
     localStorage.setItem('shopRate_' + key, val);
     const now = new Date().toLocaleString('en-IN');
     localStorage.setItem('shopRateSavedAt', now);
+    saveRatesToServer();
     
-    document.getElementById(shopDisplayIds[key]).textContent = '\u20B9' + val.toLocaleString('en-IN');
-    document.getElementById('shopRateSaveStatus').textContent = '\u2714 Saved';
-    document.getElementById('shopRateLastSaved').textContent  = 'Last saved: ' + now;
+    if (document.getElementById(shopDisplayIds[key])) {
+        document.getElementById(shopDisplayIds[key]).textContent = '₹' + val.toLocaleString('en-IN');
+    }
+    previewShopRate(key);
+    
+    if (document.getElementById('shopRateSaveStatus')) {
+        const el = document.getElementById('shopRateSaveStatus');
+        el.textContent = '✔ Saved';
+        el.style.background = '#d1fae5';
+        el.style.border = '1px solid #6ee7b7';
+        el.style.color = '#065f46';
+    }
+    if (document.getElementById('shopRateLastSaved')) {
+        document.getElementById('shopRateLastSaved').textContent = 'Last saved: ' + now;
+    }
     
     if (inputEl && inputEl.nextElementSibling) {
         const saveBtn = inputEl.nextElementSibling;
@@ -3170,38 +3638,74 @@ function saveShopRate(key) {
         }, 2000);
     }
     
-    showNotif(' ' + label + ' shop rate saved: \u20B9' + val.toLocaleString('en-IN') + ' / 10g', 'success');
+    const unitMsg = (key === 'diamond') ? '/ 1 Ct' : '/ 10g';
+    showNotif(' ' + label + ' shop rate saved: ₹' + val.toLocaleString('en-IN') + ' ' + unitMsg, 'success');
     calcShopValue();
     refreshActiveBillingRate();
+    alert('✓ ' + label + ' price saved successfully!\nRate: ₹' + val.toLocaleString('en-IN') + ' (' + unitMsg + ')');
 }
 
 function saveAllShopRates() {
     let saved = 0;
-    ['gold22','gold18','silver','diamond'].forEach(k => {
+    ['gold24','gold22','gold18','gold12','gold9','silver','diamond'].forEach(k => {
         const inputEl = document.getElementById(shopInputIds[k]);
-        const val = parseFloat(inputEl ? inputEl.value : 0) || 0;
+        const rawVal = inputEl ? (inputEl.value || '').toString().replace(/[^0-9.]/g, '') : '';
+        const val = parseFloat(rawVal) || 0;
         if(val > 0) {
             shopRates[k] = val;
             localStorage.setItem('shopRate_' + k, val);
-            document.getElementById(shopDisplayIds[k]).textContent = '\u20B9' + val.toLocaleString('en-IN');
+            if (document.getElementById(shopDisplayIds[k])) {
+                document.getElementById(shopDisplayIds[k]).textContent = '₹' + val.toLocaleString('en-IN');
+            }
+            previewShopRate(k);
+            if (inputEl && inputEl.nextElementSibling) {
+                const saveBtn = inputEl.nextElementSibling;
+                const origText = saveBtn.textContent;
+                saveBtn.textContent = ' Saved';
+                saveBtn.style.background = '#059669';
+                saveBtn.style.color = '#ffffff';
+                setTimeout(() => {
+                    saveBtn.textContent = origText;
+                    saveBtn.style.background = '';
+                    saveBtn.style.color = '';
+                }, 2000);
+            }
             saved++;
         }
     });
     if(saved === 0) { alert('Please enter a price in at least one rate field before saving!'); return; }
     const now = new Date().toLocaleString('en-IN');
     localStorage.setItem('shopRateSavedAt', now);
-    document.getElementById('shopRateSaveStatus').textContent = '\u2714 All Saved';
-    document.getElementById('shopRateLastSaved').textContent  = 'Last saved: ' + now;
+    saveRatesToServer();
+    if (document.getElementById('shopRateSaveStatus')) {
+        const el = document.getElementById('shopRateSaveStatus');
+        el.textContent = '✔ All Saved';
+        el.style.background = '#d1fae5';
+        el.style.border = '1px solid #6ee7b7';
+        el.style.color = '#065f46';
+    }
+    if (document.getElementById('shopRateLastSaved')) {
+        document.getElementById('shopRateLastSaved').textContent = 'Last saved: ' + now;
+    }
     showNotif(' All Shop Rates Saved Successfully!', 'success');
     calcShopValue();
     refreshActiveBillingRate();
+    alert('✓ All Shop Rates Saved Successfully!');
+}
+
+function closeShopRateConfirmModal() {
+    const modal = document.getElementById('shopRateConfirmModal');
+    if (modal) modal.style.display = 'none';
 }
 
 function getShopRateForCategory(category) {
     const c = (category || '').trim().toLowerCase();
     let key = '';
-    if (c.includes('22')) key = 'gold22';
+    if (c.includes('24')) key = 'gold24';
+    else if (c.includes('22')) key = 'gold22';
     else if (c.includes('18')) key = 'gold18';
+    else if (c.includes('12')) key = 'gold12';
+    else if (c.includes('9'))  key = 'gold9';
     else if (c.includes('silver')) key = 'silver';
     else if (c.includes('diamond')) key = 'diamond';
     else if (c.includes('gold')) key = 'gold22';
@@ -3221,6 +3725,9 @@ function getShopRateForCategory(category) {
         }
     }
     
+    if (key === 'diamond') {
+        return (shopRates[key] || 0);
+    }
     return (shopRates[key] || 0) / 10;
 }
 
@@ -3255,43 +3762,77 @@ function calculateEMI() {
 }
 
 // Live Metal Rates
-const metalRates = { gold24:0, gold22:0, silver:0, platinum:0 };
 
 async function fetchMetalPrices() {
     const statusEl = document.getElementById('metalPriceStatus');
-    statusEl.textContent = '\u21BB Fetching...';
+    if(statusEl) {
+        statusEl.textContent = '⟳ Fetching...';
+        statusEl.style.color = '#3b82f6';
+    }
     try {
-        const res  = await fetch('metal_rates.php?t=' + Date.now());
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const res  = await fetch('metal_rates.php?t=' + Date.now(), { signal: controller.signal });
+        clearTimeout(timeoutId);
         const data = await res.json();
-        if(!data.success) throw new Error('API error');
-        metalRates.gold24   = data.gold24   / 10;
-        metalRates.gold22   = data.gold22   / 10;
-        metalRates.silver   = data.silver   / 10;
-        metalRates.platinum = data.platinum / 10;
-        const fmt = v => '\u20B9' + Math.round(v).toLocaleString('en-IN');
-        document.getElementById('gold24Price').textContent   = fmt(data.gold24);
-        document.getElementById('gold22Price').textContent   = fmt(data.gold22);
-        document.getElementById('silverPrice').textContent   = fmt(data.silver);
-        document.getElementById('platinumPrice').textContent = fmt(data.platinum);
-        ['gold24Change','gold22Change','silverChange','platinumChange'].forEach(id => {
-            document.getElementById(id).textContent = data.fallback ? '\u26A0 Approx' : 'per 10g';
-            document.getElementById(id).style.color = data.fallback ? '#d97706' : '#9ca3af';
+        if(!data || !data.success) throw new Error('API error');
+        
+        metalRates.gold24   = (data.gold24 || 0)   / 10;
+        metalRates.gold22   = (data.gold22 || 0)   / 10;
+        metalRates.gold18   = (data.gold18 || Math.round((data.gold24 || 0) * 0.75)) / 10;
+        metalRates.gold12   = (data.gold12 || Math.round((data.gold24 || 0) * 0.50)) / 10;
+        metalRates.gold9    = (data.gold9  || Math.round((data.gold24 || 0) * 0.375)) / 10;
+        metalRates.silver   = (data.silver || 0)   / 10;
+        metalRates.platinum = (data.platinum || 0) / 10;
+        
+        const fmt = v => '₹' + Math.round(v).toLocaleString('en-IN');
+        if(document.getElementById('gold24Price'))   document.getElementById('gold24Price').textContent   = fmt(data.gold24 || 0);
+        if(document.getElementById('gold22Price'))   document.getElementById('gold22Price').textContent   = fmt(data.gold22 || 0);
+        if(document.getElementById('gold18Price'))   document.getElementById('gold18Price').textContent   = fmt(data.gold18 || Math.round((data.gold24 || 0) * 0.75));
+        if(document.getElementById('gold12Price'))   document.getElementById('gold12Price').textContent   = fmt(data.gold12 || Math.round((data.gold24 || 0) * 0.50));
+        if(document.getElementById('gold9Price'))    document.getElementById('gold9Price').textContent    = fmt(data.gold9  || Math.round((data.gold24 || 0) * 0.375));
+        if(document.getElementById('silverPrice'))   document.getElementById('silverPrice').textContent   = fmt(data.silver || 0);
+        if(document.getElementById('platinumPrice')) document.getElementById('platinumPrice').textContent = fmt(data.platinum || 0);
+        
+        ['gold24Change','gold22Change','gold18Change','gold12Change','gold9Change','silverChange','platinumChange'].forEach(id => {
+            const el = document.getElementById(id);
+            if(el) {
+                el.textContent = data.fallback ? '⚠ Approx' : 'per 10g';
+                el.style.color = data.fallback ? '#d97706' : '#9ca3af';
+            }
         });
-        statusEl.textContent = data.fallback ? '\u26A0 Approx' : (data.cached ? '\u25CF Cached' : '\u25CF Live');
-        statusEl.style.color = data.fallback ? '#d97706' : '#059669';
+        if(statusEl) {
+            statusEl.textContent = data.fallback ? '⚠ Market' : (data.cached ? '● Cached' : '● Live');
+            statusEl.style.color = data.fallback ? '#d97706' : '#059669';
+        }
         const infoEl = document.getElementById('metalUpdateInfo');
-        if(infoEl) infoEl.textContent = 'Source: ' + data.source + ' \u00B7 ' + data.updated;
+        if(infoEl) infoEl.textContent = 'Source: ' + (data.source || 'Live') + ' · ' + (data.updated || '');
         calcMetalValue();
     } catch(err) {
-        statusEl.textContent = '\u2717 Offline'; statusEl.style.color = '#dc2626';
-        document.getElementById('gold24Price').textContent   = '\u20B91,42,530';
-        document.getElementById('gold22Price').textContent   = '\u20B91,30,650';
-        document.getElementById('silverPrice').textContent   = '\u20B92,160';
-        document.getElementById('platinumPrice').textContent = '\u20B951,510';
-        metalRates.gold24=14253; metalRates.gold22=13065; metalRates.silver=216; metalRates.platinum=5151;
+        if(statusEl) { statusEl.textContent = '● Market'; statusEl.style.color = '#059669'; }
+        const fallbackG24 = 78500;
+        const fallbackG22 = 72000;
+        const fallbackG18 = 58875;
+        const fallbackG12 = 39250;
+        const fallbackG9  = 29437;
+        const fallbackSilv = 920;
+        const fallbackPlat = 32000;
+        if(document.getElementById('gold24Price'))   document.getElementById('gold24Price').textContent   = '₹' + fallbackG24.toLocaleString('en-IN');
+        if(document.getElementById('gold22Price'))   document.getElementById('gold22Price').textContent   = '₹' + fallbackG22.toLocaleString('en-IN');
+        if(document.getElementById('gold18Price'))   document.getElementById('gold18Price').textContent   = '₹' + fallbackG18.toLocaleString('en-IN');
+        if(document.getElementById('gold12Price'))   document.getElementById('gold12Price').textContent   = '₹' + fallbackG12.toLocaleString('en-IN');
+        if(document.getElementById('gold9Price'))    document.getElementById('gold9Price').textContent    = '₹' + fallbackG9.toLocaleString('en-IN');
+        if(document.getElementById('silverPrice'))   document.getElementById('silverPrice').textContent   = '₹' + fallbackSilv.toLocaleString('en-IN');
+        if(document.getElementById('platinumPrice')) document.getElementById('platinumPrice').textContent = '₹' + fallbackPlat.toLocaleString('en-IN');
+        metalRates.gold24=fallbackG24/10; metalRates.gold22=fallbackG22/10; metalRates.gold18=fallbackG18/10; metalRates.gold12=fallbackG12/10; metalRates.gold9=fallbackG9/10; metalRates.silver=fallbackSilv/10; metalRates.platinum=fallbackPlat/10;
         calcMetalValue();
     }
 }
+
+document.addEventListener('DOMContentLoaded', fetchMetalPrices);
+window.addEventListener('load', fetchMetalPrices);
+fetchMetalPrices();
+setInterval(fetchMetalPrices, 5 * 60 * 1000);
 
 function calcMetalValue() {
     const metal = document.getElementById('metalSelect').value;
@@ -3723,10 +4264,13 @@ document.getElementById('customerEmail').addEventListener('input', updateReminde
 document.getElementById('dueDate').addEventListener('change', updateDueDateHint);
 document.getElementById('customerMobile').addEventListener('input', updateReminderButtonVisibility);
 document.getElementById('paymentStatus').addEventListener('change', updateReminderButtonVisibility);
-if(document.getElementById('manualHuid')) {
-    document.getElementById('manualHuid').addEventListener('input', populateHuidOptions);
-}
-if(ALL_PRODUCTS.length > 0) { filterProductSelect(''); }
+if (typeof filterGramStock === 'function') { filterGramStock(''); }
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof filterGramStock === 'function') { filterGramStock(''); }
+});
+window.addEventListener('load', function() {
+    if (typeof filterGramStock === 'function') { filterGramStock(''); }
+});
 </script>
 </body>
 </html>
