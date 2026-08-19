@@ -1238,8 +1238,19 @@ function openHistoryModal(invoiceId, customerName) {
 
 function closeHistoryModal() {
     var modal = document.getElementById('historyModal');
-    modal.style.display = 'none';
+    if (modal) modal.style.display = 'none';
 }
+
+window.addEventListener('click', function(e) {
+    var hModal = document.getElementById('historyModal');
+    if (hModal && e.target === hModal) {
+        closeHistoryModal();
+    }
+    var rModal = document.getElementById('receiveModal');
+    if (rModal && e.target === rModal) {
+        closeReceiveModal();
+    }
+});
 
 /*  Receive Modal JS  */
 function openReceiveModal(id, invoiceNo, customerName, totalAmt, currentDue, currentDueDate) {
@@ -1371,7 +1382,7 @@ function submitReceivePayment() {
 </script>
 
 <!-- History Modal -->
-<div id="historyModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;background:rgba(0,0,0,0.55);justify-content:center;align-items:center;padding:24px;">
+<div id="historyModal" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:9999;background:rgba(0,0,0,0.55);justify-content:center;align-items:center;padding:24px;" onclick="if(event.target === this) closeHistoryModal()">
     <div style="background:#fff;border-radius:12px;max-width:720px;width:100%;max-height:calc(100vh - 48px);box-shadow:0 18px 50px rgba(0,0,0,0.18);overflow:hidden;">
         <div style="padding:18px 22px;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;justify-content:space-between;">
             <h2 id="historyModalTitle" style="font-size:18px;margin:0;color:#111827;">History</h2>
