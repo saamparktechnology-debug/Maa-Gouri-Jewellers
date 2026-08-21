@@ -1476,16 +1476,25 @@ function submitPayment() {
 
                         <!-- UNIFIED FORM PANEL -->
                         <div class="add-mode-panel active" id="panelGram">
-                            <div class="flex items-center gap-4 p-3 rounded-lg bg-amber-50/60 border border-amber-200/50 mb-3">
-                                <span class="text-xs font-semibold text-yellow-800">Source:</span>
-                                <label class="flex items-center gap-1.5 text-xs cursor-pointer font-medium text-gray-700">
-                                    <input type="radio" name="gram_source" value="stock" checked onchange="switchSource('gram', 'stock')" class="accent-amber-600">
-                                    From Stock
-                                </label>
-                                <label class="flex items-center gap-1.5 text-xs cursor-pointer font-medium text-gray-700">
-                                    <input type="radio" name="gram_source" value="manual" onchange="switchSource('gram', 'manual')" class="accent-amber-600">
-                                    Manual Entry
-                                </label>
+                            <div class="flex items-center justify-between p-3 rounded-lg bg-amber-50/60 border border-amber-200/50 mb-3 flex-wrap gap-2">
+                                <div class="flex items-center gap-4">
+                                    <span class="text-xs font-semibold text-yellow-800">Source:</span>
+                                    <label class="flex items-center gap-1.5 text-xs cursor-pointer font-medium text-gray-700">
+                                        <input type="radio" name="gram_source" value="stock" checked onchange="switchSource('gram', 'stock')" class="accent-amber-600">
+                                        From Stock
+                                    </label>
+                                    <label class="flex items-center gap-1.5 text-xs cursor-pointer font-medium text-gray-700">
+                                        <input type="radio" name="gram_source" value="category" onchange="switchSource('gram', 'category')" class="accent-amber-600">
+                                        From Category
+                                    </label>
+                                    <label class="flex items-center gap-1.5 text-xs cursor-pointer font-medium text-gray-700">
+                                        <input type="radio" name="gram_source" value="manual" onchange="switchSource('gram', 'manual')" class="accent-amber-600">
+                                        Manual Entry
+                                    </label>
+                                </div>
+                                <button type="button" onclick="toggleDiamondBreakdownPanel()" class="text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-200/80 hover:bg-amber-300 text-amber-950 border border-amber-300 shadow-sm transition-all flex items-center gap-1">
+                                    💎 Breakdown Panel
+                                </button>
                             </div>
 
                             <!-- Source: Stock -->
@@ -2410,7 +2419,11 @@ function onGramStockChange() {
     const dCent = opt.dataset.diamondCent || '';
     const mKt   = opt.dataset.metalKt || '';
     const mWt   = opt.dataset.metalWeight || '';
-    const isDiamondProd = (category.toLowerCase().includes('diamond') || dCent !== '' || mKt !== '' || mWt !== '');
+    const catLower = (category || '').toLowerCase();
+    const nameLower = (name || '').toLowerCase();
+    const dCentVal = parseFloat(dCent) || 0;
+    const mWtVal   = parseFloat(mWt) || 0;
+    const isDiamondProd = (catLower.includes('diamond') || nameLower.includes('diamond') || dCentVal > 0 || mWtVal > 0 || (mKt !== '' && mKt !== '0'));
 
     const dBreakdown = document.getElementById('posDiamondBreakdownContainer');
     if (dBreakdown) {
@@ -2425,8 +2438,6 @@ function onGramStockChange() {
             const goldRate10g = getShopRateForCategory(goldKtVal) * 10;
             if (document.getElementById('posGoldRate')) document.getElementById('posGoldRate').value = goldRate10g || '';
             calcDiamondBreakdown();
-        } else {
-            dBreakdown.classList.add('hidden');
         }
     }
 
@@ -2527,10 +2538,41 @@ function onManualGoldPriceChange() {
     calcDiamondBreakdown('gold');
 }
 
+function toggleDiamondBreakdownPanel() {
+    const dBreakdown = document.getElementById('posDiamondBreakdownContainer');
+    if (dBreakdown) {
+        dBreakdown.classList.toggle('hidden');
+        if (!dBreakdown.classList.contains('hidden')) {
+            calcDiamondBreakdown();
+        }
+    }
+}
+
 function updateGramItemTypes() {
     const category = document.getElementById('gramCatSelect').value;
     const itemTypeSelect = document.getElementById('gramItemType');
     itemTypeSelect.innerHTML = '<option value="">-- Select Item Type --</option>';
+
+    const catLower = (category || '').toLowerCase();
+    const isDiamondCat = catLower.includes('diamond');
+
+    const dBreakdown = document.getElementById('posDiamondBreakdownContainer');
+    if (dBreakdown) {
+        if (isDiamondCat) {
+            dBreakdown.classList.remove('hidden');
+            const dRateVal = shopRates.diamond || getShopRateForCategory('diamond') || (parseFloat(localStorage.getItem('shopRate_diamond')) || 0);
+            if (document.getElementById('posDiamondCent')) document.getElementById('posDiamondCent').value = '';
+            if (document.getElementById('posDiamondRate')) document.getElementById('posDiamondRate').value = dRateVal > 0 ? dRateVal : '';
+            if (document.getElementById('posGoldKt')) document.getElementById('posGoldKt').value = '18K';
+            if (document.getElementById('posGoldWeight')) document.getElementById('posGoldWeight').value = '';
+            const goldRate10g = getShopRateForCategory('18K') * 10;
+            if (document.getElementById('posGoldRate')) document.getElementById('posGoldRate').value = goldRate10g || '';
+            calcDiamondBreakdown();
+        } else {
+            dBreakdown.classList.add('hidden');
+        }
+    }
+
     if (!category) {
         onGramItemTypeChange();
         return;
@@ -2866,7 +2908,6 @@ function submitGramItem() {
     let gKt = '';
     let gR10g = 0;
 
-    const dContainer = document.getElementById('posDiamondBreakdownContainer');
     if (dContainer && !dContainer.classList.contains('hidden')) {
         dCent = parseFloat(document.getElementById('posDiamondCent')?.value) || 0;
         dRate = parseFloat(document.getElementById('posDiamondRate')?.value) || 0;
