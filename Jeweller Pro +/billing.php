@@ -1693,41 +1693,40 @@ function submitPayment() {
                         </div>
 
                         <!-- Per-Item GST & Extra Charges -->
-                        <div class="mt-4 pt-4" style="border-top:1px dashed rgba(214,139,22,0.3);">
-                            <h4 class="text-xs font-bold mb-2" style="color:#7a4e0a;">Additional Details for this Item</h4>
-                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                 <div>
-                                     <div class="flex items-center justify-between mb-1.5 flex-wrap gap-1">
-                                         <label id="mcLabel" class="text-xs font-bold" style="color:#7a4e0a;">Making Charge</label>
-                                         <div class="inline-flex p-0.5 bg-amber-100/90 border border-amber-300/80 rounded-lg shadow-inner gap-0.5">
-                                             <button type="button" id="btnMcPct" onclick="setMcMode('pct')" class="mc-tab-btn active px-2 py-0.5 text-xs font-bold rounded transition-all cursor-pointer bg-amber-600 text-white shadow-sm border border-amber-500">
-                                                 % Pct
-                                             </button>
-                                             <button type="button" id="btnMcDirect" onclick="setMcMode('direct')" class="mc-tab-btn px-2 py-0.5 text-xs font-bold rounded transition-all cursor-pointer bg-white/80 text-amber-900 hover:bg-white border border-amber-200">
-                                                 ₹ Direct
-                                             </button>
-                                         </div>
-                                     </div>
-                                     <div class="relative">
-                                         <input type="number" id="itemMakingCharge" value="" step="0.1" min="0" placeholder="e.g. 12" class="jewel-input w-full rounded-lg px-2 py-1 text-sm font-semibold pr-7" oninput="updateMakingChargeHint()">
-                                         <span id="mcUnitSuffix" class="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-bold text-amber-700 pointer-events-none">%</span>
-                                     </div>
-                                     <div id="itemMakingChargeHint" class="text-xs mt-1 font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200" style="display:none;"></div>
-                                 </div>
+                        <div class="mt-4 pt-4 border-t border-dashed border-amber-300/60">
+                            <h4 class="text-xs font-bold mb-3 text-amber-900 flex items-center gap-1.5">
+                                <span>✨ Additional Details for this Item</span>
+                            </h4>
+                            <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
                                 <div>
-                                    <label class="block mb-1 text-xs font-semibold" style="color:#7a4e0a;">Hallmark (₹)</label>
-                                    <input type="number" id="itemHallmark" value="" step="1" min="0" placeholder="0" class="jewel-input w-full rounded-lg px-2 py-1 text-sm">
+                                    <div class="flex items-center justify-between mb-1.5">
+                                        <label id="mcLabel" class="text-xs font-bold text-amber-900">Making Charge</label>
+                                        <div class="inline-flex p-0.5 bg-amber-200/70 rounded-md gap-0.5">
+                                            <button type="button" id="btnMcPct" onclick="setMcMode('pct')" class="mc-tab-btn active px-2 py-0.5 text-[11px] font-bold rounded transition-all bg-amber-700 text-white shadow-sm">
+                                                %
+                                            </button>
+                                            <button type="button" id="btnMcDirect" onclick="setMcMode('direct')" class="mc-tab-btn px-2 py-0.5 text-[11px] font-bold rounded transition-all text-amber-900 hover:bg-white/50">
+                                                ₹
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <input type="number" id="itemMakingCharge" value="" step="0.1" min="0" placeholder="e.g. 12%" class="jewel-input w-full rounded-xl px-3 py-2 text-sm font-semibold" oninput="updateMakingChargeHint()">
+                                    <div id="itemMakingChargeHint" class="text-xs mt-1.5 font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200" style="display:none;"></div>
                                 </div>
                                 <div>
-                                    <label class="block mb-1 text-xs font-semibold" style="color:#7a4e0a;">Discount (₹)</label>
-                                    <input type="number" id="itemDiscount" value="" step="1" min="0" placeholder="0" class="jewel-input w-full rounded-lg px-2 py-1 text-sm">
+                                    <label class="block mb-1.5 text-xs font-bold text-amber-900">Hallmark (₹)</label>
+                                    <input type="number" id="itemHallmark" value="" step="1" min="0" placeholder="0" class="jewel-input w-full rounded-xl px-3 py-2 text-sm font-semibold">
                                 </div>
                                 <div>
-                                    <label class="block mb-1 text-xs font-semibold" style="color:#7a4e0a;">GST Rate</label>
-                                    <select id="itemGstType" class="jewel-input w-full rounded-lg px-2 py-1 text-sm">
-                                        <option value="non_gst">0%</option>
-                                        <option value="gst_3">3%</option>
-                                        <option value="gst_18">18%</option>
+                                    <label class="block mb-1.5 text-xs font-bold text-amber-900">Discount (₹)</label>
+                                    <input type="number" id="itemDiscount" value="" step="1" min="0" placeholder="0" class="jewel-input w-full rounded-xl px-3 py-2 text-sm font-semibold">
+                                </div>
+                                <div>
+                                    <label class="block mb-1.5 text-xs font-bold text-amber-900">GST Rate</label>
+                                    <select id="itemGstType" class="jewel-input w-full rounded-xl px-3 py-2 text-sm font-semibold">
+                                        <option value="non_gst">0% (Non-GST)</option>
+                                        <option value="gst_3">3% GST</option>
+                                        <option value="gst_18">18% GST</option>
                                     </select>
                                 </div>
                             </div>
@@ -2648,27 +2647,24 @@ function setMcMode(mode) {
     currentMcMode = mode;
     const btnPct = document.getElementById('btnMcPct');
     const btnDirect = document.getElementById('btnMcDirect');
-    const suffix = document.getElementById('mcUnitSuffix');
     const input = document.getElementById('itemMakingCharge');
 
     if (mode === 'direct') {
         if (btnPct) {
-            btnPct.className = 'mc-tab-btn px-2 py-0.5 text-xs font-bold rounded transition-all cursor-pointer bg-white/80 text-amber-900 hover:bg-white border border-amber-200';
+            btnPct.className = 'mc-tab-btn px-2 py-0.5 text-[11px] font-bold rounded transition-all text-amber-900 hover:bg-white/50';
         }
         if (btnDirect) {
-            btnDirect.className = 'mc-tab-btn active px-2 py-0.5 text-xs font-bold rounded transition-all cursor-pointer bg-emerald-600 text-white shadow-sm border border-emerald-500';
+            btnDirect.className = 'mc-tab-btn active px-2 py-0.5 text-[11px] font-bold rounded transition-all bg-emerald-600 text-white shadow-sm';
         }
-        if (suffix) suffix.textContent = '₹';
-        if (input) { input.step = '1'; input.placeholder = 'e.g. 500'; }
+        if (input) { input.step = '1'; input.placeholder = 'e.g. ₹500'; }
     } else {
         if (btnPct) {
-            btnPct.className = 'mc-tab-btn active px-2 py-0.5 text-xs font-bold rounded transition-all cursor-pointer bg-amber-600 text-white shadow-sm border border-amber-500';
+            btnPct.className = 'mc-tab-btn active px-2 py-0.5 text-[11px] font-bold rounded transition-all bg-amber-700 text-white shadow-sm';
         }
         if (btnDirect) {
-            btnDirect.className = 'mc-tab-btn px-2 py-0.5 text-xs font-bold rounded transition-all cursor-pointer bg-white/80 text-amber-900 hover:bg-white border border-amber-200';
+            btnDirect.className = 'mc-tab-btn px-2 py-0.5 text-[11px] font-bold rounded transition-all text-amber-900 hover:bg-white/50';
         }
-        if (suffix) suffix.textContent = '%';
-        if (input) { input.step = '0.1'; input.placeholder = 'e.g. 12'; }
+        if (input) { input.step = '0.1'; input.placeholder = 'e.g. 12%'; }
     }
     updateMakingChargeHint();
 }
