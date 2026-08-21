@@ -2643,7 +2643,12 @@ function updateMakingChargeHint() {
         let weight = parseFloat(document.getElementById('gramWeight')?.value) || 0;
         const rate10g = parseFloat(document.getElementById('gramRate')?.value) || 0;
         const qty = parseFloat(document.getElementById('gramQty')?.value) || 1;
-        if (weight > 0) {
+        const dContainer = document.getElementById('posDiamondBreakdownContainer');
+        const isDiamondBreakdown = dContainer && !dContainer.classList.contains('hidden');
+
+        if (isDiamondBreakdown) {
+            baseAmount = qty * rate10g;
+        } else if (weight > 0) {
             baseAmount = weight * (rate10g / 10);
         } else {
             baseAmount = qty * rate10g;
@@ -2691,7 +2696,17 @@ function autoGramTotal() {
     const isPair = unitEl && unitEl.value === 'pair';
     const unitLabel = isPair ? 'pairs' : 'pcs';
     
-    if (weight > 0) {
+    const dContainer = document.getElementById('posDiamondBreakdownContainer');
+    const isDiamondBreakdown = dContainer && !dContainer.classList.contains('hidden');
+
+    if (isDiamondBreakdown) {
+        total = parseFloat((qty * rate10g).toFixed(2));
+        if(hint && rate10g > 0) {
+            hint.textContent = '≈ ₹' + rate10g.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}) + (isPair ? ' per pair × ' : ' per piece × ') + qty + ' ' + unitLabel;
+        } else if(hint) {
+            hint.textContent = '';
+        }
+    } else if (weight > 0) {
         const ratePerGram = rate10g / 10;
         total = parseFloat((weight * ratePerGram).toFixed(2));
         if(hint && rate10g > 0) {
@@ -2808,7 +2823,14 @@ function submitGramItem() {
     const unitEl = document.getElementById('gramUnit');
     const isPair = unitEl && unitEl.value === 'pair';
     
-    if (weight > 0) {
+    const dContainer = document.getElementById('posDiamondBreakdownContainer');
+    const isDiamondBreakdown = dContainer && !dContainer.classList.contains('hidden');
+
+    if (isDiamondBreakdown) {
+        baseAmount = parseFloat((qty * rate10g).toFixed(2));
+        unit = weight > 0 ? 'g' : (isPair ? 'pair' : 'pcs');
+        itemPrice = rate10g;
+    } else if (weight > 0) {
         let ratePerGram = rate10g / 10;
         baseAmount = parseFloat((weight * ratePerGram).toFixed(2));
         unit = 'g';
