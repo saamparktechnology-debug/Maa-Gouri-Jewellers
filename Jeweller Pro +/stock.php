@@ -63,6 +63,10 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         $metal_kt     = mysqli_real_escape_string($conn, trim($_POST['metal_kt'] ?? ''));
         $metal_weight = mysqli_real_escape_string($conn, trim($_POST['metal_weight'] ?? ''));
 
+        if ($category === 'Diamond' && (empty($weight) || $weight === '0')) {
+            $weight = $metal_weight;
+        }
+
         $query = "INSERT INTO products (serial_no, name, item_name, category, weight, price, quantity, unit, huid_code, diamond_cent, metal_kt, metal_weight, created_at, updated_at) VALUES ('$serial_no', '$name', '$item_name', '$category', '$weight', '$price', '$quantity', '$unit', '$huid_code', '$diamond_cent', '$metal_kt', '$metal_weight', NOW(), NOW())";
         if(mysqli_query($conn, $query)) {
             $success = " Product added successfully! ";
@@ -122,6 +126,10 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         $diamond_cent = mysqli_real_escape_string($conn, trim($_POST['diamond_cent'] ?? ''));
         $metal_kt     = mysqli_real_escape_string($conn, trim($_POST['metal_kt'] ?? ''));
         $metal_weight = mysqli_real_escape_string($conn, trim($_POST['metal_weight'] ?? ''));
+
+        if ($category === 'Diamond' && (empty($weight) || $weight === '0')) {
+            $weight = $metal_weight;
+        }
 
         $query = "UPDATE products SET serial_no='$serial_no', name='$name', item_name='$item_name', category='$category', weight='$weight', price='$price', quantity='$quantity', unit='$unit', huid_code='$huid_code', diamond_cent='$diamond_cent', metal_kt='$metal_kt', metal_weight='$metal_weight', updated_at = NOW() WHERE id=$id";
         if(mysqli_query($conn, $query)) {
@@ -1116,7 +1124,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             <input type="text" name="huid_code" placeholder="Enter HUID code (optional)" class="jewel-input">
                         </div>
 
-                        <div class="mb-3">
+                        <div class="mb-3" id="addWeightContainer">
                             <label> Weight (grams)</label>
                             <input type="text" name="weight" placeholder="e.g. 12.5" class="jewel-input">
                         </div>
@@ -1506,7 +1514,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                     </div>
                 </div>
             </div>
-            <div class="mb-3">
+            <div class="mb-3" id="editWeightContainer">
                 <label> Weight (grams)</label>
                 <input type="text" name="weight" id="editProductWeight" class="jewel-input">
             </div>
@@ -1628,14 +1636,27 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         const inp = customDiv.querySelector('input');
         if(inp) inp.value = '';
 
-        // Toggle Diamond Extra Fields Container
-        const diamondContainerId = (catSelectId === 'addCategorySelect') ? 'addDiamondFieldsContainer' : 'editDiamondFieldsContainer';
+        // Toggle Diamond Extra Fields Container & Weight Field Container
+        const isAdd = (catSelectId === 'addCategorySelect');
+        const diamondContainerId = isAdd ? 'addDiamondFieldsContainer' : 'editDiamondFieldsContainer';
+        const weightContainerId  = isAdd ? 'addWeightContainer' : 'editWeightContainer';
+        
         const dContainer = document.getElementById(diamondContainerId);
+        const wContainer = document.getElementById(weightContainerId);
+
         if (dContainer) {
             if (cat === 'Diamond') {
                 dContainer.classList.remove('hidden');
             } else {
                 dContainer.classList.add('hidden');
+            }
+        }
+
+        if (wContainer) {
+            if (cat === 'Diamond') {
+                wContainer.classList.add('hidden');
+            } else {
+                wContainer.classList.remove('hidden');
             }
         }
 
