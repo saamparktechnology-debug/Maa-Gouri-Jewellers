@@ -1476,36 +1476,28 @@ function submitPayment() {
 
                         <!-- UNIFIED FORM PANEL -->
                         <div class="add-mode-panel active" id="panelGram">
-                            <div class="flex items-center justify-between p-3 rounded-lg bg-amber-50/60 border border-amber-200/50 mb-3 flex-wrap gap-2">
-                                <div class="flex items-center gap-4">
-                                    <span class="text-xs font-semibold text-yellow-800">Source:</span>
-                                    <label class="flex items-center gap-1.5 text-xs cursor-pointer font-medium text-gray-700">
-                                        <input type="radio" name="gram_source" value="stock" checked onchange="switchSource('gram', 'stock')" class="accent-amber-600">
-                                        From Stock
-                                    </label>
-                                    <label class="flex items-center gap-1.5 text-xs cursor-pointer font-medium text-gray-700">
-                                        <input type="radio" name="gram_source" value="category" onchange="switchSource('gram', 'category')" class="accent-amber-600">
-                                        From Category
-                                    </label>
-                                    <label class="flex items-center gap-1.5 text-xs cursor-pointer font-medium text-gray-700">
-                                        <input type="radio" name="gram_source" value="manual" onchange="switchSource('gram', 'manual')" class="accent-amber-600">
-                                        Manual Entry
-                                    </label>
-                                </div>
-                                <button type="button" onclick="toggleDiamondBreakdownPanel()" class="text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-200/80 hover:bg-amber-300 text-amber-950 border border-amber-300 shadow-sm transition-all flex items-center gap-1">
-                                    💎 Breakdown Panel
-                                </button>
+                            <div class="flex items-center gap-4 p-3 rounded-lg bg-amber-50/60 border border-amber-200/50 mb-3">
+                                <span class="text-xs font-semibold text-yellow-800">Source:</span>
+                                <label class="flex items-center gap-1.5 text-xs cursor-pointer font-medium text-gray-700">
+                                    <input type="radio" name="gram_source" value="stock" checked onchange="switchSource('gram', 'stock')" class="accent-amber-600">
+                                    From Stock
+                                </label>
+                                <label class="flex items-center gap-1.5 text-xs cursor-pointer font-medium text-gray-700">
+                                    <input type="radio" name="gram_source" value="category" onchange="switchSource('gram', 'category')" class="accent-amber-600">
+                                    From Category
+                                </label>
+                                <label class="flex items-center gap-1.5 text-xs cursor-pointer font-medium text-gray-700">
+                                    <input type="radio" name="gram_source" value="manual" onchange="switchSource('gram', 'manual')" class="accent-amber-600">
+                                    Manual Entry
+                                </label>
                             </div>
 
                             <!-- Source: Stock -->
                             <div id="gramSourceStock" class="">
                                 <p class="text-xs mb-2 text-gray-400">Search stock by name, SKU, or serial number.</p>
-                                <div class="flex gap-2 mb-2 relative">
-                                    <div class="relative flex-1">
-                                        <input type="text" id="gramStockSearch" placeholder=" Search stock..." class="jewel-input w-full rounded-lg px-3 py-2 text-sm" oninput="filterGramStock(this.value)" autocomplete="off">
-                                        <div id="gramStockSuggestions" class="autocomplete-suggestions hidden"></div>
-                                    </div>
-                                    <button type="button" onclick="clearGramStockSearch()" class="px-3 py-2 rounded-lg text-sm bg-white border border-yellow-300 text-yellow-800"></button>
+                                <div class="mb-2 relative">
+                                    <input type="text" id="gramStockSearch" placeholder=" Search stock..." class="jewel-input w-full rounded-lg px-3 py-2 text-sm" oninput="filterGramStock(this.value)" autocomplete="off">
+                                    <div id="gramStockSuggestions" class="autocomplete-suggestions hidden"></div>
                                 </div>
                                 <div class="mb-3">
                                     <label class="block mb-1 text-xs font-semibold text-yellow-800">Select Product</label>
@@ -2388,7 +2380,7 @@ function onGramStockChange() {
         document.getElementById('manualHuid').value = huid;
     }
 
-    // Weight should NOT come automatically on stock product selection
+    // Keep Weight input field clear for custom entry while autoGramTotal previews using available stock weight
     if (weightInput) {
         weightInput.value = '';
     }
@@ -2422,12 +2414,14 @@ function onGramStockChange() {
     const catLower = (category || '').toLowerCase();
     const nameLower = (name || '').toLowerCase();
     const dCentVal = parseFloat(dCent) || 0;
-    const mWtVal   = parseFloat(mWt) || 0;
-    const isDiamondProd = (catLower.includes('diamond') || nameLower.includes('diamond') || dCentVal > 0 || mWtVal > 0 || (mKt !== '' && mKt !== '0'));
+    const goldWeightVal = parseFloat(mWt) || parseFloat(stockWeight) || 0;
+
+    // Breakdown panel opens ONLY when selected item contains Gold + Diamond (diamondCent > 0 OR diamond category with gold details)
+    const isGoldAndDiamond = (dCentVal > 0 || (catLower.includes('diamond') && (goldWeightVal > 0 || mKt !== '')));
 
     const dBreakdown = document.getElementById('posDiamondBreakdownContainer');
     if (dBreakdown) {
-        if (isDiamondProd) {
+        if (isGoldAndDiamond) {
             dBreakdown.classList.remove('hidden');
             const dRateVal = shopRates.diamond || getShopRateForCategory('diamond') || (parseFloat(localStorage.getItem('shopRate_diamond')) || 0);
             if (document.getElementById('posDiamondCent')) document.getElementById('posDiamondCent').value = dCent;
@@ -2438,6 +2432,12 @@ function onGramStockChange() {
             const goldRate10g = getShopRateForCategory(goldKtVal) * 10;
             if (document.getElementById('posGoldRate')) document.getElementById('posGoldRate').value = goldRate10g || '';
             calcDiamondBreakdown();
+        } else {
+            dBreakdown.classList.add('hidden');
+            if (document.getElementById('posDiamondCent')) document.getElementById('posDiamondCent').value = '';
+            if (document.getElementById('posDiamondPrice')) document.getElementById('posDiamondPrice').value = '';
+            if (document.getElementById('posGoldWeight')) document.getElementById('posGoldWeight').value = '';
+            if (document.getElementById('posGoldPrice')) document.getElementById('posGoldPrice').value = '';
         }
     }
 
@@ -2449,7 +2449,7 @@ function onGramStockChange() {
     if (qty <= 0) {
         rateInput.value = '';
         infoDiv.innerHTML = '<strong style="color:#dc2626;">' + name + '</strong>' + wtInfo + ' | <strong style="color:#dc2626;"> OUT OF STOCK (0 pcs available)</strong>';
-    } else if (isDiamondProd) {
+    } else if (isGoldAndDiamond) {
         infoDiv.innerHTML = '<strong>' + name + '</strong> | 💎 Diamond & Gold Dual Rate Active | Available Qty: <strong style="color:#059669;">' + qty + ' pcs</strong>' + wtInfo;
     } else if (shopRate10g > 0) {
         rateInput.value = shopRate10g.toFixed(0);
@@ -2727,7 +2727,15 @@ function autoGramTotal() {
     const source = checkedRadio ? checkedRadio.value : (typeof currentGramSource !== 'undefined' ? currentGramSource : 'stock');
     currentGramSource = source;
 
-    let weight = parseFloat(document.getElementById('gramWeight')?.value) || 0;
+    let typedWeight = parseFloat(document.getElementById('gramWeight')?.value) || 0;
+    let weight = typedWeight;
+    if (weight <= 0 && source === 'stock') {
+        const select = document.getElementById('gramStockProduct');
+        const opt = select && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
+        if (opt && opt.dataset.weight) {
+            weight = parseFloat(opt.dataset.weight) || 0;
+        }
+    }
     
     const rate10g = parseFloat(document.getElementById('gramRate').value) || 0;
     const qty = parseFloat(document.getElementById('gramQty')?.value) || 1;
