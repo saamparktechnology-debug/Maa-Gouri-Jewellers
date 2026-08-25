@@ -59,9 +59,9 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
             mysqli_query($conn, "ALTER TABLE products ADD COLUMN metal_weight VARCHAR(50) DEFAULT ''");
         }
 
-        $diamond_cent = mysqli_real_escape_string($conn, trim($_POST['diamond_cent'] ?? ''));
-        $metal_kt     = mysqli_real_escape_string($conn, trim($_POST['metal_kt'] ?? ''));
-        $metal_weight = mysqli_real_escape_string($conn, trim($_POST['metal_weight'] ?? ''));
+        $diamond_cent = ($category === 'Diamond') ? mysqli_real_escape_string($conn, trim($_POST['diamond_cent'] ?? '')) : '';
+        $metal_kt     = ($category === 'Diamond') ? mysqli_real_escape_string($conn, trim($_POST['metal_kt'] ?? '')) : '';
+        $metal_weight = ($category === 'Diamond') ? mysqli_real_escape_string($conn, trim($_POST['metal_weight'] ?? '')) : '';
 
         if ($category === 'Diamond' && (empty($weight) || $weight === '0')) {
             $weight = $metal_weight;
@@ -123,9 +123,9 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         $price = $_POST['price'];
         $quantity = $_POST['quantity'];
         $unit = mysqli_real_escape_string($conn, $_POST['unit'] ?? 'pcs');
-        $diamond_cent = mysqli_real_escape_string($conn, trim($_POST['diamond_cent'] ?? ''));
-        $metal_kt     = mysqli_real_escape_string($conn, trim($_POST['metal_kt'] ?? ''));
-        $metal_weight = mysqli_real_escape_string($conn, trim($_POST['metal_weight'] ?? ''));
+        $diamond_cent = ($category === 'Diamond') ? mysqli_real_escape_string($conn, trim($_POST['diamond_cent'] ?? '')) : '';
+        $metal_kt     = ($category === 'Diamond') ? mysqli_real_escape_string($conn, trim($_POST['metal_kt'] ?? '')) : '';
+        $metal_weight = ($category === 'Diamond') ? mysqli_real_escape_string($conn, trim($_POST['metal_weight'] ?? '')) : '';
 
         if ($category === 'Diamond' && (empty($weight) || $weight === '0')) {
             $weight = $metal_weight;
@@ -1224,15 +1224,17 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                                         <div class="font-semibold" style="color:#800020;"><?php echo htmlspecialchars($product['name']); ?></div>
                                         <div class="text-xs flex flex-wrap gap-1 items-center mt-0.5" style="color:#7a4e0a;">
                                             <span><?php echo htmlspecialchars($product['category'] ?? ''); ?></span>
-                                            <?php if(!empty($product['diamond_cent'])): ?>
-                                                <span class="px-1.5 py-0.5 rounded text-xs font-bold" style="background:rgba(214,139,22,0.15);color:#b5730e;border:1px solid rgba(214,139,22,0.3);">
-                                                    💎 <?php echo htmlspecialchars($product['diamond_cent']); ?> Ct
-                                                </span>
-                                            <?php endif; ?>
-                                            <?php if(!empty($product['metal_kt']) || !empty($product['metal_weight'])): ?>
-                                                <span class="px-1.5 py-0.5 rounded text-xs font-medium" style="background:rgba(181,115,14,0.08);color:#7a4e0a;border:1px solid rgba(181,115,14,0.2);">
-                                                    🪙 <?php echo htmlspecialchars($product['metal_kt'] ?? ''); ?><?php if(!empty($product['metal_weight'])) echo ' (' . htmlspecialchars($product['metal_weight']) . 'g)'; ?>
-                                                </span>
+                                            <?php if(($product['category'] ?? '') === 'Diamond'): ?>
+                                                <?php if(!empty($product['diamond_cent'])): ?>
+                                                    <span class="px-1.5 py-0.5 rounded text-xs font-bold" style="background:rgba(214,139,22,0.15);color:#b5730e;border:1px solid rgba(214,139,22,0.3);">
+                                                        💎 <?php echo htmlspecialchars($product['diamond_cent']); ?> Ct
+                                                    </span>
+                                                <?php endif; ?>
+                                                <?php if(!empty($product['metal_kt']) || !empty($product['metal_weight'])): ?>
+                                                    <span class="px-1.5 py-0.5 rounded text-xs font-medium" style="background:rgba(181,115,14,0.08);color:#7a4e0a;border:1px solid rgba(181,115,14,0.2);">
+                                                        🪙 <?php echo htmlspecialchars($product['metal_kt'] ?? ''); ?><?php if(!empty($product['metal_weight'])) echo ' (' . htmlspecialchars($product['metal_weight']) . 'g)'; ?>
+                                                    </span>
+                                                <?php endif; ?>
                                             <?php endif; ?>
                                         </div>
                                     </td>
