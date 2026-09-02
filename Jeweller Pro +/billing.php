@@ -3,9 +3,6 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 session_start();
-// Automatically lock geomorphology section when visiting main billing
-unset($_SESSION['geomorphology_unlocked']);
-unset($_SESSION['geomorphology_unlocked_at']);
 
 require_once 'config/database.php';
 require_once 'config/company_config.php';

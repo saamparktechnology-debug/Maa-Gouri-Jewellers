@@ -11,9 +11,6 @@ if(!$is_logged_in) {
     header("Location: login.php");
     exit();
 }
-// Automatically lock geomorphology section when visiting main app
-unset($_SESSION['geomorphology_unlocked']);
-unset($_SESSION['geomorphology_unlocked_at']);
 
 $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
 $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-preview.png', 'moti-removebg-preview.png', 'radhey shyam logo.png'];

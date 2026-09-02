@@ -1,8 +1,5 @@
 <?php
 session_start();
-// Automatically lock geomorphology section when visiting main accounts
-unset($_SESSION['geomorphology_unlocked']);
-unset($_SESSION['geomorphology_unlocked_at']);
 
 require_once 'config/database.php';
 
