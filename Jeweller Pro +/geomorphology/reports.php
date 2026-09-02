@@ -421,18 +421,18 @@ if ($inv_res) {
 
         <nav class="sidebar-nav">
             <div class="sidebar-section-label">Geomorphology Menu</div>
-            <a href="/geomorphology"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-            <a href="/geomorphology/reports" class="active"><i class="fas fa-chart-bar"></i> Sales Reports</a>
-            <a href="/geomorphology/accounts"><i class="fas fa-wallet"></i> Accounts Ledger</a>
-            <a href="/geomorphology/due_list"><i class="fas fa-file-invoice-dollar"></i> Due Management</a>
-            <a href="/geomorphology/income_expenses"><i class="fas fa-exchange-alt"></i> Income &amp; Expenses</a>
+            <a href="index.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="reports.php" class="active"><i class="fas fa-chart-bar"></i> Sales Reports</a>
+            <a href="accounts.php"><i class="fas fa-wallet"></i> Accounts Ledger</a>
+            <a href="due_list.php"><i class="fas fa-file-invoice-dollar"></i> Due Management</a>
+            <a href="income_expenses.php"><i class="fas fa-exchange-alt"></i> Income &amp; Expenses</a>
 
             <div class="sidebar-section-label mt-4">Security</div>
-            <a href="/geomorphology?geo_action=lock" class="text-rose-300 hover:text-rose-100"><i class="fas fa-lock text-rose-400"></i> Lock Section</a>
+            <a href="index.php?geo_action=lock" class="text-rose-300 hover:text-rose-100"><i class="fas fa-lock text-rose-400"></i> Lock Section</a>
 
             <div class="sidebar-section-label mt-4">Switch System</div>
-            <a href="/geomorphology?geo_action=exit_to_main&target=/billing"><i class="fas fa-cash-register" style="color:#10b981;"></i> New Bill (Billing)</a>
-            <a href="/geomorphology?geo_action=exit_to_main&target=/index.php"><i class="fas fa-arrow-left" style="color:#60a5fa;"></i> Back to Main GST App</a>
+            <a href="index.php?geo_action=exit_to_main&target=../billing.php"><i class="fas fa-cash-register" style="color:#10b981;"></i> New Bill (Billing)</a>
+            <a href="index.php?geo_action=exit_to_main&target=../index.php"><i class="fas fa-arrow-left" style="color:#60a5fa;"></i> Back to Main GST App</a>
         </nav>
     </aside>
 
@@ -454,13 +454,13 @@ if ($inv_res) {
             </div>
 
             <div class="flex items-center gap-2">
-                <a href="/geomorphology?geo_action=lock" title="Lock section" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600/80 hover:bg-rose-600 text-white transition inline-flex items-center gap-1">
+                <a href="index.php?geo_action=lock" title="Lock section" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600/80 hover:bg-rose-600 text-white transition inline-flex items-center gap-1">
                     <i class="fas fa-lock"></i> <span class="hidden sm:inline">Lock</span>
                 </a>
-                <a href="/geomorphology" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition">
+                <a href="index.php" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition">
                     <i class="fas fa-tachometer-alt mr-1"></i> Dashboard
                 </a>
-                <a href="/geomorphology?geo_action=exit_to_main&target=/index.php" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition hidden sm:inline-flex">
+                <a href="index.php?geo_action=exit_to_main&target=../index.php" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition hidden sm:inline-flex">
                     <i class="fas fa-home mr-1"></i> Main App
                 </a>
             </div>
@@ -487,7 +487,7 @@ if ($inv_res) {
                     <?php 
                         $csv_query = $_GET;
                         $csv_query['export'] = 'csv';
-                        $csv_url = '/geomorphology/reports?' . http_build_query($csv_query);
+                        $csv_url = 'reports.php?' . http_build_query($csv_query);
                     ?>
                     <a href="<?php echo $csv_url; ?>" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs shadow transition inline-flex items-center gap-1.5">
                         <i class="fas fa-file-csv"></i> Export CSV
@@ -513,7 +513,7 @@ if ($inv_res) {
                         foreach ($presets as $k => $label):
                             $active = ($date_preset === $k);
                     ?>
-                    <a href="/geomorphology/reports?date_preset=<?php echo $k; ?>" 
+                    <a href="reports.php?date_preset=<?php echo $k; ?>" 
                        class="px-3 py-1.5 rounded-lg font-bold transition whitespace-nowrap <?php echo $active ? 'bg-[#7a4e0a] text-white shadow' : 'bg-stone-100 text-stone-700 hover:bg-stone-200'; ?>">
                         <?php echo $label; ?>
                     </a>
@@ -521,7 +521,7 @@ if ($inv_res) {
                 </div>
 
                 <!-- Custom Filter Inputs -->
-                <form method="GET" action="/geomorphology/reports" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 text-xs">
+                <form method="GET" action="reports.php" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 text-xs">
                     <input type="hidden" name="date_preset" value="custom">
                     <div>
                         <label class="block font-bold text-stone-600 mb-1">Date From</label>
@@ -548,7 +548,7 @@ if ($inv_res) {
                         <button type="submit" class="btn-gold-action w-full justify-center py-2">
                             <i class="fas fa-filter"></i> Apply Filters
                         </button>
-                        <a href="/geomorphology/reports" class="px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-lg font-bold">
+                        <a href="reports.php" class="px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-lg font-bold">
                             Reset
                         </a>
                     </div>

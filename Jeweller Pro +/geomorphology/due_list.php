@@ -316,18 +316,18 @@ $total_due_count = count($rows);
 
         <nav class="sidebar-nav">
             <div class="sidebar-section-label">Geomorphology Menu</div>
-            <a href="/geomorphology"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-            <a href="/geomorphology/reports"><i class="fas fa-chart-bar"></i> Sales Reports</a>
-            <a href="/geomorphology/accounts"><i class="fas fa-wallet"></i> Accounts Ledger</a>
-            <a href="/geomorphology/due_list" class="active"><i class="fas fa-file-invoice-dollar"></i> Due Management</a>
-            <a href="/geomorphology/income_expenses"><i class="fas fa-exchange-alt"></i> Income &amp; Expenses</a>
+            <a href="index.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="reports.php"><i class="fas fa-chart-bar"></i> Sales Reports</a>
+            <a href="accounts.php"><i class="fas fa-wallet"></i> Accounts Ledger</a>
+            <a href="due_list.php" class="active"><i class="fas fa-file-invoice-dollar"></i> Due Management</a>
+            <a href="income_expenses.php"><i class="fas fa-exchange-alt"></i> Income &amp; Expenses</a>
 
             <div class="sidebar-section-label mt-4">Security</div>
-            <a href="/geomorphology?geo_action=lock" class="text-rose-300 hover:text-rose-100"><i class="fas fa-lock text-rose-400"></i> Lock Section</a>
+            <a href="index.php?geo_action=lock" class="text-rose-300 hover:text-rose-100"><i class="fas fa-lock text-rose-400"></i> Lock Section</a>
 
             <div class="sidebar-section-label mt-4">Switch System</div>
-            <a href="/geomorphology?geo_action=exit_to_main&target=/billing"><i class="fas fa-cash-register" style="color:#10b981;"></i> New Bill (Billing)</a>
-            <a href="/geomorphology?geo_action=exit_to_main&target=/index.php"><i class="fas fa-arrow-left" style="color:#60a5fa;"></i> Back to Main GST App</a>
+            <a href="index.php?geo_action=exit_to_main&target=../billing.php"><i class="fas fa-cash-register" style="color:#10b981;"></i> New Bill (Billing)</a>
+            <a href="index.php?geo_action=exit_to_main&target=../index.php"><i class="fas fa-arrow-left" style="color:#60a5fa;"></i> Back to Main GST App</a>
         </nav>
     </aside>
 
@@ -349,13 +349,13 @@ $total_due_count = count($rows);
             </div>
 
             <div class="flex items-center gap-2">
-                <a href="/geomorphology?geo_action=lock" title="Lock section" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600/80 hover:bg-rose-600 text-white transition inline-flex items-center gap-1">
+                <a href="index.php?geo_action=lock" title="Lock section" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600/80 hover:bg-rose-600 text-white transition inline-flex items-center gap-1">
                     <i class="fas fa-lock"></i> <span class="hidden sm:inline">Lock</span>
                 </a>
-                <a href="/geomorphology" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition">
+                <a href="index.php" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition">
                     <i class="fas fa-tachometer-alt mr-1"></i> Dashboard
                 </a>
-                <a href="/geomorphology?geo_action=exit_to_main&target=/index.php" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition hidden sm:inline-flex">
+                <a href="index.php?geo_action=exit_to_main&target=../index.php" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition hidden sm:inline-flex">
                     <i class="fas fa-home mr-1"></i> Main App
                 </a>
             </div>
@@ -372,10 +372,10 @@ $total_due_count = count($rows);
                 </div>
 
                 <div class="flex items-center gap-2 flex-wrap">
-                    <a href="/geomorphology/reports" class="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold rounded-xl text-xs border border-stone-300 transition inline-flex items-center gap-1.5">
+                    <a href="reports.php" class="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold rounded-xl text-xs border border-stone-300 transition inline-flex items-center gap-1.5">
                         <i class="fas fa-file-invoice"></i> Sales Reports
                     </a>
-                    <a href="/geomorphology/accounts" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs shadow transition inline-flex items-center gap-1.5">
+                    <a href="accounts.php" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs shadow transition inline-flex items-center gap-1.5">
                         <i class="fas fa-wallet"></i> Accounts Ledger
                     </a>
                 </div>
@@ -410,21 +410,21 @@ $total_due_count = count($rows);
 
             <!-- Filters & Search Bar -->
             <div class="card-gold p-4 mb-6">
-                <form method="GET" action="/geomorphology/due_list" class="flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
+                <form method="GET" action="due_list.php" class="flex flex-col md:flex-row items-center justify-between gap-3 text-xs">
                     <div class="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
-                        <a href="/geomorphology/due_list?status=all<?php echo $search_query ? '&search='.urlencode($search_query) : ''; ?>" 
+                        <a href="due_list.php?status=all<?php echo $search_query ? '&search='.urlencode($search_query) : ''; ?>" 
                            class="px-3 py-1.5 rounded-lg font-bold transition whitespace-nowrap <?php echo $filter_status === 'all' ? 'bg-[#7a4e0a] text-white shadow' : 'bg-stone-100 text-stone-700 hover:bg-stone-200'; ?>">
                             All Memos (<?php echo $all_memos_count; ?>)
                         </a>
-                        <a href="/geomorphology/due_list?status=pending<?php echo $search_query ? '&search='.urlencode($search_query) : ''; ?>" 
+                        <a href="due_list.php?status=pending<?php echo $search_query ? '&search='.urlencode($search_query) : ''; ?>" 
                            class="px-3 py-1.5 rounded-lg font-bold transition whitespace-nowrap <?php echo $filter_status === 'pending' ? 'bg-amber-600 text-white shadow' : 'bg-amber-50 text-amber-800 hover:bg-amber-100'; ?>">
                             Pending Dues (<?php echo $pending_count; ?>)
                         </a>
-                        <a href="/geomorphology/due_list?status=overdue<?php echo $search_query ? '&search='.urlencode($search_query) : ''; ?>" 
+                        <a href="due_list.php?status=overdue<?php echo $search_query ? '&search='.urlencode($search_query) : ''; ?>" 
                            class="px-3 py-1.5 rounded-lg font-bold transition whitespace-nowrap <?php echo $filter_status === 'overdue' ? 'bg-rose-600 text-white shadow' : 'bg-rose-50 text-rose-700 hover:bg-rose-100'; ?>">
                             Overdue (<?php echo $overdue_count; ?>)
                         </a>
-                        <a href="/geomorphology/due_list?status=paid<?php echo $search_query ? '&search='.urlencode($search_query) : ''; ?>" 
+                        <a href="due_list.php?status=paid<?php echo $search_query ? '&search='.urlencode($search_query) : ''; ?>" 
                            class="px-3 py-1.5 rounded-lg font-bold transition whitespace-nowrap <?php echo $filter_status === 'paid' ? 'bg-emerald-700 text-white shadow' : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'; ?>">
                             Fully Paid (<?php echo $all_memos_count - $pending_count; ?>)
                         </a>
@@ -443,7 +443,7 @@ $total_due_count = count($rows);
                             Search
                         </button>
                         <?php if(!empty($search_query) || $filter_status !== 'all'): ?>
-                        <a href="/geomorphology/due_list" class="px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-lg font-bold">
+                        <a href="due_list.php" class="px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-lg font-bold">
                             Reset
                         </a>
                         <?php endif; ?>
@@ -640,7 +640,7 @@ $total_due_count = count($rows);
             fd.append('next_due_date', nextDue);
 
             try {
-                const res = await fetch('/geomorphology/due_list', { method: 'POST', body: fd });
+                const res = await fetch('due_list.php', { method: 'POST', body: fd });
                 const data = await res.json();
                 if (data.success) {
                     alert(data.message);
@@ -668,7 +668,7 @@ $total_due_count = count($rows);
             fd.append('balance_amount', bal);
 
             try {
-                const res = await fetch('/geomorphology/due_list', { method: 'POST', body: fd });
+                const res = await fetch('due_list.php', { method: 'POST', body: fd });
                 const data = await res.json();
                 alert(data.message);
             } catch (err) {
@@ -686,7 +686,7 @@ $total_due_count = count($rows);
             fd.append('id', id);
 
             try {
-                const res = await fetch('/geomorphology/due_list', { method: 'POST', body: fd });
+                const res = await fetch('due_list.php', { method: 'POST', body: fd });
                 const data = await res.json();
                 if (data.success && data.history.length > 0) {
                     let html = '<table class="w-full text-xs text-left"><thead><tr class="border-b border-stone-200 text-stone-500 font-bold"><th class="py-2">Date</th><th class="py-2">Mode</th><th class="py-2 text-right">Amount Paid</th><th class="py-2 text-right">Remaining Due</th><th class="py-2 text-center">Receipt</th></tr></thead><tbody class="divide-y divide-stone-100">';
@@ -697,7 +697,7 @@ $total_due_count = count($rows);
                             <td class="py-2.5 text-right font-bold text-emerald-700">₹${parseFloat(h.amount_paid).toFixed(2)}</td>
                             <td class="py-2.5 text-right font-bold text-rose-600">₹${parseFloat(h.new_balance).toFixed(2)}</td>
                             <td class="py-2.5 text-center">
-                                <a href="/view_pdf.php?invoice_no=${encodeURIComponent(invNo)}&receipt=1&history_id=${h.history_id}" target="_blank" class="text-amber-700 hover:underline font-bold px-2 py-1 bg-amber-50 rounded">
+                                <a href="../view_pdf.php?invoice_no=${encodeURIComponent(invNo)}&receipt=1&history_id=${h.history_id}" target="_blank" class="text-amber-700 hover:underline font-bold px-2 py-1 bg-amber-50 rounded">
                                     <i class="fas fa-print"></i>
                                 </a>
                             </td>

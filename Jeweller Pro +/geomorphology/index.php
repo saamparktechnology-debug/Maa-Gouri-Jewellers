@@ -187,21 +187,21 @@ $recent_invoices = mysqli_query($conn, "
 
         <nav class="sidebar-nav">
             <div class="sidebar-section-label">Geomorphology Menu</div>
-            <a href="/geomorphology" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-            <a href="/geomorphology/reports"><i class="fas fa-chart-bar"></i> Sales Reports</a>
-            <a href="/geomorphology/accounts"><i class="fas fa-wallet"></i> Accounts Ledger</a>
-            <a href="/geomorphology/due_list"><i class="fas fa-file-invoice-dollar"></i> Due Management</a>
-            <a href="/geomorphology/income_expenses"><i class="fas fa-exchange-alt"></i> Income &amp; Expenses</a>
+            <a href="index.php" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="reports.php"><i class="fas fa-chart-bar"></i> Sales Reports</a>
+            <a href="accounts.php"><i class="fas fa-wallet"></i> Accounts Ledger</a>
+            <a href="due_list.php"><i class="fas fa-file-invoice-dollar"></i> Due Management</a>
+            <a href="income_expenses.php"><i class="fas fa-exchange-alt"></i> Income &amp; Expenses</a>
 
             <div class="sidebar-section-label mt-4">Security</div>
-            <a href="/geomorphology?geo_action=lock" class="text-rose-300 hover:text-rose-100"><i class="fas fa-lock text-rose-400"></i> Lock Section</a>
+            <a href="index.php?geo_action=lock" class="text-rose-300 hover:text-rose-100"><i class="fas fa-lock text-rose-400"></i> Lock Section</a>
             <button type="button" onclick="openChangePassModal()" class="w-full text-left flex items-center gap-3 px-5 py-2.5 text-xs text-amber-300 hover:text-white transition">
                 <i class="fas fa-key text-amber-400"></i> Change Password
             </button>
 
             <div class="sidebar-section-label mt-4">Switch System</div>
-            <a href="/geomorphology?geo_action=exit_to_main&target=/billing"><i class="fas fa-cash-register" style="color:#10b981;"></i> New Bill (Billing)</a>
-            <a href="/geomorphology?geo_action=exit_to_main&target=/index.php"><i class="fas fa-arrow-left" style="color:#60a5fa;"></i> Back to Main GST App</a>
+            <a href="index.php?geo_action=exit_to_main&target=../billing.php"><i class="fas fa-cash-register" style="color:#10b981;"></i> New Bill (Billing)</a>
+            <a href="index.php?geo_action=exit_to_main&target=../index.php"><i class="fas fa-arrow-left" style="color:#60a5fa;"></i> Back to Main GST App</a>
         </nav>
     </aside>
 
@@ -221,14 +221,7 @@ $recent_invoices = mysqli_query($conn, "
                     </span>
                 </div>
             </div>
-
             <div class="flex items-center gap-2">
-                <button type="button" onclick="openChangePassModal()" title="Change section password" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition hidden sm:inline-flex items-center gap-1">
-                    <i class="fas fa-key text-amber-300"></i> Change Pass
-                </button>
-                <a href="/geomorphology?geo_action=lock" title="Lock section" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600/80 hover:bg-rose-600 text-white transition inline-flex items-center gap-1">
-                    <i class="fas fa-lock"></i> <span class="hidden sm:inline">Lock</span>
-                </a>
                 <a href="/geomorphology?geo_action=exit_to_main&target=/index.php" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition hidden sm:inline-flex">
                     <i class="fas fa-home mr-1"></i> Main App
                 </a>
@@ -246,10 +239,10 @@ $recent_invoices = mysqli_query($conn, "
                 </div>
 
                 <div class="flex items-center gap-2 flex-wrap">
-                    <a href="/geomorphology?geo_action=exit_to_main&target=/billing" class="btn-gold-action">
+                    <a href="index.php?geo_action=exit_to_main&target=../billing.php" class="btn-gold-action">
                         <i class="fas fa-cash-register"></i> New Bill
                     </a>
-                    <a href="/geomorphology/reports" class="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold rounded-xl text-xs border border-stone-300 transition inline-flex items-center gap-1.5">
+                    <a href="reports.php" class="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold rounded-xl text-xs border border-stone-300 transition inline-flex items-center gap-1.5">
                         <i class="fas fa-chart-line"></i> Sales Reports
                     </a>
                 </div>
@@ -328,7 +321,7 @@ $recent_invoices = mysqli_query($conn, "
             <div class="card-gold overflow-hidden mb-6">
                 <div class="p-4 border-b border-stone-200 bg-amber-50/50 flex items-center justify-between">
                     <h3 class="font-bold text-xs uppercase tracking-wider text-[#7a4e0a]">Recent Non-GST Cash Memos</h3>
-                    <a href="/geomorphology/reports" class="text-xs font-bold text-[#7a4e0a] hover:underline flex items-center gap-1">
+                    <a href="reports.php" class="text-xs font-bold text-[#7a4e0a] hover:underline flex items-center gap-1">
                         View All Reports <i class="fas fa-arrow-right text-[10px]"></i>
                     </a>
                 </div>

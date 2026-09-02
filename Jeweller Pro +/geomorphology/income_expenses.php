@@ -63,13 +63,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST' && isset($_POST['add_expense']
 if (isset($_GET['delete_income'])) {
     $id = intval($_GET['delete_income']);
     mysqli_query($conn, "DELETE FROM income WHERE id = $id");
-    header("Location: /geomorphology/income_expenses");
+    header("Location: income_expenses.php");
     exit();
 }
 if (isset($_GET['delete_expense'])) {
     $id = intval($_GET['delete_expense']);
     mysqli_query($conn, "DELETE FROM expenses WHERE id = $id");
-    header("Location: /geomorphology/income_expenses");
+    header("Location: income_expenses.php");
     exit();
 }
 
@@ -205,18 +205,18 @@ foreach($expense_records as $r) {
 
         <nav class="sidebar-nav">
             <div class="sidebar-section-label">Geomorphology Menu</div>
-            <a href="/geomorphology"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-            <a href="/geomorphology/reports"><i class="fas fa-chart-bar"></i> Sales Reports</a>
-            <a href="/geomorphology/accounts"><i class="fas fa-wallet"></i> Accounts Ledger</a>
-            <a href="/geomorphology/due_list"><i class="fas fa-file-invoice-dollar"></i> Due Management</a>
-            <a href="/geomorphology/income_expenses" class="active"><i class="fas fa-exchange-alt"></i> Income &amp; Expenses</a>
+            <a href="index.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="reports.php"><i class="fas fa-chart-bar"></i> Sales Reports</a>
+            <a href="accounts.php"><i class="fas fa-wallet"></i> Accounts Ledger</a>
+            <a href="due_list.php"><i class="fas fa-file-invoice-dollar"></i> Due Management</a>
+            <a href="income_expenses.php" class="active"><i class="fas fa-exchange-alt"></i> Income &amp; Expenses</a>
 
             <div class="sidebar-section-label mt-4">Security</div>
-            <a href="/geomorphology?geo_action=lock" class="text-rose-300 hover:text-rose-100"><i class="fas fa-lock text-rose-400"></i> Lock Section</a>
+            <a href="index.php?geo_action=lock" class="text-rose-300 hover:text-rose-100"><i class="fas fa-lock text-rose-400"></i> Lock Section</a>
 
             <div class="sidebar-section-label mt-4">Switch System</div>
-            <a href="/geomorphology?geo_action=exit_to_main&target=/billing"><i class="fas fa-cash-register" style="color:#10b981;"></i> New Bill (Billing)</a>
-            <a href="/geomorphology?geo_action=exit_to_main&target=/index.php"><i class="fas fa-arrow-left" style="color:#60a5fa;"></i> Back to Main GST App</a>
+            <a href="index.php?geo_action=exit_to_main&target=../billing.php"><i class="fas fa-cash-register" style="color:#10b981;"></i> New Bill (Billing)</a>
+            <a href="index.php?geo_action=exit_to_main&target=../index.php"><i class="fas fa-arrow-left" style="color:#60a5fa;"></i> Back to Main GST App</a>
         </nav>
     </aside>
 
@@ -238,13 +238,13 @@ foreach($expense_records as $r) {
             </div>
 
             <div class="flex items-center gap-2">
-                <a href="/geomorphology?geo_action=lock" title="Lock section" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600/80 hover:bg-rose-600 text-white transition inline-flex items-center gap-1">
+                <a href="index.php?geo_action=lock" title="Lock section" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600/80 hover:bg-rose-600 text-white transition inline-flex items-center gap-1">
                     <i class="fas fa-lock"></i> <span class="hidden sm:inline">Lock</span>
                 </a>
-                <a href="/geomorphology" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition">
+                <a href="index.php" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition">
                     <i class="fas fa-tachometer-alt mr-1"></i> Dashboard
                 </a>
-                <a href="/geomorphology?geo_action=exit_to_main&target=/index.php" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition hidden sm:inline-flex">
+                <a href="index.php?geo_action=exit_to_main&target=../index.php" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition hidden sm:inline-flex">
                     <i class="fas fa-home mr-1"></i> Main App
                 </a>
             </div>
@@ -279,7 +279,7 @@ foreach($expense_records as $r) {
 
             <!-- Date Filter -->
             <div class="card-gold p-4 mb-6">
-                <form method="GET" action="/geomorphology/income_expenses" class="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+                <form method="GET" action="income_expenses.php" class="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
                     <div class="flex items-center gap-2 w-full sm:w-auto">
                         <span class="font-bold text-stone-600">Date Range:</span>
                         <input type="date" name="date_from" value="<?php echo htmlspecialchars($date_from); ?>" class="px-3 py-2 bg-stone-50 border border-stone-300 rounded-lg text-stone-800 font-semibold">
@@ -358,7 +358,7 @@ foreach($expense_records as $r) {
                                     <td class="py-2.5 px-3 text-stone-600"><?php echo htmlspecialchars($e['description'] ?: ($e['vendor_name'] ?? '-')); ?></td>
                                     <td class="py-2.5 px-3 text-right font-extrabold text-rose-600">₹<?php echo number_format($e['amount'], 2); ?></td>
                                     <td class="py-2.5 px-3 text-center">
-                                        <a href="/geomorphology/income_expenses?delete_expense=<?php echo $e['id']; ?>" onclick="return confirm('Delete this expense?')" class="text-stone-400 hover:text-rose-600">
+                                        <a href="income_expenses.php?delete_expense=<?php echo $e['id']; ?>" onclick="return confirm('Delete this expense?')" class="text-stone-400 hover:text-rose-600">
                                             <i class="fas fa-trash-alt"></i>
                                         </a>
                                     </td>
@@ -400,7 +400,7 @@ foreach($expense_records as $r) {
                                     <td class="py-2.5 px-3 text-stone-600"><?php echo htmlspecialchars($inc['description'] ?: '-'); ?></td>
                                     <td class="py-2.5 px-3 text-right font-extrabold text-emerald-700">₹<?php echo number_format($inc['amount'], 2); ?></td>
                                     <td class="py-2.5 px-3 text-center">
-                                        <a href="/geomorphology/income_expenses?delete_income=<?php echo $inc['id']; ?>" onclick="return confirm('Delete this income entry?')" class="text-stone-400 hover:text-rose-600">
+                                        <a href="income_expenses.php?delete_income=<?php echo $inc['id']; ?>" onclick="return confirm('Delete this income entry?')" class="text-stone-400 hover:text-rose-600">
                                             <i class="fas fa-trash-alt"></i>
                                         </a>
                                     </td>
@@ -426,7 +426,7 @@ foreach($expense_records as $r) {
                 <button onclick="document.getElementById('expenseModal').classList.add('hidden')" class="text-stone-400 hover:text-stone-600 text-lg">&times;</button>
             </div>
             
-            <form method="POST" action="/geomorphology/income_expenses" class="space-y-3.5">
+            <form method="POST" action="income_expenses.php" class="space-y-3.5">
                 <input type="hidden" name="add_expense" value="1">
                 <div>
                     <label class="block font-bold text-stone-600 mb-1">Expense Date *</label>
@@ -472,7 +472,7 @@ foreach($expense_records as $r) {
                 <button onclick="document.getElementById('incomeModal').classList.add('hidden')" class="text-stone-400 hover:text-stone-600 text-lg">&times;</button>
             </div>
             
-            <form method="POST" action="/geomorphology/income_expenses" class="space-y-3.5">
+            <form method="POST" action="income_expenses.php" class="space-y-3.5">
                 <input type="hidden" name="add_income" value="1">
                 <div>
                     <label class="block font-bold text-stone-600 mb-1">Income Date *</label>

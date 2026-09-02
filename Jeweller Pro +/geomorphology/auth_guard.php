@@ -9,7 +9,7 @@ require_once __DIR__ . '/../config/mail_config.php';
 
 // 1. Must be logged in to system
 if (!isset($_SESSION['user_id'])) {
-    header("Location: /login.php");
+    header("Location: ../login.php");
     exit();
 }
 
@@ -51,7 +51,7 @@ function verify_geomorphology_password($conn, $input_pass) {
 if (isset($_GET['geo_action']) && ($_GET['geo_action'] === 'lock' || $_GET['geo_action'] === 'exit_to_main')) {
     unset($_SESSION['geomorphology_unlocked']);
     unset($_SESSION['geomorphology_unlocked_at']);
-    $target = $_GET['target'] ?? '/geomorphology';
+    $target = $_GET['target'] ?? 'index.php';
     header("Location: " . $target);
     exit();
 }

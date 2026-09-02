@@ -273,18 +273,18 @@ $totDueCols = $totDueCol;
 
         <nav class="sidebar-nav">
             <div class="sidebar-section-label">Geomorphology Menu</div>
-            <a href="/geomorphology"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-            <a href="/geomorphology/reports"><i class="fas fa-chart-bar"></i> Sales Reports</a>
-            <a href="/geomorphology/accounts" class="active"><i class="fas fa-wallet"></i> Accounts Ledger</a>
-            <a href="/geomorphology/due_list"><i class="fas fa-file-invoice-dollar"></i> Due Management</a>
-            <a href="/geomorphology/income_expenses"><i class="fas fa-exchange-alt"></i> Income &amp; Expenses</a>
+            <a href="index.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="reports.php"><i class="fas fa-chart-bar"></i> Sales Reports</a>
+            <a href="accounts.php" class="active"><i class="fas fa-wallet"></i> Accounts Ledger</a>
+            <a href="due_list.php"><i class="fas fa-file-invoice-dollar"></i> Due Management</a>
+            <a href="income_expenses.php"><i class="fas fa-exchange-alt"></i> Income &amp; Expenses</a>
 
             <div class="sidebar-section-label mt-4">Security</div>
-            <a href="/geomorphology?geo_action=lock" class="text-rose-300 hover:text-rose-100"><i class="fas fa-lock text-rose-400"></i> Lock Section</a>
+            <a href="index.php?geo_action=lock" class="text-rose-300 hover:text-rose-100"><i class="fas fa-lock text-rose-400"></i> Lock Section</a>
 
             <div class="sidebar-section-label mt-4">Switch System</div>
-            <a href="/geomorphology?geo_action=exit_to_main&target=/billing"><i class="fas fa-cash-register" style="color:#10b981;"></i> New Bill (Billing)</a>
-            <a href="/geomorphology?geo_action=exit_to_main&target=/index.php"><i class="fas fa-arrow-left" style="color:#60a5fa;"></i> Back to Main GST App</a>
+            <a href="index.php?geo_action=exit_to_main&target=../billing.php"><i class="fas fa-cash-register" style="color:#10b981;"></i> New Bill (Billing)</a>
+            <a href="index.php?geo_action=exit_to_main&target=../index.php"><i class="fas fa-arrow-left" style="color:#60a5fa;"></i> Back to Main GST App</a>
         </nav>
     </aside>
 
@@ -306,13 +306,13 @@ $totDueCols = $totDueCol;
             </div>
 
             <div class="flex items-center gap-2">
-                <a href="/geomorphology?geo_action=lock" title="Lock section" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600/80 hover:bg-rose-600 text-white transition inline-flex items-center gap-1">
+                <a href="index.php?geo_action=lock" title="Lock section" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600/80 hover:bg-rose-600 text-white transition inline-flex items-center gap-1">
                     <i class="fas fa-lock"></i> <span class="hidden sm:inline">Lock</span>
                 </a>
-                <a href="/geomorphology" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition">
+                <a href="index.php" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition">
                     <i class="fas fa-tachometer-alt mr-1"></i> Dashboard
                 </a>
-                <a href="/geomorphology?geo_action=exit_to_main&target=/index.php" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition hidden sm:inline-flex">
+                <a href="index.php?geo_action=exit_to_main&target=../index.php" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition hidden sm:inline-flex">
                     <i class="fas fa-home mr-1"></i> Main App
                 </a>
             </div>
@@ -332,7 +332,7 @@ $totDueCols = $totDueCol;
                     <button onclick="window.print()" class="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold rounded-xl text-xs border border-stone-300 transition inline-flex items-center gap-1.5">
                         <i class="fas fa-print"></i> Print Daybook
                     </button>
-                    <a href="/geomorphology/due_list" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs shadow transition inline-flex items-center gap-1.5">
+                    <a href="due_list.php" class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs shadow transition inline-flex items-center gap-1.5">
                         <i class="fas fa-file-invoice-dollar"></i> Due Collections
                     </a>
                 </div>
@@ -342,23 +342,23 @@ $totDueCols = $totDueCol;
             <div class="card-gold p-4 mb-6 no-print">
                 <div class="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
                     <div class="flex items-center gap-2">
-                        <a href="/geomorphology/accounts?month=<?php echo $prevMonth; ?>" class="px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold rounded-lg transition inline-flex items-center gap-1">
+                        <a href="accounts.php?month=<?php echo $prevMonth; ?>" class="px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold rounded-lg transition inline-flex items-center gap-1">
                             <i class="fas fa-chevron-left"></i> <span><?php echo date('M Y', strtotime($prevMonth.'-01')); ?></span>
                         </a>
                         <span class="px-4 py-2 bg-amber-50 text-amber-900 border border-amber-300 rounded-lg font-extrabold text-sm">
                             <i class="fas fa-calendar-alt text-amber-600 mr-1.5"></i> <?php echo $monthLabel; ?>
                         </span>
-                        <a href="/geomorphology/accounts?month=<?php echo $nextMonth; ?>" class="px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold rounded-lg transition inline-flex items-center gap-1">
+                        <a href="accounts.php?month=<?php echo $nextMonth; ?>" class="px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 font-bold rounded-lg transition inline-flex items-center gap-1">
                             <span><?php echo date('M Y', strtotime($nextMonth.'-01')); ?></span> <i class="fas fa-chevron-right"></i>
                         </a>
                     </div>
 
-                    <form method="GET" action="/geomorphology/accounts" class="flex items-center gap-2">
+                    <form method="GET" action="accounts.php" class="flex items-center gap-2">
                         <input type="month" name="month" value="<?php echo htmlspecialchars($month); ?>" class="px-3 py-1.5 bg-stone-50 border border-stone-300 rounded-lg text-stone-800 font-bold">
                         <button type="submit" class="btn-gold-action">
                             Go
                         </button>
-                        <a href="/geomorphology/accounts" class="px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-lg font-bold">
+                        <a href="accounts.php" class="px-3 py-2 bg-stone-100 hover:bg-stone-200 text-stone-600 rounded-lg font-bold">
                             Current Month
                         </a>
                     </form>
