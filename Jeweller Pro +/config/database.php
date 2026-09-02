@@ -232,22 +232,26 @@ mysqli_query($conn, $create_invoices);
 
 // Ensure all required columns exist on invoices table
 $columns_to_ensure = [
-    'customer_id'      => "INT NULL",
-    'customer_address' => "TEXT NULL",
-    'customer_gstin'   => "VARCHAR(50) NULL",
-    'discount'         => "DECIMAL(10,2) DEFAULT 0",
-    'payment_status'   => "VARCHAR(20) DEFAULT 'pending'",
-    'payment_method'   => "VARCHAR(20) DEFAULT 'Cash'",
-    'paid_amount'      => "DECIMAL(10,2) DEFAULT 0",
-    'balance_amount'   => "DECIMAL(10,2) DEFAULT 0",
-    'huid_code'        => "VARCHAR(100) NULL",
-    'cash_paid'        => "DECIMAL(10,2) DEFAULT 0",
-    'upi_paid'         => "DECIMAL(10,2) DEFAULT 0",
-    'account_paid'     => "DECIMAL(10,2) DEFAULT 0",
-    'due_date'         => "DATE NULL",
-    'reminder_sent'    => "TINYINT(1) DEFAULT 0",
-    'pdf_file'         => "LONGBLOB NULL",
-    'pdf_file_name'    => "VARCHAR(255) NULL",
+    'customer_id'        => "INT NULL",
+    'customer_address'   => "TEXT NULL",
+    'customer_gstin'     => "VARCHAR(50) NULL",
+    'discount'           => "DECIMAL(10,2) DEFAULT 0",
+    'advance_adjusted'   => "DECIMAL(10,2) DEFAULT 0",
+    'applied_advance_id' => "INT NULL",
+    'refund_amount'      => "DECIMAL(10,2) DEFAULT 0",
+    'refund_mode'        => "VARCHAR(50) NULL",
+    'payment_status'     => "VARCHAR(20) DEFAULT 'pending'",
+    'payment_method'     => "VARCHAR(20) DEFAULT 'Cash'",
+    'paid_amount'        => "DECIMAL(10,2) DEFAULT 0",
+    'balance_amount'     => "DECIMAL(10,2) DEFAULT 0",
+    'huid_code'          => "VARCHAR(100) NULL",
+    'cash_paid'          => "DECIMAL(10,2) DEFAULT 0",
+    'upi_paid'           => "DECIMAL(10,2) DEFAULT 0",
+    'account_paid'       => "DECIMAL(10,2) DEFAULT 0",
+    'due_date'           => "DATE NULL",
+    'reminder_sent'      => "TINYINT(1) DEFAULT 0",
+    'pdf_file'           => "LONGBLOB NULL",
+    'pdf_file_name'      => "VARCHAR(255) NULL",
 ];
 
 foreach ($columns_to_ensure as $col_name => $col_definition) {
@@ -256,6 +260,41 @@ foreach ($columns_to_ensure as $col_name => $col_definition) {
         mysqli_query($conn, "ALTER TABLE invoices ADD COLUMN $col_name $col_definition");
     }
 }
+
+// Ensure customer_advances table exists
+$create_customer_advances = "CREATE TABLE IF NOT EXISTS customer_advances (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    receipt_no VARCHAR(50) UNIQUE NOT NULL,
+    customer_name VARCHAR(150) NOT NULL,
+    customer_mobile VARCHAR(20) NOT NULL,
+    customer_address TEXT NULL,
+    advance_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    used_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    available_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    payment_method VARCHAR(50) DEFAULT 'Cash',
+    cash_paid DECIMAL(12,2) DEFAULT 0.00,
+    upi_paid DECIMAL(12,2) DEFAULT 0.00,
+    booking_note TEXT NULL,
+    delivery_date DATE NULL,
+    status VARCHAR(20) DEFAULT 'active',
+    created_by INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)";
+mysqli_query($conn, $create_customer_advances);
+
+// Ensure advance_adjustments table exists
+$create_advance_adjustments = "CREATE TABLE IF NOT EXISTS advance_adjustments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    advance_id INT NOT NULL,
+    invoice_no VARCHAR(50) NOT NULL,
+    adjusted_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    surplus_amount DECIMAL(12,2) NOT NULL DEFAULT 0.00,
+    surplus_action VARCHAR(50) DEFAULT 'credit',
+    refund_mode VARCHAR(50) NULL,
+    notes TEXT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)";
+mysqli_query($conn, $create_advance_adjustments);
 
 $create_invoice_items = "CREATE TABLE IF NOT EXISTS invoice_items (
 id INT AUTO_INCREMENT PRIMARY KEY,
