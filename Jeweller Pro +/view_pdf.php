@@ -11,6 +11,324 @@ if(!isset($_SESSION['user_id'])) {
     exit();
 }
 
+if (!function_exists('ind_format')) {
+    function ind_format($num) {
+        $num = round(floatval($num ?? 0), 2);
+        $parts = explode('.', sprintf("%.2f", $num));
+
+        $whole = $parts[0];
+        $fraction = $parts[1];
+        if(strlen($whole) > 3) {
+            $last3 = substr($whole, -3);
+            $rest = substr($whole, 0, -3);
+            $rest = preg_replace("/\B(?=(\d{2})+(?!\d))/", ",", $rest);
+            $whole = $rest . "," . $last3;
+        }
+        return $whole . "." . $fraction;
+    }
+}
+
+if (!function_exists('num2words')) {
+    function num2words($n) {
+        $num = round(floatval($n ?? 0), 2);
+        $whole = (int)floor($num);
+        $fraction = (int)round(($num - $whole) * 100);
+        
+        if ($whole == 0 && $fraction == 0) return 'Zero Rupees Only';
+        
+        $words = '';
+        if ($whole > 0) {
+            $words .= num2words_integer($whole) . ' Rupees';
+        }
+        if ($fraction > 0) {
+            if (!empty($words)) $words .= ' and ';
+            $words .= num2words_integer($fraction) . ' Paise';
+        }
+        return $words . ' Only';
+    }
+}
+
+if (!function_exists('num2words_integer')) {
+    function num2words_integer($n) {
+        $n = (int)$n;
+        $ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+        $tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+        if($n==0) return 'Zero';
+        if($n<20) return $ones[$n];
+        if($n<100) return $tens[(int)($n/10)].($n%10?' '.$ones[$n%10]:'');
+        if($n<1000) return $ones[(int)($n/100)].' Hundred'.($n%100?' '.num2words_integer($n%100):'');
+        if($n<100000) return num2words_integer((int)($n/1000)).' Thousand'.($n%1000?' '.num2words_integer($n%1000):'');
+        if($n<10000000) return num2words_integer((int)($n/100000)).' Lakh'.($n%100000?' '.num2words_integer($n%100000):'');
+        return num2words_integer((int)($n/10000000)).' Crore'.($n%10000000?' '.num2words_integer($n%10000000):'');
+    }
+}
+
+
+// --- CHECK IF ADVANCE CREDIT RECEIPT IS REQUESTED ---
+$is_advance_receipt = (isset($_GET['advance_no']) || isset($_GET['advance_id']));
+if ($is_advance_receipt) {
+    $adv_no = mysqli_real_escape_string($conn, $_GET['advance_no'] ?? '');
+    $adv_id = intval($_GET['advance_id'] ?? 0);
+    if ($adv_no) {
+        $adv_res = mysqli_query($conn, "SELECT * FROM customer_advances WHERE receipt_no = '$adv_no' LIMIT 1");
+    } else {
+        $adv_res = mysqli_query($conn, "SELECT * FROM customer_advances WHERE id = $adv_id LIMIT 1");
+    }
+    if (!$adv_res || mysqli_num_rows($adv_res) == 0) {
+        die("<h3 style='font-family:sans-serif;padding:20px;'>Advance receipt not found.</h3><a href='billing.php'>&larr; Back to Billing</a>");
+    }
+    $adv = mysqli_fetch_assoc($adv_res);
+    $adj_res = mysqli_query($conn, "SELECT * FROM advance_adjustments WHERE advance_id = " . intval($adv['id']) . " ORDER BY created_at ASC");
+    $adjustments = [];
+    if ($adj_res) {
+        while ($ar = mysqli_fetch_assoc($adj_res)) $adjustments[] = $ar;
+    }
+
+    $logo_file = $COMPANY['logo_path'] ?? 'logo.png';
+    $adv_amount = floatval($adv['advance_amount']);
+    $used_amount = floatval($adv['used_amount']);
+    $available_amount = floatval($adv['available_amount']);
+    $adv_date_fmt = date('d/m/Y', strtotime($adv['created_at']));
+    $delivery_date_fmt = (!empty($adv['delivery_date']) && $adv['delivery_date'] !== '0000-00-00') ? date('d/m/Y', strtotime($adv['delivery_date'])) : '—';
+    
+    // Number to words
+    function num2words_adv($num) {
+        $n = (int)round($num);
+        if($n <= 0) return 'Zero Rupees Only';
+        $words = [
+            0=>'',1=>'One',2=>'Two',3=>'Three',4=>'Four',5=>'Five',6=>'Six',7=>'Seven',8=>'Eight',9=>'Nine',
+            10=>'Ten',11=>'Eleven',12=>'Twelve',13=>'Thirteen',14=>'Fourteen',15=>'Fifteen',16=>'Sixteen',
+            17=>'Seventeen',18=>'Eighteen',19=>'Nineteen',20=>'Twenty',30=>'Thirty',40=>'Forty',50=>'Fifty',
+            60=>'Sixty',70=>'Seventy',80=>'Eighty',90=>'Ninety'
+        ];
+        $res = '';
+        if($n >= 10000000) { $c = (int)($n/10000000); $res .= ($c<20?$words[$c]:$words[(int)($c/10)*10].($c%10?' '.$words[$c%10]:'')).' Crore '; $n %= 10000000; }
+        if($n >= 100000)   { $c = (int)($n/100000);   $res .= ($c<20?$words[$c]:$words[(int)($c/10)*10].($c%10?' '.$words[$c%10]:'')).' Lakh ';  $n %= 100000; }
+        if($n >= 1000)     { $c = (int)($n/1000);     $res .= ($c<20?$words[$c]:$words[(int)($c/10)*10].($c%10?' '.$words[$c%10]:'')).' Thousand '; $n %= 1000; }
+        if($n >= 100)      { $res .= $words[(int)($n/100)].' Hundred '; $n %= 100; }
+        if($n > 0) {
+            if($n < 20) $res .= $words[$n].' ';
+            else $res .= $words[(int)($n/10)*10].($n%10?' '.$words[$n%10]:'').' ';
+        }
+        return trim($res).' Rupees Only';
+    }
+    $adv_words = num2words_adv($adv_amount);
+    ?>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advance Receipt - <?php echo htmlspecialchars($adv['receipt_no']); ?></title>
+    <link rel="icon" type="image/png" href="logo.png">
+    <link rel="shortcut icon" type="image/png" href="logo.png">
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Poppins:wght@400;500;600;700&display=swap');
+    @page { size: A4 portrait; margin: 6mm 8mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Poppins', sans-serif; font-size: 11px; line-height: 1.35; color: #1e293b; background: #f8fafc; padding: 15px; }
+    .print-actions { max-width: 800px; margin: 0 auto 12px; display: flex; justify-content: space-between; align-items: center; }
+    .btn-back { display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; background: #fff; border: 1.5px solid #d68b16; border-radius: 8px; color: #7a4e0a; font-weight: 600; text-decoration: none; font-size: 12px; }
+    .btn-print { display: inline-flex; align-items: center; gap: 6px; padding: 8px 20px; background: linear-gradient(135deg,#800020,#d68b16); border: none; border-radius: 8px; color: #fff; font-weight: 700; font-size: 12.5px; cursor: pointer; }
+    .invoice-card { max-width: 800px; margin: 0 auto; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); overflow: hidden; position: relative; padding: 24px; }
+    .top-header { display: flex; align-items: center; gap: 16px; padding-bottom: 12px; border-bottom: 2px solid #d68b16; margin-bottom: 14px; }
+    .very-left-logo { width: auto; max-width: 90px; height: 68px; max-height: 68px; object-fit: contain; flex-shrink: 0; }
+    .shop-branding-text { flex: 1; }
+    .shop-title { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 800; color: #800020; letter-spacing: 0.5px; }
+    .shop-details-line { font-size: 10px; color: #64748b; margin-top: 2px; line-height: 1.4; }
+    .doc-badge { background: linear-gradient(135deg,#800020,#d68b16); color: #fff; padding: 8px 16px; border-radius: 20px; font-size: 11px; font-weight: 700; text-align: center; line-height: 1.25; }
+    .meta-bar { display: grid; grid-template-columns: 1fr 1fr 1fr; background: rgba(214,139,22,0.08); border: 1px solid rgba(214,139,22,0.25); border-radius: 8px; padding: 10px 14px; margin-bottom: 14px; }
+    .meta-item { display: flex; flex-direction: column; }
+    .meta-label { font-size: 9px; text-transform: uppercase; color: #854d0e; font-weight: 700; }
+    .meta-value { font-size: 13px; font-weight: 700; color: #1e293b; }
+    .bill-to-card { display: flex; justify-content: space-between; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; }
+    .bill-to-title { font-size: 9.5px; text-transform: uppercase; color: #92400e; font-weight: 700; }
+    .customer-name-big { font-size: 16px; font-weight: 700; color: #800020; margin: 2px 0; }
+    .inv-table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+    .inv-table th { background: linear-gradient(135deg,#7a4e0a,#d68b16); color: #fff; padding: 8px 10px; font-size: 11px; text-align: left; }
+    .inv-table td { padding: 9px 10px; border-bottom: 1px solid #f1f5f9; font-size: 11px; }
+    .amount-highlight { background: #ecfdf5; border: 1.5px solid #6ee7b7; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+    .terms-box { background: #fffdfa; border: 1px solid #f2e2c4; border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; }
+    .terms-title { font-size: 10.5px; font-weight: 700; color: #800020; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; }
+    .terms-list { list-style: none; padding-left: 0; font-size: 9.5px; color: #475569; line-height: 1.55; }
+    .terms-list li { margin-bottom: 3px; position: relative; padding-left: 14px; }
+    .terms-list li::before { content: "•"; position: absolute; left: 2px; color: #d68b16; font-weight: bold; font-size: 12px; }
+    .status-pill { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 10px; font-weight: 700; }
+    .status-active { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .status-part { background: #fef9c3; color: #854d0e; border: 1px solid #fde047; }
+    .status-used { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+    @media print {
+        body { background: #fff; padding: 0; }
+        .print-actions { display: none; }
+        .invoice-card { box-shadow: none; border: none; padding: 0; width: 100%; }
+    }
+    </style>
+    </head>
+    <body>
+    <div class="print-actions">
+        <div style="display:flex;gap:10px;">
+            <a href="billing.php" class="btn-back">&larr; Back to Billing</a>
+            <a href="reports.php" class="btn-back">📊 Reports</a>
+        </div>
+        <button onclick="window.print()" class="btn-print">🖨️ Print / Download PDF (A4)</button>
+    </div>
+
+    <div class="invoice-card">
+        <div class="top-header">
+            <img src="<?php echo $logo_file; ?>" alt="Logo" class="very-left-logo">
+            <div class="shop-branding-text">
+                <div class="shop-title"><?php echo $COMPANY['name']; ?></div>
+                <div class="shop-details-line">
+                    <strong>GSTIN:</strong> <?php echo $COMPANY['gstin']; ?> &nbsp;|&nbsp; <strong>Ph No:</strong> +91-<?php echo $COMPANY['mobile']; ?><br>
+                    <strong>Address:</strong> <?php echo $COMPANY['address_line1']; ?>, <?php echo $COMPANY['address_line2']; ?>, <?php echo $COMPANY['state']; ?> (Code: <?php echo $COMPANY['state_code']; ?>)
+                </div>
+            </div>
+            <div>
+                <div class="doc-badge">ADVANCE CREDIT<br>MONEY RECEIPT</div>
+            </div>
+        </div>
+
+        <div class="meta-bar">
+            <div class="meta-item">
+                <span class="meta-label">Receipt Number</span>
+                <span class="meta-value" style="color:#800020; font-family:monospace;"><?php echo htmlspecialchars($adv['receipt_no']); ?></span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Receipt Date</span>
+                <span class="meta-value"><?php echo $adv_date_fmt; ?></span>
+            </div>
+            <div class="meta-item">
+                <span class="meta-label">Expected Delivery / Order Date</span>
+                <span class="meta-value"><?php echo $delivery_date_fmt; ?></span>
+            </div>
+        </div>
+
+        <div class="bill-to-card">
+            <div>
+                <div class="bill-to-title">Received With Thanks From</div>
+                <div class="customer-name-big"><?php echo htmlspecialchars($adv['customer_name']); ?></div>
+                <?php if(!empty($adv['customer_address'])): ?>
+                <div style="color:#64748b;font-size:11px;">📍 <?php echo htmlspecialchars($adv['customer_address']); ?></div>
+                <?php endif; ?>
+                <div style="color:#64748b;font-size:11px;">📱 Mobile: <strong>+91-<?php echo htmlspecialchars($adv['customer_mobile']); ?></strong></div>
+            </div>
+            <div style="text-align:right;">
+                <div class="bill-to-title">Payment Mode</div>
+                <div style="font-size:14px;font-weight:700;color:#065f46;margin-top:2px;">
+                    💳 <?php echo htmlspecialchars($adv['payment_method']); ?>
+                    <?php if($adv['payment_method'] === 'Cash+UPI'): ?>
+                        <div style="font-size:10px;color:#64748b;">(Cash: ₹<?php echo number_format($adv['cash_paid'],2); ?> + UPI: ₹<?php echo number_format($adv['upi_paid'],2); ?>)</div>
+                    <?php endif; ?>
+                </div>
+                <div style="margin-top:6px;">
+                    <?php if($available_amount >= $adv_amount): ?>
+                        <span class="status-pill status-active">🟢 Active Available Deposit</span>
+                    <?php elseif($available_amount > 0): ?>
+                        <span class="status-pill status-part">🟡 Partially Used (₹<?php echo number_format($available_amount, 2); ?> Left)</span>
+                    <?php else: ?>
+                        <span class="status-pill status-used">⚪ Fully Adjusted in Bills</span>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+
+        <div class="amount-highlight">
+            <div>
+                <div style="font-size:10px;text-transform:uppercase;color:#065f46;font-weight:700;">Advance Amount Received</div>
+                <div style="font-size:12px;font-weight:600;color:#047857;margin-top:2px;"><?php echo $adv_words; ?></div>
+            </div>
+            <div style="font-size:24px;font-weight:800;color:#065f46;font-family:'Poppins',sans-serif;">
+                ₹<?php echo number_format($adv_amount, 2); ?>
+            </div>
+        </div>
+
+        <table class="inv-table">
+            <thead>
+                <tr>
+                    <th>Particulars / Booking Purpose</th>
+                    <th style="width:130px;text-align:right;">Advance Deposit</th>
+                    <th style="width:130px;text-align:right;">Adjusted in Bills</th>
+                    <th style="width:130px;text-align:right;">Available Credit</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+                        <strong>Advance Credit Deposit Booking</strong>
+                        <?php if(!empty($adv['booking_note'])): ?>
+                        <div style="color:#475569;font-size:10.5px;margin-top:3px;">📝 <strong>Booking Note / Order:</strong> <?php echo htmlspecialchars($adv['booking_note']); ?></div>
+                        <?php endif; ?>
+                    </td>
+                    <td style="text-align:right;font-weight:700;">₹<?php echo number_format($adv_amount, 2); ?></td>
+                    <td style="text-align:right;color:#dc2626;font-weight:600;">(-) ₹<?php echo number_format($used_amount, 2); ?></td>
+                    <td style="text-align:right;color:#059669;font-weight:800;font-size:13px;">₹<?php echo number_format($available_amount, 2); ?></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <?php if(!empty($adjustments)): ?>
+        <div style="margin-bottom:16px;">
+            <div style="font-size:10.5px;font-weight:700;color:#7a4e0a;text-transform:uppercase;margin-bottom:6px;">🧾 Bill Adjustment History:</div>
+            <table class="inv-table">
+                <thead>
+                    <tr style="background:#f1f5f9;color:#475569;">
+                        <th style="background:#e2e8f0;color:#334155;">Adjustment Date</th>
+                        <th style="background:#e2e8f0;color:#334155;">Adjusted Against Invoice</th>
+                        <th style="background:#e2e8f0;color:#334155;text-align:right;">Amount Deducted</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach($adjustments as $adj): ?>
+                    <tr>
+                        <td><?php echo date('d/m/Y h:i A', strtotime($adj['created_at'])); ?></td>
+                        <td><a href="view_pdf.php?invoice_no=<?php echo urlencode($adj['invoice_no']); ?>" target="_blank" style="color:#800020;font-weight:700;text-decoration:underline;"><?php echo htmlspecialchars($adj['invoice_no']); ?></a></td>
+                        <td style="text-align:right;font-weight:700;color:#059669;">₹<?php echo number_format($adj['amount_adjusted'], 2); ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php endif; ?>
+
+        <!-- Detailed Terms and Conditions -->
+        <div class="terms-box">
+            <div class="terms-title">
+                <span>📜</span> Terms &amp; Conditions / Store Policies
+            </div>
+            <ul class="terms-list">
+                <li><strong>Advance Deposit Adjustment:</strong> This money receipt acknowledges advance booking deposit. The available advance credit balance will be adjusted in full against the customer's final Tax Invoice / Cash Memo at the time of purchase settlement.</li>
+                <li><strong>Receipt Verification:</strong> Please preserve and present this original money receipt or registered mobile SMS confirmation at the time of final bill settlement and jewellery collection.</li>
+                <li><strong>Gold &amp; Silver Rate Policy:</strong> For custom booking orders, the rate of precious metal shall apply as per agreed booking terms or prevailing store rate on the date of final billing.</li>
+                <li><strong>Delivery Schedule:</strong> Expected delivery date is indicative. Custom handcrafted designs may require additional time for quality finishing and hallmarking.</li>
+                <li><strong>Order Cancellation:</strong> In case of cancellation of customized orders after production commences, nominal labour/making charges may apply as per company policy.</li>
+                <li><strong>Jurisdiction:</strong> All transactions are subject to Paschim Medinipur / West Bengal jurisdiction.</li>
+            </ul>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; margin-top:14px; align-items:flex-end;">
+            <div style="border:1.5px dashed #d68b16; border-radius:8px; width:190px; height:80px; display:inline-flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(241,245,249,0.4);">
+                <div style="color:#64748b; font-size:9.5px; font-weight:600; text-transform:uppercase; margin-top:auto; padding-bottom:6px;">Customer Signature</div>
+            </div>
+            <div style="border:1.5px dashed #d68b16; border-radius:8px; width:220px; height:80px; display:inline-flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(248,243,230,0.4);">
+                <div style="font-size:9px; color:#7a4e0a; font-weight:700; text-transform:uppercase; margin-top:auto; padding-bottom:6px; text-align:center;">
+                    For <?php echo $COMPANY['name']; ?><br>
+                    <span style="font-size:8px; font-weight:normal; color:#64748b;">Authorised Signatory &amp; Stamp</span>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top:14px;padding-top:8px;border-top:1px solid #e8d5a8;text-align:center;font-size:9px;color:#7a4e0a;">
+            Printed on: <?php echo date("d-M-Y h:i A"); ?> | Maa Gouri Jewellers Pro+ Billing System
+        </div>
+    </div>
+
+    </div>
+    </body>
+    </html>
+    <?php
+    exit();
+}
+
 $invoice_no = mysqli_real_escape_string($conn, $_GET['invoice_no'] ?? '');
 if(!$invoice_no && isset($_GET['id'])) {
     $id_param = intval($_GET['id']);
@@ -28,6 +346,7 @@ if(!$inv_res || mysqli_num_rows($inv_res) == 0) {
 }
 $inv = mysqli_fetch_assoc($inv_res);
 
+
 // Fetch invoice items
 $col_gst_type_check = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'gst_type'")) > 0;
 $select_gst_type = $col_gst_type_check ? "ii.gst_type," : "'non_gst' AS gst_type,";
@@ -36,10 +355,10 @@ $select_pcs = $col_pcs_check ? "ii.pcs, ii.unit, ii.gross_wt, ii.net_wt," : "1 A
 
 $items_res = mysqli_query($conn, "
     SELECT ii.invoice_id, ii.product_id, ii.quantity, ii.price, ii.total,
-           ii.making_charge, ii.making_charge_pct, ii.hallmark, ii.discount, $select_gst_type $select_pcs
-           COALESCE(ii.product_name, p.name) AS product_name,
-           COALESCE(ii.serial_no, p.serial_no) AS serial_no,
-           COALESCE(ii.huid_code, p.huid_code) AS huid_code,
+           ii.making_charge, ii.making_charge_pct, ii.hallmark, ii.hallmark_type, ii.discount, $select_gst_type $select_pcs
+           COALESCE(NULLIF(ii.product_name, ''), p.name) AS product_name,
+           COALESCE(NULLIF(ii.serial_no, ''), p.serial_no) AS serial_no,
+           ii.huid_code AS huid_code,
            ii.hsn_code AS hsn_code
     FROM invoice_items ii
     LEFT JOIN products p ON ii.product_id = p.id
@@ -177,6 +496,7 @@ $total_net_wt = 0;
 $total_making_charge = 0;
 $total_hallmark = 0;
 $total_item_discount = 0;
+$total_base_metal = 0;
 foreach($items as $it) {
     $total_making_charge += floatval($it['making_charge'] ?? 0);
     $total_hallmark += floatval($it['hallmark'] ?? 0);
@@ -203,53 +523,8 @@ foreach($items as $it) {
     $total_net_wt   += $net;
 }
 
-// Number to words
-
-function ind_format($num) {
-    $num = round($num, 2);
-    $parts = explode('.', sprintf("%.2f", $num));
-    $whole = $parts[0];
-    $fraction = $parts[1];
-    if(strlen($whole) > 3) {
-        $last3 = substr($whole, -3);
-        $rest = substr($whole, 0, -3);
-        $rest = preg_replace("/\B(?=(\d{2})+(?!\d))/", ",", $rest);
-        $whole = $rest . "," . $last3;
-    }
-    return $whole . "." . $fraction;
-}
-
-function num2words($n) {
-    $num = round(floatval($n), 2);
-    $whole = (int)floor($num);
-    $fraction = (int)round(($num - $whole) * 100);
-    
-    if ($whole == 0 && $fraction == 0) return 'Zero Rupees Only';
-    
-    $words = '';
-    if ($whole > 0) {
-        $words .= num2words_integer($whole) . ' Rupees';
-    }
-    if ($fraction > 0) {
-        if (!empty($words)) $words .= ' and ';
-        $words .= num2words_integer($fraction) . ' Paise';
-    }
-    return $words . ' Only';
-}
-
-function num2words_integer($n) {
-    $n = (int)$n;
-    $ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
-    $tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
-    if($n==0) return 'Zero';
-    if($n<20) return $ones[$n];
-    if($n<100) return $tens[(int)($n/10)].($n%10?' '.$ones[$n%10]:'');
-    if($n<1000) return $ones[(int)($n/100)].' Hundred'.($n%100?' '.num2words_integer($n%100):'');
-    if($n<100000) return num2words_integer((int)($n/1000)).' Thousand'.($n%1000?' '.num2words_integer($n%1000):'');
-    if($n<10000000) return num2words_integer((int)($n/100000)).' Lakh'.($n%100000?' '.num2words_integer($n%100000):'');
-    return num2words_integer((int)($n/10000000)).' Crore'.($n%10000000?' '.num2words_integer($n%10000000):'');
-}
 $total_words = num2words($total);
+
 
 $logo_file = $COMPANY['logo_path'] ?? 'logo.png';
 
@@ -490,9 +765,14 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                             <strong>Address:</strong> <?php echo $COMPANY['address_line1']; ?>, <?php echo $COMPANY['address_line2']; ?>, <?php echo $COMPANY['state']; ?> (Code: <?php echo $COMPANY['state_code']; ?>)
                         </div>
                     </div>
-                    <div class="header-right">
-                        <div class="tax-invoice-tag" style="color:#059669;font-size:17px;">PAYMENT RECEIPT</div>
-                        <span class="payment-status-pill pill-paid"> PAYMENT RECEIVED</span>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <?php if(file_exists('assets/images/hallmark_logo.jpg')): ?>
+                        <img src="assets/images/hallmark_logo.jpg" alt="BIS Hallmark Certified" style="height:54px; width:54px; object-fit:contain; border-radius:6px; border:1px solid rgba(214,139,22,0.4); padding:2px; background:#fff;" title="100% Certified BIS Hallmarked Jewellery">
+                        <?php endif; ?>
+                        <div class="header-right">
+                            <div class="tax-invoice-tag" style="color:#059669;font-size:17px;">PAYMENT RECEIPT</div>
+                            <span class="payment-status-pill pill-paid"> PAYMENT RECEIVED</span>
+                        </div>
                     </div>
                 </div>
 
@@ -524,16 +804,17 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                         <div class="bill-to-title">Received From</div>
                         <div class="customer-name-big"><?php echo htmlspecialchars($inv['customer_name']); ?></div>
                         <?php if(!empty($inv['customer_address'])): ?>
-                        <div class="customer-address-text"> Address: <?php echo htmlspecialchars($inv['customer_address']); ?></div>
+                        <div class="customer-address-text">Address: <?php echo htmlspecialchars($inv['customer_address']); ?></div>
                         <?php endif; ?>
-                        <div class="customer-address-text"> Ph No: <strong>+91-<?php echo htmlspecialchars($inv['customer_mobile'] ?? '-'); ?></strong></div>
+                        <div class="customer-address-text">Ph No: <strong>+91-<?php echo htmlspecialchars($inv['customer_mobile'] ?? '-'); ?></strong></div>
+                        <?php if(!empty($inv['customer_gstin'])): ?>
+                        <div class="customer-address-text">GSTIN: <strong><?php echo htmlspecialchars($inv['customer_gstin']); ?></strong></div>
+                        <?php endif; ?>
                     </div>
                     <div class="bill-to-right">
-                        <?php if(!empty($inv['customer_gstin'])): ?>
-                         GSTIN: <strong><?php echo htmlspecialchars($inv['customer_gstin']); ?></strong><br>
-                        <?php endif; ?>
                     </div>
                 </div>
+
 
                 <!-- Payment Particulars Breakdown Table -->
                 <table class="inv-table" style="margin-bottom:16px;">
@@ -579,18 +860,11 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
 
                 <!-- Terms & Signature Stamp Box -->
                 <div class="bottom-section" style="margin-top:16px; grid-template-columns:1.3fr 1fr; gap:16px; align-items: stretch;">
-                    <div class="bottom-left" style="display:flex; flex-direction:column; justify-content:space-between;">
-                        <div>
-                            <div class="terms-box-title">Terms &amp; Declaration</div>
-                            <div class="terms-text-content">
-                                1. Received payment with thanks towards due balance for <?php echo $is_gst ? 'Invoice' : 'Cash Memo'; ?> <strong><?php echo htmlspecialchars($invoice_no); ?></strong>.<br>
-                                2. Subject to Paschim Medinipur Jurisdiction.<br>
-                                3. This is a computer generated official payment receipt.
-                            </div>
-                        </div>
+                    <div style="font-size:9.5px; color:#64748b; border:1px dashed #cbd5e1; border-radius:8px; padding:10px 14px; background:#f8fafc; line-height:1.4;">
+                        <strong>Important Note:</strong> This official money receipt acknowledges the receipt of the partial/cleared payment specified above for invoice/cashmemo <strong><?php echo htmlspecialchars($invoice_no); ?></strong>.
                     </div>
-                    <div class="bottom-right">
-                         <!-- Empty space or other calculations if needed -->
+                    <div class="signature-stamp-frame" style="width:165px; height:75px; border:1.5px dashed #d68b16; border-radius:8px; display:inline-flex; flex-direction:column; align-items:center; justify-content:center; background:rgba(248,243,230,0.5);">
+                        <div class="stamp-label-text" style="font-size:9.5px; color:#7a4e0a; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; margin-top:auto; padding-bottom:5px; text-align:center;">Signature &amp; Stamp<br>Authorised Signatory</div>
                     </div>
                 </div>
 
@@ -622,14 +896,19 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                             <strong>Address:</strong> <?php echo $COMPANY['address_line1']; ?>, <?php echo $COMPANY['address_line2']; ?>, <?php echo $COMPANY['state']; ?> (Code: <?php echo $COMPANY['state_code']; ?>)
                         </div>
                     </div>
-                    <div class="header-right">
-                        <div class="tax-invoice-tag"><?php echo $doc_title; ?></div>
-                        <span class="payment-status-pill <?php echo 'pill-'.$inv['payment_status']; ?>">
-                            <?php
-                            $ps = $inv['payment_status'];
-                            echo ($ps==='paid') ? ' PAID' : (($ps==='part') ? 'PART PAID' : (($ps==='unpaid') ? 'UNPAID' : strtoupper($ps)));
-                            ?>
-                        </span>
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <?php if(file_exists('assets/images/hallmark_logo.jpg')): ?>
+                        <img src="assets/images/hallmark_logo.jpg" alt="BIS Hallmark Certified" style="height:58px; width:58px; object-fit:contain; border-radius:6px; border:1px solid rgba(214,139,22,0.4); padding:2px; background:#fff;" title="100% Certified BIS Hallmarked Jewellery">
+                        <?php endif; ?>
+                        <div class="header-right">
+                            <div class="tax-invoice-tag"><?php echo $doc_title; ?></div>
+                            <span class="payment-status-pill <?php echo 'pill-'.$inv['payment_status']; ?>">
+                                <?php
+                                $ps = $inv['payment_status'];
+                                echo ($ps==='paid') ? ' PAID' : (($ps==='part') ? 'PART PAID' : (($ps==='unpaid') ? 'UNPAID' : strtoupper($ps)));
+                                ?>
+                            </span>
+                        </div>
                     </div>
                 </div>
 
@@ -649,21 +928,21 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                     </div>
                 </div>
 
-                <!-- 3. Bill To Block: Name & Address on left, Ph No & GSTIN & Vertical Place of Supply on right -->
+                <!-- 3. Bill To Block: Name & Address & Ph No & GSTIN on left, Vertical Place of Supply on right -->
                 <div class="bill-to-card">
                     <div class="bill-to-left">
                         <div class="bill-to-title"><?php echo $bill_to_label; ?></div>
                         <div class="customer-name-big"><?php echo htmlspecialchars($inv['customer_name']); ?></div>
                         <?php if(!empty($inv['customer_address'])): ?>
-                        <div class="customer-address-text"> Address: <?php echo htmlspecialchars($inv['customer_address']); ?></div>
+                        <div class="customer-address-text">Address: <?php echo htmlspecialchars($inv['customer_address']); ?></div>
                         <?php endif; ?>
-                        <div class="customer-address-text"> Ph No: <strong>+91-<?php echo htmlspecialchars($inv['customer_mobile'] ?? '-'); ?></strong></div>
+                        <div class="customer-address-text">Ph No: <strong>+91-<?php echo htmlspecialchars($inv['customer_mobile'] ?? '-'); ?></strong></div>
+                        <?php if(!empty($inv['customer_gstin'])): ?>
+                        <div class="customer-address-text">GSTIN: <strong><?php echo htmlspecialchars($inv['customer_gstin']); ?></strong></div>
+                        <?php endif; ?>
                     </div>
                     <div class="bill-to-right">
-                        <?php if(!empty($inv['customer_gstin'])): ?>
-                         GSTIN: <strong><?php echo htmlspecialchars($inv['customer_gstin']); ?></strong><br>
-                        <?php endif; ?>
-                         <strong>Place of Supply:</strong><br>
+                        <strong>Place of Supply:</strong><br>
                         <div style="margin-top:2px;font-size:11.5px;color:#334155;line-height:1.4;">
                             <?php echo $COMPANY['address_line1']; ?><br>
                             <?php echo $COMPANY['address_line2']; ?><br>
@@ -672,6 +951,7 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                         </div>
                     </div>
                 </div>
+
 
                 <!-- 4. Items Table with Auto-Fitting Content Layout -->
                 <table class="inv-table">
@@ -683,7 +963,6 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                             <th class="right">Actual Price</th>
                             <th class="right">Making</th>
                             <th class="right">Hallmark</th>
-                            <th class="right">Discount</th>
                             <th class="right">GST</th>
                             <th class="right">TOTAL</th>
                         </tr>
@@ -691,7 +970,7 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                     <tbody>
                         <?php if(empty($items)): ?>
                         <tr>
-                            <td colspan="9" style="text-align:center;padding:16px;color:#94a3b8;">No items added to this invoice.</td>
+                            <td colspan="8" style="text-align:center;padding:16px;color:#94a3b8;">No items added to this invoice.</td>
                         </tr>
                         <?php else: 
                         $total_base_metal = 0;
@@ -699,9 +978,8 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                             $name     = htmlspecialchars($it['product_name'] ?? 'Item');
                             $serial   = trim($it['serial_no'] ?? '');
                             $huid     = trim($it['huid_code'] ?? '');
-                            if(empty($huid) && !empty($inv['huid_code'])) {
-                                $huid = trim($inv['huid_code']);
-                            }
+                            if ($huid === '-') $huid = '';
+                            $huid     = preg_replace('/^HUID[:\s\-_]*/i', '', $huid);
                             $unit     = strtolower(trim($it['unit'] ?? 'g'));
                             $is_piece = in_array($unit, ['qty','pcs','piece','pieces']);
                             $item_val = floatval($it['quantity']);
@@ -736,8 +1014,7 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                             }
                             $making_charge_val = floatval($it['making_charge'] ?? 0);
                             $hallmark_val = floatval($it['hallmark'] ?? 0);
-                            $discount_val = floatval($it['discount'] ?? 0);
-                            $base_val = $amt - $making_charge_val - $hallmark_val + $discount_val;
+                            $base_val = $amt - $making_charge_val - $hallmark_val;
                             $total_base_metal += $base_val;
 
                             $cat_disp = '';
@@ -780,12 +1057,26 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                                     <span style="color:#7a4e0a; font-size:9.5px; font-weight:600;">(<?php echo htmlspecialchars($cat_disp); ?>)</span>
                                     <?php endif; ?>
                                 </div>
-                                <div class="item-sub" style="font-size:8px; color:#475569; margin-top:2px; line-height:1.35;">
-                                    <?php if(!empty($huid)): ?><span style="color:#7a4e0a;font-weight:600;">HUID: <?php echo htmlspecialchars($huid); ?></span><?php endif; ?>
-                                    <?php if($is_gst && !empty($it['hsn_code'])): ?> <?php if(!empty($huid)): ?>&bull;<?php endif; ?><span>HSN: <?php echo htmlspecialchars($it['hsn_code']); ?></span><?php endif; ?>
+                                <div class="item-sub" style="font-size:8px; color:#475569; margin-top:2.5px; line-height:1.4;">
+                                    <?php if(!empty($it['hallmark_type'])): ?>
+                                    <span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:1px 4.5px;border-radius:3px;font-weight:700;font-size:8px;"><?php echo htmlspecialchars($it['hallmark_type']); ?></span>
+                                    <?php endif; ?>
+                                    <?php if(!empty($huid)): ?>
+                                    <span style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;padding:1px 4.5px;border-radius:3px;font-weight:600;font-family:monospace;font-size:8px;">HUID: <?php echo htmlspecialchars($huid); ?></span>
+                                    <?php endif; ?>
+                                    <?php if($is_gst && !empty($it['hsn_code'])): ?>
+                                    <span>HSN: <?php echo htmlspecialchars($it['hsn_code']); ?></span>
+                                    <?php endif; ?>
                                     <br>
-                                    <span>Qty: <strong><?php echo $item_pcs; ?> Pcs</strong></span>
-                                    <?php if($net_wt > 0): ?> &bull; <span>Wt: <strong><?php echo number_format($net_wt, 3); ?>g</strong></span><?php endif; ?>
+                                    <span>Qty: <strong><?php echo (stripos($clean_name, 'pair') !== false || strtolower($unit) === 'pair') ? '1 Pair (' . $item_pcs . ' pcs)' : $item_pcs . ' Pcs'; ?></strong></span>
+                                    <?php if($gross_wt > 0 && $net_wt > 0 && abs($gross_wt - $net_wt) > 0.001): ?>
+                                        &bull; <span>Gross Wt: <strong><?php echo number_format($gross_wt, 3); ?>g</strong></span>
+                                        &bull; <span>Net Wt: <strong><?php echo number_format($net_wt, 3); ?>g</strong></span>
+                                    <?php elseif($net_wt > 0): ?>
+                                        &bull; <span>Net Wt: <strong><?php echo number_format($net_wt, 3); ?>g</strong></span>
+                                    <?php elseif($gross_wt > 0): ?>
+                                        &bull; <span>Gross Wt: <strong><?php echo number_format($gross_wt, 3); ?>g</strong></span>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                             <td class="right"><?php echo $rate_cell_html; ?></td>
@@ -800,13 +1091,6 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                             <td class="right">
                                 <?php if($hallmark_val > 0): ?>
                                 ₹<?php echo ind_format($hallmark_val); ?>
-                                <?php else: ?>
-                                <span style="color:#94a3b8;">-</span>
-                                <?php endif; ?>
-                            </td>
-                            <td class="right" style="color:<?php echo $discount_val > 0 ? '#b91c1c' : '#475569'; ?>;">
-                                <?php if($discount_val > 0): ?>
-                                -₹<?php echo ind_format($discount_val); ?>
                                 <?php else: ?>
                                 <span style="color:#94a3b8;">-</span>
                                 <?php endif; ?>
@@ -832,9 +1116,6 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                             <td class="right" style="font-size:9px;">₹<?php echo ind_format($total_base_metal); ?></td>
                             <td class="right" style="font-size:9px;">₹<?php echo ind_format($total_making_charge); ?></td>
                             <td class="right" style="font-size:9px;">₹<?php echo ind_format($total_hallmark); ?></td>
-                            <td class="right" style="font-size:8.5px; color:<?php echo $total_item_discount > 0 ? '#b91c1c' : 'inherit'; ?>;">
-                                <?php echo ($total_item_discount > 0) ? '-₹'.ind_format($total_item_discount) : '-'; ?>
-                            </td>
                             <td class="right" style="font-size:9px;">₹<?php echo ind_format($is_gst ? $gst_total : 0); ?></td>
                             <td class="right" style="font-size:9.5px; font-weight:800;">₹<?php echo ind_format($subtotal + ($is_gst ? $gst_total : 0)); ?></td>
                         </tr>
@@ -889,6 +1170,26 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
 
                         <div style="border-top: 1px solid #cbd5e1; margin-top: 6px; margin-bottom: 8px;"></div>
 
+                        <?php 
+                        $inv_discount = floatval($inv['discount'] ?? 0);
+                        if($inv_discount > 0): 
+                        ?>
+                        <div class="calc-line" style="color:#dc2626;font-weight:700;">
+                            <span>Less: Special Bill Discount</span>
+                            <span>(-) ₹<?php echo ind_format($inv_discount); ?></span>
+                        </div>
+                        <?php endif; ?>
+
+                        <?php 
+                        $advance_adjusted = floatval($inv['advance_adjusted'] ?? 0);
+                        if($advance_adjusted > 0): 
+                        ?>
+                        <div class="calc-line" style="color:#059669;font-weight:700;">
+                            <span>Less: Advance Credit Adjusted</span>
+                            <span>(-) ₹<?php echo ind_format($advance_adjusted); ?></span>
+                        </div>
+                        <?php endif; ?>
+
                         <?php if($old_gold > 0): ?>
                         <div class="calc-line" style="color:#dc2626;font-weight:600;">
                             <span>Less: <?php echo htmlspecialchars($old_gold_type); ?> Return / Exchange</span>
@@ -900,6 +1201,8 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                             <span class="calc-total-label">Grand Total (Net Payable)</span>
                             <span class="calc-total-val">₹<?php echo ind_format($total); ?></span>
                         </div>
+
+
 
                         <?php if($refund_amount > 0): ?>
                         <div class="calc-line" style="color:#059669; font-weight:700; background:#ecfdf5; border:1px solid #a7f3d0; padding:5px 8px; border-radius:6px; margin:4px 0; font-size:11.5px;">

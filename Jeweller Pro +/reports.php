@@ -1,6 +1,11 @@
 <?php
 session_start();
+// Automatically lock geomorphology section when visiting main reports
+unset($_SESSION['geomorphology_unlocked']);
+unset($_SESSION['geomorphology_unlocked_at']);
+
 require_once 'config/database.php';
+
 require_once 'config/company_config.php';
 
 if(!isset($_SESSION['user_id'])) {
@@ -32,9 +37,11 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_invoice_items') {
             
             if ($res) {
                 while ($row = mysqli_fetch_assoc($res)) {
-                    $unit = !empty($row['unit']) ? $row['unit'] : ((stripos($row['product_name'] ?? '', 'pair') !== false) ? 'pairs' : 'pcs');
-                    $gross_wt = !empty($row['gross_wt']) ? floatval($row['gross_wt']) : (floatval($row['quantity'] ?? 0));
-                    $pcs = !empty($row['pcs']) ? intval($row['pcs']) : 1;
+                    $unit = !empty($row['unit']) ? $row['unit'] : ((stripos($row['product_name'] ?? '', 'pair') !== false) ? 'pair' : 'pcs');
+                    $gross_wt = !empty($row['gross_wt']) ? floatval($row['gross_wt']) : ($unit === 'g' ? floatval($row['quantity'] ?? 0) : 0);
+                    $net_wt = !empty($row['net_wt']) ? floatval($row['net_wt']) : $gross_wt;
+                    $pcs = !empty($row['pcs']) ? intval($row['pcs']) : ($unit === 'pair' ? 2 : 1);
+                    if ($pcs <= 0) $pcs = 1;
                     $items[] = [
                         'id' => intval($row['id']),
                         'product_id' => $row['product_id'] ? intval($row['product_id']) : null,
@@ -46,9 +53,9 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_invoice_items') {
                         'quantity' => floatval($row['quantity'] ?? 0),
                         'pcs' => $pcs,
                         'gross_wt' => $gross_wt,
-                        'net_wt' => floatval($row['net_wt'] ?? $gross_wt),
+                        'net_wt' => $net_wt,
                         'category' => $row['category'] ?? '',
-                        'weight' => !empty($row['gross_wt']) ? $row['gross_wt'] : ($row['p_weight'] ?? ''),
+                        'weight' => $gross_wt > 0 ? $gross_wt : (!empty($row['p_weight']) ? floatval($row['p_weight']) : 0),
                         'unit' => $unit
                     ];
                 }
@@ -83,16 +90,16 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_delete_invoice'
                         foreach ($restore_items as $item) {
                             $product_id = intval($item['product_id'] ?? 0);
                             $restore_qty = floatval($item['restore_qty'] ?? 0);
-                            $hsn_code = mysqli_real_escape_string($conn, $item['hsn_code'] ?? '0');
+                            $restore_weight = floatval($item['restore_weight'] ?? 0);
+                            $hsn_code = mysqli_real_escape_string($conn, $item['hsn_code'] ?? '7113');
                             $product_name = mysqli_real_escape_string($conn, $item['product_name'] ?? '');
                             $serial_no = mysqli_real_escape_string($conn, $item['serial_no'] ?? '');
                             $huid_code = mysqli_real_escape_string($conn, $item['huid_code'] ?? '');
                             $price = floatval($item['price'] ?? 0);
-                            $unit = mysqli_real_escape_string($conn, $item['unit'] ?? '');
+                            $unit = mysqli_real_escape_string($conn, $item['unit'] ?? 'pcs');
                             $category = mysqli_real_escape_string($conn, $item['category'] ?? '');
-                            $weight = mysqli_real_escape_string($conn, $item['weight'] ?? '');
                             
-                            if ($restore_qty > 0) {
+                            if ($restore_qty > 0 || $restore_weight > 0) {
                                 $product_exists = false;
                                 if ($product_id > 0) {
                                     $p_chk = mysqli_query($conn, "SELECT id FROM products WHERE id = $product_id");
@@ -102,7 +109,8 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_delete_invoice'
                                 }
                                 
                                 if ($product_exists) {
-                                    mysqli_query($conn, "UPDATE products SET quantity = quantity + $restore_qty, hsn_code = '$hsn_code' WHERE id = $product_id");
+                                    $wt_sql = $restore_weight > 0 ? ", weight = weight + $restore_weight" : "";
+                                    mysqli_query($conn, "UPDATE products SET quantity = quantity + $restore_qty, status = 'In Stock', hsn_code = '$hsn_code' $wt_sql WHERE id = $product_id");
                                 } else {
                                     // Re-insert product back to stock
                                     if (empty($category)) {
@@ -122,7 +130,25 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_delete_invoice'
                                     }
                                     
                                     // Insert product
-                                    mysqli_query($conn, "INSERT INTO products (serial_no, name, item_name, category, weight, price, quantity, huid_code, hsn_code, created_at) VALUES ('$serial_no', '$product_name', '$product_name', '$category', '$weight', $price, $restore_qty, '$huid_code', '$hsn_code', NOW())");
+                                    mysqli_query($conn, "INSERT INTO products (serial_no, name, item_name, category, weight, price, quantity, huid_code, hsn_code, status, created_at) VALUES ('$serial_no', '$product_name', '$product_name', '$category', '$restore_weight', $price, $restore_qty, '$huid_code', '$hsn_code', 'In Stock', NOW())");
+                                }
+
+                                if (function_exists('log_product_activity')) {
+                                    $wt_detail = $restore_weight > 0 ? " ({$restore_weight}g)" : "";
+                                    log_product_activity($conn, [
+                                        'activity_type' => 'restocked',
+                                        'product_id' => $product_id,
+                                        'product_name' => $product_name,
+                                        'category' => $category,
+                                        'serial_no' => $serial_no,
+                                        'huid_code' => $huid_code,
+                                        'quantity' => $restore_qty,
+                                        'unit' => $unit ?: 'pcs',
+                                        'weight' => $restore_weight,
+                                        'rate' => $price,
+                                        'details' => "Restored +{$restore_qty} {$unit}{$wt_detail} back to stock from deleted Invoice/Memo #$invoice_no",
+                                        'performed_by' => $_SESSION['user_name'] ?? 'Admin'
+                                    ]);
                                 }
                             }
                         }
@@ -398,18 +424,18 @@ if (isset($_GET['reset_msg'])) {
     $reset_success = $_GET['reset_msg'];
 }
 
-// Get daily sales for last 7 days
+// Get daily sales for last 7 days (GST Only)
 $daily_sales = [];
 for($i = 6; $i >= 0; $i--) {
     $date = date('Y-m-d', strtotime("-$i days"));
-    $sales = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(total_amount), 0) as total FROM invoices WHERE DATE(created_at) = '$date'"));
+    $sales = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(total_amount), 0) as total FROM invoices WHERE (gst_type LIKE 'gst%' OR gst_amount > 0) AND DATE(created_at) = '$date'"));
     $daily_sales[] = ['date' => date('d M', strtotime($date)), 'total' => $sales['total']];
 }
 
 // Get top products
-$top_products = mysqli_query($conn, "SELECT p.name, SUM(ii.quantity) as sold FROM invoice_items ii JOIN products p ON ii.product_id = p.id GROUP BY ii.product_id ORDER BY sold DESC LIMIT 5");
+$top_products = mysqli_query($conn, "SELECT p.name, SUM(ii.quantity) as sold FROM invoice_items ii JOIN products p ON ii.product_id = p.id JOIN invoices i ON ii.invoice_id = i.id WHERE (i.gst_type LIKE 'gst%' OR i.gst_amount > 0) GROUP BY ii.product_id ORDER BY sold DESC LIMIT 5");
 
-// Payment Status Summary
+// Payment Status Summary (GST Only)
 $pay_summary = mysqli_fetch_assoc(mysqli_query($conn, "
     SELECT
         COUNT(*) as total,
@@ -422,22 +448,48 @@ $pay_summary = mysqli_fetch_assoc(mysqli_query($conn, "
         SUM(CASE WHEN payment_status='part'   THEN balance_amount ELSE 0 END) as part_balance,
         SUM(CASE WHEN payment_status='unpaid' THEN balance_amount ELSE 0 END) as unpaid_balance
     FROM invoices
+    WHERE (gst_type LIKE 'gst%' OR gst_amount > 0)
 "));
 
-$paid_cust = mysqli_query($conn, "SELECT invoice_no, customer_name, customer_mobile, total_amount, created_at FROM invoices WHERE payment_status='paid' ORDER BY created_at DESC LIMIT 100");
+$paid_cust = mysqli_query($conn, "SELECT invoice_no, customer_name, customer_mobile, total_amount, created_at FROM invoices WHERE (gst_type LIKE 'gst%' OR gst_amount > 0) AND payment_status='paid' ORDER BY created_at DESC LIMIT 100");
 $paid_rows = [];
 while($r = mysqli_fetch_assoc($paid_cust)) $paid_rows[] = $r;
 
-$part_customers = mysqli_query($conn, "SELECT i.invoice_no, i.customer_name, i.customer_mobile, i.total_amount, i.paid_amount, i.balance_amount, i.created_at, COALESCE(c.email, '') AS customer_email FROM invoices i LEFT JOIN customers c ON c.mobile = i.customer_mobile WHERE i.payment_status='part' ORDER BY i.created_at DESC LIMIT 100");
+$part_customers = mysqli_query($conn, "SELECT i.invoice_no, i.customer_name, i.customer_mobile, i.total_amount, i.paid_amount, i.balance_amount, i.created_at, COALESCE(c.email, '') AS customer_email FROM invoices i LEFT JOIN customers c ON c.mobile = i.customer_mobile WHERE (i.gst_type LIKE 'gst%' OR i.gst_amount > 0) AND i.payment_status='part' ORDER BY i.created_at DESC LIMIT 100");
 $part_rows = [];
 while($r = mysqli_fetch_assoc($part_customers)) $part_rows[] = $r;
 
-$unpaid_customers = mysqli_query($conn, "SELECT invoice_no, customer_name, customer_mobile, total_amount, paid_amount, balance_amount, created_at FROM invoices WHERE payment_status='unpaid' ORDER BY created_at DESC LIMIT 100");
+$unpaid_customers = mysqli_query($conn, "SELECT invoice_no, customer_name, customer_mobile, total_amount, paid_amount, balance_amount, created_at FROM invoices WHERE (gst_type LIKE 'gst%' OR gst_amount > 0) AND payment_status='unpaid' ORDER BY created_at DESC LIMIT 100");
 $unpaid_rows = [];
 while($r = mysqli_fetch_assoc($unpaid_customers)) $unpaid_rows[] = $r;
 
+// Advance Credits Summary from customer_advances
+$adv_summary = mysqli_fetch_assoc(mysqli_query($conn, "
+    SELECT 
+        COUNT(*) as total_adv_count,
+        COALESCE(SUM(advance_amount), 0) as total_adv_amount,
+        COALESCE(SUM(used_amount), 0) as total_adv_used,
+        COALESCE(SUM(available_amount), 0) as total_adv_available,
+        SUM(CASE WHEN available_amount > 0 THEN 1 ELSE 0 END) as active_adv_count
+    FROM customer_advances 
+    WHERE status != 'cancelled'
+")) ?: ['total_adv_count' => 0, 'total_adv_amount' => 0, 'total_adv_used' => 0, 'total_adv_available' => 0, 'active_adv_count' => 0];
+
+$adv_customers_res = mysqli_query($conn, "
+    SELECT id, receipt_no, customer_name, customer_mobile, customer_address, advance_amount, used_amount, available_amount, payment_method, status, created_at 
+    FROM customer_advances 
+    WHERE status != 'cancelled'
+    ORDER BY created_at DESC 
+    LIMIT 100
+");
+$adv_rows = [];
+if ($adv_customers_res) {
+    while ($ar = mysqli_fetch_assoc($adv_customers_res)) $adv_rows[] = $ar;
+}
+
+
 $gst_month = mysqli_real_escape_string($conn, $_GET['gst_month'] ?? date('Y-m'));
-$gst_month_where = $gst_month ? "WHERE DATE_FORMAT(created_at,'%Y-%m') = '$gst_month'" : '';
+$gst_month_where = $gst_month ? "WHERE (gst_type LIKE 'gst%' OR gst_amount > 0) AND DATE_FORMAT(created_at,'%Y-%m') = '$gst_month'" : "WHERE (gst_type LIKE 'gst%' OR gst_amount > 0)";
 $gst_summary = mysqli_fetch_assoc(mysqli_query($conn, "
     SELECT
         SUM(CASE WHEN (gst_type LIKE 'gst%' OR gst_amount > 0) THEN 1 ELSE 0 END) as gst_count,
@@ -466,10 +518,9 @@ if($filter_from)   $where_clauses[] = "DATE(created_at) >= '$filter_from'";
 if($filter_to)     $where_clauses[] = "DATE(created_at) <= '$filter_to'";
 if($filter_name)   $where_clauses[] = "(customer_name LIKE '%$filter_name%' OR customer_mobile LIKE '%$filter_name%')";
 if($filter_status) $where_clauses[] = "payment_status = '$filter_status'";
-if($filter_gst === 'gst')       $where_clauses[] = "(gst_type LIKE 'gst%' OR gst_amount > 0)";
 if($filter_gst === 'gst_3')     $where_clauses[] = "((gst_type LIKE 'gst%' OR gst_amount > 0) AND NOT (gst_type = 'gst_18' OR (total_amount - gst_amount > 0 AND (gst_amount / (total_amount - gst_amount)) > 0.10)))";
-if($filter_gst === 'gst_18')    $where_clauses[] = "((gst_type LIKE 'gst%' OR gst_amount > 0) AND (gst_type = 'gst_18' OR (total_amount - gst_amount > 0 AND (gst_amount / (total_amount - gst_amount)) > 0.10)))";
-if($filter_gst === 'non_gst')   $where_clauses[] = "(gst_type NOT LIKE 'gst%' AND (gst_amount IS NULL OR gst_amount = 0))";
+elseif($filter_gst === 'gst_18')    $where_clauses[] = "((gst_type LIKE 'gst%' OR gst_amount > 0) AND (gst_type = 'gst_18' OR (total_amount - gst_amount > 0 AND (gst_amount / (total_amount - gst_amount)) > 0.10)))";
+else $where_clauses[] = "(gst_type LIKE 'gst%' OR gst_amount > 0)";
 $where_sql = $where_clauses ? 'WHERE ' . implode(' AND ', $where_clauses) : '';
 
 // customer_gstin column exists directly in invoices table
@@ -819,7 +870,9 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
 
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Tools</div>
+        <a href="product_summary.php"><i class="fas fa-boxes-packing"></i> PRODUCT SUMMARY</a>
         <a href="whatsapp_automation.php"><i class="fab fa-whatsapp"></i> WHATSAPP</a>
+
         <a href="purchase.php">
             <i class="fas fa-book"></i>PURCHASE
         </a>
@@ -945,15 +998,15 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                     <p class="text-xs mt-1" style="color:#c2410c;"> Balance: ₹<?php echo number_format($pay_summary['part_balance'],2); ?></p>
                     <button onclick="toggleDetail('detailPart')" class="toggle-detail-btn"> View Customers</button>
                 </div>
-                <!-- Unpaid -->
-                <div class="stat-card-unpaid p-4">
+                <!-- Advance Credit -->
+                <div class="stat-card-unpaid p-4" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1.5px solid #f59e0b;border-radius:12px;">
                     <div class="flex justify-between items-start mb-2">
-                        <span class="font-bold text-sm" style="color:#9f1239;"> Advanced (Credit)</span>
-                        <span class="text-2xl font-black" style="color:#9f1239;"><?php echo $pay_summary['unpaid_count']; ?></span>
+                        <span class="font-bold text-sm" style="color:#92400e;">✨ Advanced (Credit)</span>
+                        <span class="text-2xl font-black" style="color:#92400e;"><?php echo intval($adv_summary['active_adv_count'] ?? 0); ?></span>
                     </div>
-                    <p class="font-bold text-lg" style="color:#9f1239;">₹<?php echo number_format($pay_summary['unpaid_amt'],2); ?></p>
-                    <p class="text-xs mt-1" style="color:#be123c;"> Total due: ₹<?php echo number_format($pay_summary['unpaid_balance'],2); ?></p>
-                    <button onclick="toggleDetail('detailUnpaid')" class="toggle-detail-btn"> View Customers</button>
+                    <p class="font-bold text-lg" style="color:#92400e;">₹<?php echo number_format($adv_summary['total_adv_amount'] ?? 0, 2); ?></p>
+                    <p class="text-xs mt-1 font-semibold" style="color:#059669;">Available Credit: ₹<?php echo number_format($adv_summary['total_adv_available'] ?? 0, 2); ?></p>
+                    <button onclick="toggleDetail('detailUnpaid')" class="toggle-detail-btn" style="background:#d97706;color:#fff;">View Advance Customers</button>
                 </div>
             </div>
 
@@ -1017,26 +1070,56 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 <?php endif; ?>
             </div>
 
-            <!-- Unpaid detail -->
+            <!-- Advance Credit Detail Collapse -->
             <div id="detailUnpaid" class="detail-collapse">
-                <h4 class="font-bold text-sm mb-3" style="color:#be123c;"> Unpaid - Full Payment Pending</h4>
-                <?php if(empty($unpaid_rows)): ?>
-                    <p class="text-sm" style="color:#16a34a;">No unpaid customers! </p>
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="font-bold text-sm" style="color:#92400e;">✨ Advance Credit Bookings & Deposits</h4>
+                    <span class="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-lg">Total Active Balance: ₹<?php echo number_format($adv_summary['total_adv_available'] ?? 0, 2); ?></span>
+                </div>
+                <?php if(empty($adv_rows)): ?>
+                    <p class="text-sm" style="color:#7a4e0a;">No advance credit bookings found.</p>
                 <?php else: ?>
                 <div class="overflow-x-auto">
                     <table class="report-table">
                         <thead><tr>
-                            <th>Customer</th><th>Mobile</th><th class="text-right">Bill Total</th><th class="text-right"> Due</th><th class="text-center">Date</th><th class="text-center">Invoice</th>
+                            <th>Receipt No</th>
+                            <th>Customer Name</th>
+                            <th>Mobile</th>
+                            <th class="text-right">Deposit Amount</th>
+                            <th class="text-right">Used in Bills</th>
+                            <th class="text-right">Available Credit</th>
+                            <th class="text-center">Date</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-center">Action</th>
                         </tr></thead>
                         <tbody>
-                        <?php foreach($unpaid_rows as $r): ?>
+                        <?php foreach($adv_rows as $r): ?>
                             <tr>
-                                <td><?php echo htmlspecialchars($r['customer_name']); ?></td>
+                                <td class="font-mono text-xs font-bold" style="color:#800020;">
+                                    <a href="view_pdf.php?advance_no=<?php echo urlencode($r['receipt_no']); ?>" target="_blank" class="hover:underline">
+                                        <?php echo htmlspecialchars($r['receipt_no']); ?>
+                                    </a>
+                                </td>
+                                <td class="font-bold"><?php echo htmlspecialchars($r['customer_name']); ?></td>
                                 <td><?php echo htmlspecialchars($r['customer_mobile']); ?></td>
-                                <td class="text-right font-bold" style="color:#d97706;">₹<?php echo number_format($r['total_amount'],2); ?></td>
-                                <td class="text-right font-bold" style="color:#dc2626;">₹<?php echo number_format($r['balance_amount'],2); ?></td>
-                                <td class="text-center"><?php echo date('d M Y', strtotime($r['created_at'])); ?></td>
-                                <td class="text-center font-mono text-xs" style="color:#d68b16;"><?php echo htmlspecialchars($r['invoice_no']); ?></td>
+                                <td class="text-right font-bold text-stone-900">₹<?php echo number_format($r['advance_amount'],2); ?></td>
+                                <td class="text-right font-semibold text-rose-600">₹<?php echo number_format($r['used_amount'],2); ?></td>
+                                <td class="text-right font-black text-emerald-700">₹<?php echo number_format($r['available_amount'],2); ?></td>
+                                <td class="text-center text-xs text-stone-500"><?php echo date('d M Y', strtotime($r['created_at'])); ?></td>
+                                <td class="text-center">
+                                    <?php if(floatval($r['available_amount']) <= 0.005): ?>
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-gray-100 text-gray-700">Fully Used</span>
+                                    <?php elseif(floatval($r['used_amount']) > 0): ?>
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-100 text-amber-800">Partial</span>
+                                    <?php else: ?>
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800">Active</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="text-center">
+                                    <a href="view_pdf.php?advance_no=<?php echo urlencode($r['receipt_no']); ?>" target="_blank" class="btn-jewel" style="padding:4px 10px;font-size:11px;border-radius:14px;text-decoration:none;">
+                                        🖨️ Receipt
+                                    </a>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                         </tbody>
@@ -1044,6 +1127,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 </div>
                 <?php endif; ?>
             </div>
+
         </div>
 
         <!--  GST SUMMARY  -->
@@ -1559,20 +1643,31 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 
                 data.forEach((item, index) => {
                     const itemDiv = document.createElement('div');
-                    itemDiv.className = 'p-3 bg-yellow-50 bg-opacity-50 rounded-xl border border-yellow-100 flex flex-col gap-2 mb-2';
+                    itemDiv.className = 'p-3 bg-yellow-50 bg-opacity-60 rounded-xl border border-yellow-200 flex flex-col gap-2 mb-2';
+                    
+                    let soldLabel = '';
+                    if (item.gross_wt > 0) {
+                        soldLabel = `Sold: ${item.pcs || 1} pcs (${parseFloat(item.gross_wt).toFixed(3)}g)`;
+                    } else {
+                        soldLabel = `Sold: ${item.pcs || item.quantity} ${item.unit || 'pcs'}`;
+                    }
+
+                    const defaultQty = item.pcs || 1;
+                    const defaultWeight = item.gross_wt || item.weight || item.net_wt || 0;
+
                     itemDiv.innerHTML = `
                         <div class="flex justify-between items-start">
-                            <span class="text-xs font-semibold text-gray-800">${item.product_name}</span>
-                            <span class="text-[10px] text-gray-500 font-mono">Sold: ${item.quantity} ${item.unit || 'pcs'}</span>
+                            <span class="text-xs font-bold text-gray-800">${item.product_name}</span>
+                            <span class="text-[10px] text-amber-900 bg-amber-100/90 px-2 py-0.5 rounded font-mono font-bold">${soldLabel}</span>
                         </div>
                         <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-[10px] font-semibold text-gray-600 mb-1">Qty to Restore</label>
-                                <input type="number" id="restoreQty_${index}" value="${item.quantity}" step="0.001" min="0" max="${item.quantity}" class="jewel-input w-full rounded-lg px-2 py-1 text-xs" style="background:#fff;">
+                                <label class="block text-[10px] font-bold text-gray-700 mb-1">Qty to Restore (Pcs)</label>
+                                <input type="number" id="restoreQty_${index}" value="${defaultQty}" step="1" min="0" class="jewel-input w-full rounded-lg px-2 py-1.5 text-xs font-bold" style="background:#fff;">
                             </div>
                             <div>
-                                <label class="block text-[10px] font-semibold text-gray-600 mb-1">HSN Code</label>
-                                <input type="text" id="restoreHsn_${index}" value="${item.hsn_code || '7113'}" class="jewel-input w-full rounded-lg px-2 py-1 text-xs" style="background:#fff;">
+                                <label class="block text-[10px] font-bold text-gray-700 mb-1">Weight to Restore (g)</label>
+                                <input type="number" id="restoreWeight_${index}" value="${defaultWeight}" step="0.001" min="0" class="jewel-input w-full rounded-lg px-2 py-1.5 text-xs font-bold" style="background:#fff;">
                             </div>
                         </div>
                     `;
@@ -1617,9 +1712,9 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
         
         let confirmMsg = '';
         if (currentDeleteMode === 'permanent') {
-            confirmMsg = " FINAL WARNING: This action is permanent and CANNOT be undone.\nAre you sure you want to delete Invoice #" + currentDeleteInvoiceNo + " permanently (without restoring stock)?";
+            confirmMsg = "⚠️ FINAL WARNING: This action is permanent and CANNOT be undone.\nAre you sure you want to delete Invoice #" + currentDeleteInvoiceNo + " permanently (without restoring stock)?";
         } else {
-            confirmMsg = "Are you sure you want to delete Invoice #" + currentDeleteInvoiceNo + " and move the specified quantities back to stock?";
+            confirmMsg = "Are you sure you want to delete Invoice #" + currentDeleteInvoiceNo + " and move the specified quantities & weights back to stock?";
         }
         
         if (!confirm(confirmMsg)) return;
@@ -1649,7 +1744,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
         if (currentDeleteMode === 'restore_stock') {
             const restoreData = invoiceItemsCache.map((item, index) => {
                 const qtyInput = document.getElementById('restoreQty_' + index);
-                const hsnInput = document.getElementById('restoreHsn_' + index);
+                const weightInput = document.getElementById('restoreWeight_' + index);
                 
                 return {
                     product_id: item.product_id,
@@ -1657,11 +1752,11 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                     serial_no: item.serial_no || '',
                     huid_code: item.huid_code || '',
                     price: item.price || 0,
-                    unit: item.unit || '',
+                    unit: item.unit || 'pcs',
                     category: item.category || '',
-                    weight: item.weight || '',
-                    restore_qty: parseFloat(qtyInput ? qtyInput.value : item.quantity) || 0,
-                    hsn_code: (hsnInput && hsnInput.value.trim() && hsnInput.value.trim() !== '0') ? hsnInput.value.trim() : '7113'
+                    restore_qty: parseFloat(qtyInput ? qtyInput.value : (item.pcs || 1)) || 0,
+                    restore_weight: parseFloat(weightInput ? weightInput.value : (item.gross_wt || 0)) || 0,
+                    hsn_code: (item.hsn_code && item.hsn_code !== '0') ? item.hsn_code : '7113'
                 };
             });
             
@@ -1696,16 +1791,16 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
             
             <div class="flex gap-3">
                 <button type="button" onclick="selectDeleteMode('permanent')" id="btnDeletePerm" class="flex-1 py-3 px-4 rounded-xl border border-red-300 text-red-700 bg-red-50 hover:bg-red-100 font-semibold text-xs transition duration-200 text-center cursor-pointer">
-                     Delete Permanently<br><span class="text-[9px] font-normal text-red-500">(Stock is NOT updated)</span>
+                    🗑️ Delete Permanently<br><span class="text-[9px] font-normal text-red-500">(Stock is NOT updated)</span>
                 </button>
                 <button type="button" onclick="selectDeleteMode('restore_stock')" id="btnDeleteRestore" class="flex-1 py-3 px-4 rounded-xl border border-green-300 text-green-700 bg-green-50 hover:bg-green-100 font-semibold text-xs transition duration-200 text-center cursor-pointer">
-                     Move to Stock<br><span class="text-[9px] font-normal text-green-500">(Add items to inventory)</span>
+                    📦 Move to Stock<br><span class="text-[9px] font-normal text-green-500">(Add items to inventory)</span>
                 </button>
             </div>
             
             <!-- Items Form (Visible only when 'restore_stock' is selected) -->
             <div id="restoreStockForm" class="hidden space-y-3 pt-3 border-t border-dashed border-gray-200">
-                <h4 class="text-xs font-bold text-yellow-800 uppercase tracking-wider">Quantities & HSN to move back:</h4>
+                <h4 class="text-xs font-bold text-yellow-800 uppercase tracking-wider">Quantities &amp; Weight to move back:</h4>
                 <div class="space-y-1" id="restoreItemsList">
                     <!-- Dynamic Items list populated by JS -->
                 </div>

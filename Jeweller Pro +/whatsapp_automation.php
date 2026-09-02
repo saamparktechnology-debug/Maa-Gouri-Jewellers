@@ -768,9 +768,13 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Tools</div>
 
+        <a href="product_summary.php">
+            <i class="fas fa-boxes-packing"></i> PRODUCT SUMMARY
+        </a>
         <a href="whatsapp_automation.php" class="active">
             <i class="fab fa-whatsapp"></i> WHATSAPP
         </a>
+
         <a href="purchase.php">
             <i class="fas fa-book"></i> PURCHASE
         </a>

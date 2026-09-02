@@ -2,6 +2,7 @@
 session_start();
 require_once 'config/database.php';
 require_once 'config/company_config.php';
+require_once 'includes/activity_logger.php';
 
 if(!isset($_SESSION['user_id'])) {
     header("Location: login.php");
@@ -23,20 +24,18 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         if($item_name_raw === 'Other' && !empty($_POST['item_name_custom'])) {
             $item_name_raw = $_POST['item_name_custom'];
         }
-        $unit = mysqli_real_escape_string($conn, $_POST['unit'] ?? 'pcs');
-        if ($unit === 'pair' && stripos($name, 'pair') === false) {
-            $name .= ' (Pair)';
-        }
         $item_name = mysqli_real_escape_string($conn, $item_name_raw);
         $category = mysqli_real_escape_string($conn, $_POST['category']);
         $weight = mysqli_real_escape_string($conn, $_POST['weight']);
         $huid_code = mysqli_real_escape_string($conn, trim($_POST['huid_code'] ?? ''));
         $price = $_POST['price'];
         $quantity = $_POST['quantity'];
+        $unit = mysqli_real_escape_string($conn, $_POST['unit'] ?? 'pcs');
 
-        $chk = mysqli_query($conn, "SHOW COLUMNS FROM products LIKE 'item_name'");
-        if(mysqli_num_rows($chk) == 0) {
-            mysqli_query($conn, "ALTER TABLE products ADD COLUMN item_name VARCHAR(255) DEFAULT '' AFTER name");
+        // Ensure new columns exist
+        $chk1 = mysqli_query($conn, "SHOW COLUMNS FROM products LIKE 'huid_code'");
+        if(mysqli_num_rows($chk1) == 0) {
+            mysqli_query($conn, "ALTER TABLE products ADD COLUMN huid_code VARCHAR(100) DEFAULT NULL");
         }
         $chk2 = mysqli_query($conn, "SHOW COLUMNS FROM products LIKE 'created_at'");
         if(mysqli_num_rows($chk2) == 0) {
@@ -69,6 +68,22 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         $query = "INSERT INTO products (serial_no, name, item_name, category, weight, price, quantity, unit, huid_code, diamond_cent, metal_kt, metal_weight, created_at, updated_at) VALUES ('$serial_no', '$name', '$item_name', '$category', '$weight', '$price', '$quantity', '$unit', '$huid_code', '$diamond_cent', '$metal_kt', '$metal_weight', NOW(), NOW())";
         if(mysqli_query($conn, $query)) {
+            $new_pid = mysqli_insert_id($conn);
+            log_product_activity($conn, [
+                'activity_type' => 'added',
+                'product_id' => $new_pid,
+                'product_name' => $item_name ?: $name,
+                'category' => $category,
+                'serial_no' => $serial_no,
+                'huid_code' => $huid_code,
+                'quantity' => floatval($quantity),
+                'unit' => $unit,
+                'weight' => floatval($weight),
+                'rate' => floatval($price),
+                'total_amount' => round(floatval($price) * ($unit === 'g' ? floatval($weight) : floatval($quantity)), 2),
+                'details' => "Product added to stock: " . ($weight > 0 ? "{$weight}g" : "{$quantity} {$unit}"),
+                'performed_by' => $_SESSION['user_name'] ?? 'Admin'
+            ]);
             $success = " Product added successfully! ";
         } else {
             $error = "Error adding product: " . mysqli_error($conn);
@@ -80,7 +95,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         $weight = floatval($_POST['weight'] ?? 0);
         $input_unit = strtolower(trim($_POST['unit'] ?? 'pcs'));
 
-        $p_res = mysqli_query($conn, "SELECT quantity, unit, weight FROM products WHERE id = $id");
+        $p_res = mysqli_query($conn, "SELECT quantity, unit, weight, name, item_name, category, price, serial_no, huid_code FROM products WHERE id = $id");
         if ($p_res && $p_row = mysqli_fetch_assoc($p_res)) {
             $db_qty = floatval($p_row['quantity']);
             $db_unit = strtolower(trim($p_row['unit'] ?? 'pcs'));
@@ -102,6 +117,20 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
 
             $sql = "UPDATE products SET quantity = '$final_qty', weight = '$final_weight', updated_at = NOW() WHERE id = $id";
             if(mysqli_query($conn, $sql)) {
+                log_product_activity($conn, [
+                    'activity_type' => 'restocked',
+                    'product_id' => $id,
+                    'product_name' => $p_row['item_name'] ?: $p_row['name'],
+                    'category' => $p_row['category'] ?? '',
+                    'serial_no' => $p_row['serial_no'] ?? '',
+                    'huid_code' => $p_row['huid_code'] ?? '',
+                    'quantity' => $added_qty,
+                    'unit' => $db_unit,
+                    'weight' => $weight,
+                    'rate' => floatval($p_row['price'] ?? 0),
+                    'details' => "Stock Updated: +{$quantity} {$input_unit}" . ($weight > 0 ? " (+{$weight}g)" : "") . " (Total Now: {$final_qty} {$db_unit}, {$final_weight}g)",
+                    'performed_by' => $_SESSION['user_name'] ?? 'Admin'
+                ]);
                 $success = " Stock updated successfully!";
             } else {
                 $error = "Error updating stock: " . mysqli_error($conn);
@@ -111,39 +140,111 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
     }
     elseif(isset($_POST['update_product'])) {
-        $id = $_POST['product_id'];
+        $id = intval($_POST['product_id']);
+        $edit_mode = $_POST['edit_mode'] ?? 'add';
         $serial_no = mysqli_real_escape_string($conn, trim($_POST['serial_no'] ?? ''));
         $name = mysqli_real_escape_string($conn, trim($_POST['name'] ?? ''));
         $item_name_raw2 = $_POST['item_name'] ?? '';
         if($item_name_raw2 === 'Other' && !empty($_POST['item_name_custom'])) { $item_name_raw2 = $_POST['item_name_custom']; }
         $item_name = mysqli_real_escape_string($conn, $item_name_raw2);
         $category = mysqli_real_escape_string($conn, $_POST['category']);
-        $weight = mysqli_real_escape_string($conn, $_POST['weight']);
         $huid_code = mysqli_real_escape_string($conn, trim($_POST['huid_code'] ?? ''));
-        $price = $_POST['price'];
-        $quantity = $_POST['quantity'];
+        $price = floatval($_POST['price'] ?? 0);
         $unit = mysqli_real_escape_string($conn, $_POST['unit'] ?? 'pcs');
         $diamond_cent = ($category === 'Diamond') ? mysqli_real_escape_string($conn, trim($_POST['diamond_cent'] ?? '')) : '';
         $metal_kt     = ($category === 'Diamond') ? mysqli_real_escape_string($conn, trim($_POST['metal_kt'] ?? '')) : '';
         $metal_weight = ($category === 'Diamond') ? mysqli_real_escape_string($conn, trim($_POST['metal_weight'] ?? '')) : '';
 
-        if ($category === 'Diamond' && (empty($weight) || $weight === '0')) {
-            $weight = $metal_weight;
-        }
+        // Fetch current product state
+        $p_res = mysqli_query($conn, "SELECT weight, quantity, unit, name, item_name, category FROM products WHERE id = $id LIMIT 1");
+        $curr_prod = $p_res ? mysqli_fetch_assoc($p_res) : null;
+        $prev_w = floatval($curr_prod['weight'] ?? 0);
+        $prev_q = floatval($curr_prod['quantity'] ?? 0);
 
-        $query = "UPDATE products SET serial_no='$serial_no', name='$name', item_name='$item_name', category='$category', weight='$weight', price='$price', quantity='$quantity', unit='$unit', huid_code='$huid_code', diamond_cent='$diamond_cent', metal_kt='$metal_kt', metal_weight='$metal_weight', updated_at = NOW() WHERE id=$id";
-        if(mysqli_query($conn, $query)) {
-            $success = " Product updated successfully! ";
+        if ($edit_mode === 'add') {
+            $add_w = floatval($_POST['add_weight'] ?? 0);
+            $add_q = floatval($_POST['add_quantity'] ?? 0);
+            $weight = $prev_w + $add_w;
+            $quantity = $prev_q + $add_q;
+
+            if ($category === 'Diamond' && !empty($metal_weight)) {
+                $metal_weight = floatval($curr_prod['metal_weight'] ?? 0) + $add_w;
+            }
+
+            $query = "UPDATE products SET serial_no='$serial_no', name='$name', item_name='$item_name', category='$category', weight='$weight', price='$price', quantity='$quantity', unit='$unit', huid_code='$huid_code', diamond_cent='$diamond_cent', metal_kt='$metal_kt', metal_weight='$metal_weight', updated_at = NOW() WHERE id=$id";
+            if(mysqli_query($conn, $query)) {
+                log_product_activity($conn, [
+                    'activity_type' => 'restocked',
+                    'product_id' => $id,
+                    'product_name' => $item_name ?: $name,
+                    'category' => $category,
+                    'serial_no' => $serial_no,
+                    'huid_code' => $huid_code,
+                    'quantity' => $add_q,
+                    'unit' => $unit,
+                    'weight' => $add_w,
+                    'rate' => $price,
+                    'details' => "Restocked stock (+{$add_w}g, +{$add_q} {$unit}) — Previous: {$prev_w}g / {$prev_q}, New Total: {$weight}g / {$quantity} {$unit}",
+                    'performed_by' => $_SESSION['user_name'] ?? 'Admin'
+                ]);
+                $success = " Stock added successfully! Added: +{$add_w}g, +{$add_q} {$unit}. New Total: {$weight}g / {$quantity} {$unit}";
+            } else {
+                $error = "Error updating product: " . mysqli_error($conn);
+            }
         } else {
-            $error = "Error updating product: " . mysqli_error($conn);
+            // Direct correction mode
+            $weight = mysqli_real_escape_string($conn, $_POST['weight'] ?? '0');
+            $quantity = floatval($_POST['quantity'] ?? 0);
+
+            if ($category === 'Diamond' && (empty($weight) || $weight === '0')) {
+                $weight = $metal_weight;
+            }
+
+            $query = "UPDATE products SET serial_no='$serial_no', name='$name', item_name='$item_name', category='$category', weight='$weight', price='$price', quantity='$quantity', unit='$unit', huid_code='$huid_code', diamond_cent='$diamond_cent', metal_kt='$metal_kt', metal_weight='$metal_weight', updated_at = NOW() WHERE id=$id";
+            if(mysqli_query($conn, $query)) {
+                log_product_activity($conn, [
+                    'activity_type' => 'edited',
+                    'product_id' => $id,
+                    'product_name' => $item_name ?: $name,
+                    'category' => $category,
+                    'serial_no' => $serial_no,
+                    'huid_code' => $huid_code,
+                    'quantity' => $quantity,
+                    'unit' => $unit,
+                    'weight' => floatval($weight),
+                    'rate' => $price,
+                    'details' => "Corrected product details (Weight: {$weight}g, Qty: {$quantity} {$unit}, Price: ₹{$price})",
+                    'performed_by' => $_SESSION['user_name'] ?? 'Admin'
+                ]);
+                $success = " Product details corrected successfully! ";
+            } else {
+                $error = "Error updating product: " . mysqli_error($conn);
+            }
         }
     }
     elseif(isset($_POST['delete_product'])) {
-        $id = $_POST['product_id'];
+        $id = intval($_POST['product_id']);
+        $del_p = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM products WHERE id = $id"));
+        if ($del_p) {
+            log_product_activity($conn, [
+                'activity_type' => 'deleted',
+                'product_id' => $id,
+                'product_name' => $del_p['item_name'] ?: $del_p['name'],
+                'category' => $del_p['category'] ?? '',
+                'serial_no' => $del_p['serial_no'] ?? '',
+                'huid_code' => $del_p['huid_code'] ?? '',
+                'quantity' => floatval($del_p['quantity']),
+                'unit' => $del_p['unit'] ?? 'pcs',
+                'weight' => floatval($del_p['weight'] ?? 0),
+                'rate' => floatval($del_p['price'] ?? 0),
+                'details' => "Product deleted from inventory",
+                'performed_by' => $_SESSION['user_name'] ?? 'Admin'
+            ]);
+        }
+        // Safe deletion: DO NOT delete invoice_items to preserve customer invoice history
         mysqli_query($conn, "SET FOREIGN_KEY_CHECKS = 0");
-        mysqli_query($conn, "DELETE FROM invoice_items WHERE product_id = $id");
         if(mysqli_query($conn, "DELETE FROM products WHERE id = $id")) {
-            $success = " Product deleted successfully!";
+            $success = " Product deleted successfully from inventory!";
         } else {
             $error = "Error deleting product: " . mysqli_error($conn);
         }
@@ -939,9 +1040,13 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Tools</div>
 
+        <a href="product_summary.php">
+            <i class="fas fa-boxes-packing"></i> PRODUCT SUMMARY
+        </a>
         <a href="whatsapp_automation.php">
             <i class="fab fa-whatsapp"></i> WHATSAPP
         </a>
+
         <a href="purchase.php">
             <i class="fas fa-book"></i> PURCHASE
         </a>
@@ -1053,7 +1158,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         </div>
 
                         <div class="mb-3">
-                            <label> Category</label>
+                            <label> Category *</label>
                             <select name="category" id="addCategorySelect" required class="jewel-input" onchange="updateItemTypes('addCategorySelect','addItemSelect','addCustomItem')">
                                 <option value="">-- Select Category --</option>
                                 <optgroup label=" Gold">
@@ -1079,7 +1184,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         </div>
 
                         <div class="mb-3">
-                            <label> Item Type</label>
+                            <label> Item Type *</label>
                             <select name="item_name" id="addItemSelect" required class="jewel-input" onchange="toggleCustomItem('addCustomItem', this.value)">
                                 <option value="">-- Select Category First --</option>
                             </select>
@@ -1088,12 +1193,19 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                             </div>
                         </div>
 
+                        <div class="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900 mb-3 flex items-start gap-2">
+                            <i class="fas fa-info-circle text-amber-600 mt-0.5"></i>
+                            <div>
+                                <strong>Basket / Bulk Pool Stock:</strong> Serial No &amp; HUID are optional. You can pool items with total weight &amp; piece count.
+                            </div>
+                        </div>
+
                         <!-- Diamond Specific Fields -->
                         <div id="addDiamondFieldsContainer" class="hidden mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
                             <div class="text-xs font-bold text-amber-900 mb-2">💎 Diamond & Gold Details</div>
                             <div class="mb-2">
-                                <label class="block text-xs font-semibold text-amber-800 mb-1">Diamond Cent (Ct)</label>
-                                <input type="number" step="0.01" name="diamond_cent" id="addDiamondCent" placeholder="e.g. 25 (Cent)" class="jewel-input">
+                                <label class="block text-xs font-semibold text-amber-800 mb-1">Diamond Weight (Ct)</label>
+                                <input type="number" step="0.01" name="diamond_cent" id="addDiamondCent" placeholder="e.g. 0.25 (Ct)" class="jewel-input">
                             </div>
                             <div class="grid grid-cols-2 gap-2">
                                 <div>
@@ -1115,29 +1227,29 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                         </div>
 
                         <div class="mb-3">
-                            <label> Serial Number</label>
-                            <input type="text" name="serial_no" placeholder="Enter serial number" class="jewel-input">
+                            <label> Serial Number <span class="text-stone-400 font-normal text-xs">(Optional)</span></label>
+                            <input type="text" name="serial_no" placeholder="Leave blank for basket inventory" class="jewel-input">
                         </div>
 
                         <div class="mb-3">
-                            <label> HUID Code</label>
-                            <input type="text" name="huid_code" placeholder="Enter HUID code (optional)" class="jewel-input">
+                            <label> HUID Code <span class="text-stone-400 font-normal text-xs">(Optional)</span></label>
+                            <input type="text" name="huid_code" placeholder="Leave blank if not hallmarked yet" class="jewel-input">
                         </div>
 
                         <div class="mb-3" id="addWeightContainer">
-                            <label> Weight (grams)</label>
-                            <input type="text" name="weight" placeholder="e.g. 12.5" class="jewel-input">
+                            <label> Total Weight (grams) *</label>
+                            <input type="text" name="weight" placeholder="e.g. 12.500" class="jewel-input" required>
                         </div>
 
                         <input type="hidden" name="price" value="0">
 
                         <div class="mb-4 flex gap-2">
                             <div class="flex-1">
-                                <label> Quantity</label>
-                                <input type="number" name="quantity" placeholder="Enter quantity" required class="jewel-input">
+                                <label> Quantity *</label>
+                                <input type="number" name="quantity" placeholder="e.g. 10" required class="jewel-input">
                             </div>
                             <div class="w-1/3">
-                                <label> Unit</label>
+                                <label> Unit *</label>
                                 <select name="unit" class="jewel-input">
                                     <option value="pcs">Pcs</option>
                                     <option value="pair">Pair</option>
@@ -1442,66 +1554,131 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
 <!-- Edit Product Modal -->
 <div id="editModal" class="modal-overlay">
-    <div class="modal-content">
-        <h3 class="text-xl font-bold gold-font"><i class="fas fa-edit mr-2" style="color:#d68b16;"></i> Edit Product</h3>
+    <div class="modal-content" style="max-width:540px;">
+        <div class="flex items-center justify-between mb-3 border-b border-amber-200 pb-2.5">
+            <h3 class="text-lg font-bold gold-font flex items-center gap-2">
+                <i class="fas fa-edit" style="color:#d68b16;"></i> Edit Product / Stock
+            </h3>
+            <button type="button" onclick="closeEditModal()" class="text-stone-400 hover:text-stone-700 font-bold text-lg">&times;</button>
+        </div>
+
         <form method="POST">
             <input type="hidden" name="product_id" id="editProductId">
+            <input type="hidden" name="edit_mode" id="editModalModeInput" value="add">
+            <input type="hidden" id="editPrevWeightHidden" value="0">
+            <input type="hidden" id="editPrevQtyHidden" value="0">
 
-            <div class="mb-3">
-                <label> Serial Number</label>
-                <input type="text" name="serial_no" id="editProductSerial" class="jewel-input">
+            <!-- Mode Selector Tabs -->
+            <div class="flex rounded-xl p-1 bg-amber-100/70 border border-amber-300/60 mb-3 gap-1">
+                <button type="button" id="tabEditAddStock" onclick="setEditModalMode('add')" class="flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all bg-amber-800 text-white shadow-sm cursor-pointer">
+                    <i class="fas fa-plus-circle mr-1"></i> ➕ Add / Restock (+New)
+                </button>
+                <button type="button" id="tabEditCorrect" onclick="setEditModalMode('correct')" class="flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all text-amber-900 hover:bg-white/60 cursor-pointer">
+                    <i class="fas fa-pen-to-square mr-1"></i> ✏️ Correct Mistake (Direct Edit)
+                </button>
             </div>
-            <div class="mb-3">
-                <label> HUID Code</label>
-                <input type="text" name="huid_code" id="editProductHuid" class="jewel-input">
+
+            <!-- Panel 1: Add New Stock (+Weight / +Qty) -->
+            <div id="panelEditAddStock" class="mb-3 p-3 rounded-xl bg-amber-50/90 border border-amber-200">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs font-semibold text-amber-900">📦 Previous Stock:</span>
+                    <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-200/80 text-amber-950" id="editCurrentStockBadge">0.000g | 0 pcs</span>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mb-2">
+                    <div>
+                        <label class="block text-xs font-bold text-amber-900 mb-1">➕ New Weight to Add (g)</label>
+                        <input type="number" step="0.001" min="0" name="add_weight" id="editAddWeight" placeholder="e.g. 50.000" class="jewel-input text-xs" oninput="calcEditModalPreview()">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-amber-900 mb-1">➕ New Qty to Add</label>
+                        <input type="number" step="1" min="0" name="add_quantity" id="editAddQuantity" placeholder="e.g. 5" class="jewel-input text-xs" oninput="calcEditModalPreview()">
+                    </div>
+                </div>
+                <div class="text-xs font-bold text-emerald-800 bg-emerald-50 px-2.5 py-1.5 rounded-lg border border-emerald-200 flex items-center justify-between">
+                    <span>✨ Resulting Total Stock:</span>
+                    <span id="editPreviewResultValues">0.000g | 0 pcs</span>
+                </div>
             </div>
-            <div class="mb-3">
-                <label> Product Name</label>
-                <input type="text" name="name" id="editProductName" class="jewel-input">
+
+            <!-- Panel 2: Direct Edit / Correct Mistake -->
+            <div id="panelEditCorrect" class="hidden mb-3 p-3 rounded-xl bg-rose-50/60 border border-rose-200">
+                <div class="text-xs font-bold text-rose-900 mb-2 flex items-center gap-1">
+                    <i class="fas fa-exclamation-circle text-rose-600"></i> Correct Mistake in Previous Stock (Direct Override):
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div id="editWeightContainer">
+                        <label class="block text-xs font-semibold text-rose-900 mb-1">Correct Total Weight (g)</label>
+                        <input type="number" step="0.001" name="weight" id="editProductWeight" class="jewel-input text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-rose-900 mb-1">Correct Total Quantity</label>
+                        <input type="number" step="1" name="quantity" id="editProductQuantity" class="jewel-input text-xs">
+                    </div>
+                </div>
             </div>
-            <div class="mb-3">
-                <label> Category</label>
-                <select name="category" id="editProductCategory" required class="jewel-input" onchange="updateItemTypes('editProductCategory','editProductItemName','editCustomItem')">
-                    <option value="">-- Select Category --</option>
-                    <optgroup label=" Gold">
-                        <option value="Gold 24K">Gold 24K</option>
-                        <option value="Gold 22K">Gold 22K</option>
-                        <option value="Gold 18K">Gold 18K</option>
-                        <option value="Gold 12K">Gold 12K</option>
-                        <option value="Gold 9K">Gold 9K</option>
-                    </optgroup>
-                    <optgroup label=" Silver">
-                        <option value="Silver">Silver</option>
-                    </optgroup>
-                    <optgroup label=" Stone">
-                        <option value="Stone">Stone</option>
-                    </optgroup>
-                    <optgroup label=" Diamond">
-                        <option value="Diamond">Diamond</option>
-                    </optgroup>
-                </select>
+
+            <!-- Common Product Details -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2.5">
+                <div>
+                    <label class="block text-xs font-semibold mb-1 text-stone-700">Serial Number</label>
+                    <input type="text" name="serial_no" id="editProductSerial" placeholder="e.g. SN123" class="jewel-input text-xs">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold mb-1 text-stone-700">HUID Code</label>
+                    <input type="text" name="huid_code" id="editProductHuid" placeholder="e.g. HUID123456" class="jewel-input text-xs">
+                </div>
             </div>
-            <div class="mb-3">
-                <label> Item Name</label>
-                <select name="item_name" id="editProductItemName" required class="jewel-input" onchange="toggleCustomItem('editCustomItem', this.value)">
-                    <option value="">-- Select Item --</option>
-                </select>
-                <div class="custom-item-input mt-2" id="editCustomItem">
-                    <input type="text" name="item_name_custom" id="editItemCustomInput" placeholder="Custom item name..." class="jewel-input">
+
+            <div class="mb-2.5">
+                <label class="block text-xs font-semibold mb-1 text-stone-700">Product Name</label>
+                <input type="text" name="name" id="editProductName" placeholder="Display product name" class="jewel-input text-xs">
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2.5">
+                <div>
+                    <label class="block text-xs font-semibold mb-1 text-stone-700">Category *</label>
+                    <select name="category" id="editProductCategory" required class="jewel-input text-xs" onchange="updateItemTypes('editProductCategory','editProductItemName','editCustomItem')">
+                        <option value="">-- Select Category --</option>
+                        <optgroup label="Gold">
+                            <option value="Gold 24K">Gold 24K</option>
+                            <option value="Gold 22K">Gold 22K</option>
+                            <option value="Gold 18K">Gold 18K</option>
+                            <option value="Gold 12K">Gold 12K</option>
+                            <option value="Gold 9K">Gold 9K</option>
+                        </optgroup>
+                        <optgroup label="Silver">
+                            <option value="Silver">Silver</option>
+                        </optgroup>
+                        <optgroup label="Stone">
+                            <option value="Stone">Stone</option>
+                        </optgroup>
+                        <optgroup label="Diamond">
+                            <option value="Diamond">Diamond</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold mb-1 text-stone-700">Item Name *</label>
+                    <select name="item_name" id="editProductItemName" required class="jewel-input text-xs" onchange="toggleCustomItem('editCustomItem', this.value)">
+                        <option value="">-- Select Item --</option>
+                    </select>
+                    <div class="custom-item-input mt-1.5" id="editCustomItem">
+                        <input type="text" name="item_name_custom" id="editItemCustomInput" placeholder="Custom item name..." class="jewel-input text-xs">
+                    </div>
                 </div>
             </div>
 
             <!-- Diamond Specific Fields -->
-            <div id="editDiamondFieldsContainer" class="hidden mb-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
-                <div class="text-xs font-bold text-amber-900 mb-2">💎 Diamond & Gold Details</div>
-                <div class="mb-2">
-                    <label class="block text-xs font-semibold text-amber-800 mb-1">Diamond Cent (Ct)</label>
-                    <input type="number" step="0.01" name="diamond_cent" id="editDiamondCent" placeholder="e.g. 25 (Cent)" class="jewel-input">
+            <div id="editDiamondFieldsContainer" class="hidden mb-2.5 p-2.5 rounded-lg bg-amber-50 border border-amber-200">
+                <div class="text-xs font-bold text-amber-900 mb-1.5">💎 Diamond & Gold Details</div>
+                <div class="mb-1.5">
+                    <label class="block text-xs font-semibold text-amber-800 mb-1">Diamond Weight (Ct)</label>
+                    <input type="number" step="0.01" name="diamond_cent" id="editDiamondCent" placeholder="e.g. 0.25 (Ct)" class="jewel-input text-xs">
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                     <div>
                         <label class="block text-xs font-semibold text-amber-800 mb-1">Gold Purity (KT)</label>
-                        <select name="metal_kt" id="editMetalKt" class="jewel-input">
+                        <select name="metal_kt" id="editMetalKt" class="jewel-input text-xs">
                             <option value="24K">24K Gold</option>
                             <option value="22K">22K Gold</option>
                             <option value="18K">18K Gold</option>
@@ -1512,34 +1689,32 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-amber-800 mb-1">Gold Weight (gms)</label>
-                        <input type="number" step="0.001" name="metal_weight" id="editMetalWeight" placeholder="e.g. 3.500" class="jewel-input">
+                        <input type="number" step="0.001" name="metal_weight" id="editMetalWeight" placeholder="e.g. 3.500" class="jewel-input text-xs">
                     </div>
                 </div>
             </div>
-            <div class="mb-3" id="editWeightContainer">
-                <label> Weight (grams)</label>
-                <input type="text" name="weight" id="editProductWeight" class="jewel-input">
-            </div>
-            <div class="mb-3">
-                <label> Price (₹)</label>
-                <input type="number" step="0.01" name="price" id="editProductPrice" required class="jewel-input">
-            </div>
-            <div class="mb-4 flex gap-2">
-                <div class="flex-1">
-                    <label> Quantity</label>
-                    <input type="number" name="quantity" id="editProductQuantity" required class="jewel-input">
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
+                <div>
+                    <label class="block text-xs font-semibold mb-1 text-stone-700">Unit Price / Rate (₹) *</label>
+                    <input type="number" step="0.01" name="price" id="editProductPrice" required class="jewel-input text-xs">
                 </div>
-                <div class="w-1/3">
-                    <label> Unit</label>
-                    <select name="unit" id="editProductUnit" class="jewel-input">
+                <div>
+                    <label class="block text-xs font-semibold mb-1 text-stone-700">Stock Unit *</label>
+                    <select name="unit" id="editProductUnit" class="jewel-input text-xs" onchange="calcEditModalPreview()">
                         <option value="pcs">Pcs</option>
                         <option value="pair">Pair</option>
                     </select>
                 </div>
             </div>
-            <div class="flex gap-3">
-                <button type="submit" name="update_product" class="btn-jewel flex-1 text-center"> Update</button>
-                <button type="button" onclick="closeEditModal()" class="flex-1 py-2 rounded-lg text-sm font-semibold" style="background:#e5e7eb;color:#374151;">Cancel</button>
+
+            <div class="flex gap-2.5">
+                <button type="submit" name="update_product" class="btn-jewel flex-1 text-center py-2 text-xs font-bold shadow-md cursor-pointer">
+                    <i class="fas fa-check-circle mr-1"></i> Save Changes
+                </button>
+                <button type="button" onclick="closeEditModal()" class="py-2 px-4 rounded-xl text-xs font-semibold border border-stone-300 bg-stone-100 hover:bg-stone-200 text-stone-700 cursor-pointer">
+                    Cancel
+                </button>
             </div>
         </form>
     </div>
@@ -1617,12 +1792,12 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
     /* ---------- Item types ---------- */
     const itemsByCategory = {
-        'Gold 24K': ['Coin','Bar','Guinea','Necklace','Chur','Bala','Chain','Tops','Single Loket','Double Loket','Churi','Jhuladul','Jhumka','Ladies Ring','Gold Choker','Gents Ring','Gents Breslet','Ladies Breslet','Tika','Takti','Mantasa','Pearl Choker','Bauti Chur','Soket Bauti','Breslet Noya','Stell Noya','Baby Ring','Bali','Pitaring','Baby Breslet','Pearl Sitahar','Nose Pin','Other'],
-        'Gold 22K': ['Necklace','Chur','Bala','Chain','Tops','Single Loket','Double Loket','Churi','Jhuladul','Jhumka','Ladies Ring','Gold Choker','Gents Ring','Gents Breslet','Ladies Breslet','Tika','Takti','Mantasa','Pearl Choker','Bauti Chur','Soket Bauti','Breslet Noya','Stell Noya','Baby Ring','Bali','Pitaring','Baby Breslet','Pearl Sitahar','Nose Pin','Other'],
-        'Gold 18K': ['Necklace','Chur','Bala','Chain','Tops','Single Loket','Double Loket','Churi','Jhuladul','Jhumka','Ladies Ring','Gold Choker','Gents Ring','Gents Breslet','Ladies Breslet','Tika','Takti','Mantasa','Pearl Choker','Bauti Chur','Soket Bauti','Breslet Noya','Stell Noya','Baby Ring','Bali','Pitaring','Baby Breslet','Pearl Sitahar','Nose Pin','Other'],
-        'Gold 12K': ['Necklace','Chur','Bala','Chain','Tops','Single Loket','Double Loket','Churi','Jhuladul','Jhumka','Ladies Ring','Gold Choker','Gents Ring','Gents Breslet','Ladies Breslet','Tika','Takti','Mantasa','Pearl Choker','Bauti Chur','Soket Bauti','Breslet Noya','Stell Noya','Baby Ring','Bali','Pitaring','Baby Breslet','Pearl Sitahar','Nose Pin','Other'],
-        'Gold 9K':  ['Necklace','Chur','Bala','Chain','Tops','Single Loket','Double Loket','Churi','Jhuladul','Jhumka','Ladies Ring','Gold Choker','Gents Ring','Gents Breslet','Ladies Breslet','Tika','Takti','Mantasa','Pearl Choker','Bauti Chur','Soket Bauti','Breslet Noya','Stell Noya','Baby Ring','Bali','Pitaring','Baby Breslet','Pearl Sitahar','Nose Pin','Other'],
-        'Silver':   ['Thali','Bati','Glass','Spoon','Showpiece','B.B.C Silver','Mix Silver','Other'],
+        'Gold 24K': ['Gold Ornaments','Mixed Gold Stock','Coin','Bar','Guinea','Necklace','Chur','Bala','Chain','Tops','Single Loket','Double Loket','Churi','Jhuladul','Jhumka','Ladies Ring','Gold Choker','Gents Ring','Gents Breslet','Ladies Breslet','Tika','Takti','Mantasa','Pearl Choker','Bauti Chur','Soket Bauti','Breslet Noya','Stell Noya','Baby Ring','Bali','Pitaring','Baby Breslet','Pearl Sitahar','Nose Pin','Other'],
+        'Gold 22K': ['Gold Ornaments','Mixed Gold Stock','Necklace','Chur','Bala','Chain','Tops','Single Loket','Double Loket','Churi','Jhuladul','Jhumka','Ladies Ring','Gold Choker','Gents Ring','Gents Breslet','Ladies Breslet','Tika','Takti','Mantasa','Pearl Choker','Bauti Chur','Soket Bauti','Breslet Noya','Stell Noya','Baby Ring','Bali','Pitaring','Baby Breslet','Pearl Sitahar','Nose Pin','Other'],
+        'Gold 18K': ['Gold Ornaments','Mixed Gold Stock','Necklace','Chur','Bala','Chain','Tops','Single Loket','Double Loket','Churi','Jhuladul','Jhumka','Ladies Ring','Gold Choker','Gents Ring','Gents Breslet','Ladies Breslet','Tika','Takti','Mantasa','Pearl Choker','Bauti Chur','Soket Bauti','Breslet Noya','Stell Noya','Baby Ring','Bali','Pitaring','Baby Breslet','Pearl Sitahar','Nose Pin','Other'],
+        'Gold 12K': ['Gold Ornaments','Mixed Gold Stock','Necklace','Chur','Bala','Chain','Tops','Single Loket','Double Loket','Churi','Jhuladul','Jhumka','Ladies Ring','Gold Choker','Gents Ring','Gents Breslet','Ladies Breslet','Tika','Takti','Mantasa','Pearl Choker','Bauti Chur','Soket Bauti','Breslet Noya','Stell Noya','Baby Ring','Bali','Pitaring','Baby Breslet','Pearl Sitahar','Nose Pin','Other'],
+        'Gold 9K':  ['Gold Ornaments','Mixed Gold Stock','Necklace','Chur','Bala','Chain','Tops','Single Loket','Double Loket','Churi','Jhuladul','Jhumka','Ladies Ring','Gold Choker','Gents Ring','Gents Breslet','Ladies Breslet','Tika','Takti','Mantasa','Pearl Choker','Bauti Chur','Soket Bauti','Breslet Noya','Stell Noya','Baby Ring','Bali','Pitaring','Baby Breslet','Pearl Sitahar','Nose Pin','Other'],
+        'Silver':   ['Silver Ornaments','Payel','Chain','Bala','Ring','Churi','Thali','Bati','Glass','Spoon','Showpiece','B.B.C Silver','Mix Silver','Other'],
         'Stone':    ['Natural Pearl','Gomed','Red Coral','Nila','Panna','Jerkon','Amethist','Cats Eye','Other'],
         'Diamond':  ['Ladies Ring','Gents Ring','Tops','Mangal Sutra','Nose Pin','Necklace','Other'],
         'Other':    ['Shankha','Pala','Mala','Moti Mala','Trasel','Branch Fram','Braslate Pala','Parl Mala','Gala','Reparing','Stamp Charg','Other']
@@ -1698,6 +1873,55 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         else { div.classList.remove('show'); div.querySelector('input').value = ''; }
     }
 
+    function setEditModalMode(mode) {
+        document.getElementById('editModalModeInput').value = mode;
+        const tabAdd = document.getElementById('tabEditAddStock');
+        const tabCorrect = document.getElementById('tabEditCorrect');
+        const panelAdd = document.getElementById('panelEditAddStock');
+        const panelCorrect = document.getElementById('panelEditCorrect');
+
+        if (mode === 'add') {
+            tabAdd.style.background = '#800020';
+            tabAdd.style.color = '#ffffff';
+            tabAdd.style.fontWeight = '700';
+
+            tabCorrect.style.background = 'transparent';
+            tabCorrect.style.color = '#7a4e0a';
+            tabCorrect.style.fontWeight = '600';
+
+            panelAdd.classList.remove('hidden');
+            panelCorrect.classList.add('hidden');
+            document.getElementById('editProductWeight').required = false;
+            document.getElementById('editProductQuantity').required = false;
+        } else {
+            tabCorrect.style.background = '#800020';
+            tabCorrect.style.color = '#ffffff';
+            tabCorrect.style.fontWeight = '700';
+
+            tabAdd.style.background = 'transparent';
+            tabAdd.style.color = '#7a4e0a';
+            tabAdd.style.fontWeight = '600';
+
+            panelCorrect.classList.remove('hidden');
+            panelAdd.classList.add('hidden');
+            document.getElementById('editProductWeight').required = true;
+            document.getElementById('editProductQuantity').required = true;
+        }
+    }
+
+    function calcEditModalPreview() {
+        const prevW = parseFloat(document.getElementById('editPrevWeightHidden').value) || 0;
+        const prevQ = parseFloat(document.getElementById('editPrevQtyHidden').value) || 0;
+        const addW = parseFloat(document.getElementById('editAddWeight').value) || 0;
+        const addQ = parseFloat(document.getElementById('editAddQuantity').value) || 0;
+        const unit = document.getElementById('editProductUnit') ? document.getElementById('editProductUnit').value : 'pcs';
+
+        const newW = (prevW + addW).toFixed(3);
+        const newQ = (prevQ + addQ);
+
+        document.getElementById('editPreviewResultValues').textContent = newW + 'g | ' + newQ + ' ' + unit;
+    }
+
     /* ---------- Modals ---------- */
     function openEditModal(id, serial_no, name, item_name, category, weight, price, quantity, huid_code, unit, diamond_cent, metal_kt, metal_weight) {
         document.getElementById('editProductId').value = id;
@@ -1707,6 +1931,17 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         document.getElementById('editProductPrice').value = price;
         document.getElementById('editProductQuantity').value = quantity;
         document.getElementById('editProductHuid').value = huid_code || '';
+
+        // Store and display previous stock state
+        document.getElementById('editPrevWeightHidden').value = weight || '0';
+        document.getElementById('editPrevQtyHidden').value = quantity || '0';
+        const displayW = (parseFloat(weight) || 0).toFixed(3);
+        const displayQ = quantity || 0;
+        const displayUnit = (unit === 'pair') ? 'pair' : 'pcs';
+        document.getElementById('editCurrentStockBadge').textContent = displayW + 'g | ' + displayQ + ' ' + displayUnit;
+        document.getElementById('editAddWeight').value = '';
+        document.getElementById('editAddQuantity').value = '';
+
         if (document.getElementById('editProductUnit')) {
             document.getElementById('editProductUnit').value = (unit === 'pair') ? 'pair' : 'pcs';
         }
@@ -1736,6 +1971,8 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             document.getElementById('editItemCustomInput').value = item_name;
         }
 
+        calcEditModalPreview();
+        setEditModalMode('add');
         document.getElementById('editModal').classList.add('flex');
     }
 

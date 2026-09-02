@@ -11,6 +11,10 @@ if(!$is_logged_in) {
     header("Location: login.php");
     exit();
 }
+// Automatically lock geomorphology section when visiting main app
+unset($_SESSION['geomorphology_unlocked']);
+unset($_SESSION['geomorphology_unlocked_at']);
+
 $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
 $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-preview.png', 'moti-removebg-preview.png', 'radhey shyam logo.png'];
 
@@ -19,7 +23,7 @@ $top_products = [];
 if($is_logged_in) {
     for($i = 6; $i >= 0; $i--) {
         $date = date('Y-m-d', strtotime("-$i days"));
-        $sales_query = mysqli_query($conn, "SELECT COALESCE(SUM(total_amount), 0) as total FROM invoices WHERE DATE(created_at) = '$date'");
+        $sales_query = mysqli_query($conn, "SELECT COALESCE(SUM(total_amount), 0) as total FROM invoices WHERE (gst_type LIKE 'gst%' OR gst_amount > 0) AND DATE(created_at) = '$date'");
         $sales = mysqli_fetch_assoc($sales_query);
         $daily_sales[] = [
             'date' => date('d M', strtotime($date)),
@@ -27,7 +31,7 @@ if($is_logged_in) {
         ];
     }
 
-    $top_products_result = mysqli_query($conn, "SELECT p.name, SUM(ii.quantity) as sold FROM invoice_items ii JOIN products p ON ii.product_id = p.id GROUP BY ii.product_id ORDER BY sold DESC LIMIT 5");
+    $top_products_result = mysqli_query($conn, "SELECT p.name, SUM(ii.quantity) as sold FROM invoice_items ii JOIN products p ON ii.product_id = p.id JOIN invoices i ON ii.invoice_id = i.id WHERE (i.gst_type LIKE 'gst%' OR i.gst_amount > 0) GROUP BY ii.product_id ORDER BY sold DESC LIMIT 5");
     while($row = mysqli_fetch_assoc($top_products_result)) {
         $top_products[] = $row;
     }
@@ -37,7 +41,7 @@ if($is_logged_in) {
     for($m = 5; $m >= 0; $m--) {
         $month = date('Y-m', strtotime("-$m months"));
         $month_label = date('M', strtotime($month . '-01'));
-        $sales_query = mysqli_query($conn, "SELECT COALESCE(SUM(total_amount), 0) as total FROM invoices WHERE DATE_FORMAT(created_at, '%Y-%m') = '$month'");
+        $sales_query = mysqli_query($conn, "SELECT COALESCE(SUM(total_amount), 0) as total FROM invoices WHERE (gst_type LIKE 'gst%' OR gst_amount > 0) AND DATE_FORMAT(created_at, '%Y-%m') = '$month'");
         $sales_row = mysqli_fetch_assoc($sales_query);
         $monthly_sales[] = ['month' => $month_label, 'total' => $sales_row['total'] ?? 0];
     }
@@ -48,18 +52,18 @@ if($is_logged_in) {
         $customer_row = mysqli_fetch_assoc($customer_query);
         $customer_growth[] = ['date' => date('d M', strtotime($date)), 'total' => $customer_row['total'] ?? 0];
 
-        $invoice_count_query = mysqli_query($conn, "SELECT COUNT(*) as total FROM invoices WHERE DATE(created_at) = '$date'");
+        $invoice_count_query = mysqli_query($conn, "SELECT COUNT(*) as total FROM invoices WHERE (gst_type LIKE 'gst%' OR gst_amount > 0) AND DATE(created_at) = '$date'");
         $invoice_count_row = mysqli_fetch_assoc($invoice_count_query);
         $daily_invoice_counts[] = ['date' => date('d M', strtotime($date)), 'total' => $invoice_count_row['total'] ?? 0];
     }
 
-    $invoice_pending_count_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM invoices WHERE balance_amount > 0"));
-    $invoice_completed_count_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM invoices WHERE COALESCE(balance_amount, 0) = 0"));
+    $invoice_pending_count_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM invoices WHERE (gst_type LIKE 'gst%' OR gst_amount > 0) AND balance_amount > 0"));
+    $invoice_completed_count_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM invoices WHERE (gst_type LIKE 'gst%' OR gst_amount > 0) AND COALESCE(balance_amount, 0) = 0"));
     $invoice_pending_count = $invoice_pending_count_row['total'] ?? 0;
     $invoice_completed_count = $invoice_completed_count_row['total'] ?? 0;
 
     $category_sales = [];
-    $category_sales_result = mysqli_query($conn, "SELECT COALESCE(p.category, 'Other') as category, COALESCE(SUM(ii.total), 0) as revenue FROM invoice_items ii JOIN products p ON ii.product_id = p.id GROUP BY p.category ORDER BY revenue DESC LIMIT 6");
+    $category_sales_result = mysqli_query($conn, "SELECT COALESCE(p.category, 'Other') as category, COALESCE(SUM(ii.total), 0) as revenue FROM invoice_items ii JOIN products p ON ii.product_id = p.id JOIN invoices i ON ii.invoice_id = i.id WHERE (i.gst_type LIKE 'gst%' OR i.gst_amount > 0) GROUP BY p.category ORDER BY revenue DESC LIMIT 6");
     while($row = mysqli_fetch_assoc($category_sales_result)) {
         $category_sales[] = $row;
     }
@@ -77,7 +81,7 @@ if($is_logged_in) {
     }
 
     $pending_invoices = [];
-    $pending_invoices_result = mysqli_query($conn, "SELECT invoice_no, customer_name, balance_amount FROM invoices WHERE balance_amount > 0 ORDER BY created_at DESC LIMIT 5");
+    $pending_invoices_result = mysqli_query($conn, "SELECT invoice_no, customer_name, balance_amount FROM invoices WHERE (gst_type LIKE 'gst%' OR gst_amount > 0) AND balance_amount > 0 ORDER BY created_at DESC LIMIT 5");
     while($row = mysqli_fetch_assoc($pending_invoices_result)) {
         $pending_invoices[] = $row;
     }
@@ -91,11 +95,11 @@ if($is_logged_in) {
     $customers_count_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM customers"));
     $total_income_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(amount), 0) as total FROM income"));
     $total_expense_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(amount), 0) as total FROM expenses"));
-    $total_due_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(balance_amount), 0) as total FROM invoices WHERE balance_amount > 0"));
+    $total_due_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(balance_amount), 0) as total FROM invoices WHERE (gst_type LIKE 'gst%' OR gst_amount > 0) AND balance_amount > 0"));
 
     $monthly_income = floatval($monthly_income_row['total'] ?? 0);
     if($monthly_income == 0) {
-        $m_inv_paid = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(total_amount - COALESCE(balance_amount, 0)), 0) as total FROM invoices WHERE DATE_FORMAT(created_at, '%Y-%m') = '$current_month'"));
+        $m_inv_paid = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(total_amount - COALESCE(balance_amount, 0)), 0) as total FROM invoices WHERE (gst_type LIKE 'gst%' OR gst_amount > 0) AND DATE_FORMAT(created_at, '%Y-%m') = '$current_month'"));
         $monthly_income = floatval($m_inv_paid['total'] ?? 0);
     }
 
@@ -114,35 +118,35 @@ if($is_logged_in) {
 
     $customers_count = intval($customers_count_row['total'] ?? 0);
     if($customers_count == 0) {
-        $c_inv_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(DISTINCT customer_mobile) as total FROM invoices WHERE customer_mobile != '' AND customer_mobile IS NOT NULL"));
+        $c_inv_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(DISTINCT customer_mobile) as total FROM invoices WHERE (gst_type LIKE 'gst%' OR gst_amount > 0) AND customer_mobile != '' AND customer_mobile IS NOT NULL"));
         $customers_count = intval($c_inv_row['total'] ?? 0);
     }
 
     $total_income = floatval($total_income_row['total'] ?? 0);
     if($total_income == 0) {
-        $t_inv_paid = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(total_amount - COALESCE(balance_amount, 0)), 0) as total FROM invoices"));
+        $t_inv_paid = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(total_amount - COALESCE(balance_amount, 0)), 0) as total FROM invoices WHERE (gst_type LIKE 'gst%' OR gst_amount > 0)"));
         $total_income = floatval($t_inv_paid['total'] ?? 0);
     }
 
     $total_expense = floatval($total_expense_row['total'] ?? 0);
     $total_due = floatval($total_due_row['total'] ?? 0);
 
-    // Total sales from invoices (all-time)
-    $total_sales_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(total_amount), 0) as total FROM invoices"));
+    // Total sales from invoices (all-time GST)
+    $total_sales_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(total_amount), 0) as total FROM invoices WHERE (gst_type LIKE 'gst%' OR gst_amount > 0)"));
     $total_sales = $total_sales_row['total'] ?? 0;
 
-    // Today's sales (Includes new billing invoices + due payments cleared today)
+    // Today's sales (Includes new billing invoices + due payments cleared today for GST)
     $today_due_cleared = 0;
     $due_chk = mysqli_query($conn, "SHOW TABLES LIKE 'due_update_history'");
     if($due_chk && mysqli_num_rows($due_chk) > 0) {
-        $due_cleared_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(amount_paid), 0) as total FROM due_update_history WHERE DATE(payment_date) = CURDATE()"));
+        $due_cleared_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(h.amount_paid), 0) as total FROM due_update_history h JOIN invoices i ON h.invoice_id = i.id WHERE (i.gst_type LIKE 'gst%' OR i.gst_amount > 0) AND DATE(h.payment_date) = CURDATE()"));
         $today_due_cleared = floatval($due_cleared_row['total'] ?? 0);
     }
-    $today_inv_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(total_amount), 0) as total FROM invoices WHERE DATE(created_at) = CURDATE()"));
+    $today_inv_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(total_amount), 0) as total FROM invoices WHERE (gst_type LIKE 'gst%' OR gst_amount > 0) AND DATE(created_at) = CURDATE()"));
     $today_sales_amt = floatval($today_inv_row['total'] ?? 0) + $today_due_cleared;
 
     // Today's invoice count
-    $today_invoice_count_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM invoices WHERE DATE(created_at) = CURDATE()"));
+    $today_invoice_count_row = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM invoices WHERE (gst_type LIKE 'gst%' OR gst_amount > 0) AND DATE(created_at) = CURDATE()"));
     $today_invoice_count = $today_invoice_count_row['total'] ?? 0;
 
     // Total purchases from purchase_entries
@@ -955,9 +959,13 @@ if($is_logged_in) {
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Tools</div>
 
+        <a href="product_summary.php">
+            <i class="fas fa-boxes-packing"></i> PRODUCT SUMMARY
+        </a>
         <a href="whatsapp_automation.php">
             <i class="fab fa-whatsapp"></i> WHATSAPP
         </a>
+
         <a href="purchase.php">
             <i class="fas fa-book"></i> PURCHASE
         </a>

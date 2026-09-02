@@ -1,6 +1,11 @@
 <?php
 session_start();
+// Automatically lock geomorphology section when visiting main accounts
+unset($_SESSION['geomorphology_unlocked']);
+unset($_SESSION['geomorphology_unlocked_at']);
+
 require_once 'config/database.php';
+
 require_once 'config/company_config.php';
 
 if(!isset($_SESSION['user_id'])) {
@@ -37,7 +42,7 @@ $monthLabel = date('F Y', strtotime($monthStart));
 $monthStartEsc = mysqli_real_escape_string($conn, $monthStart);
 $monthEndEsc   = mysqli_real_escape_string($conn, $monthEnd);
 
-//  1. Fetch all paid/part invoices for the month 
+//  1. Fetch all paid/part GST invoices for the month 
 $sql = "
     SELECT
         DATE(created_at)               AS day,
@@ -53,6 +58,7 @@ $sql = "
         total_amount
     FROM invoices
     WHERE DATE(created_at) BETWEEN '$monthStartEsc' AND '$monthEndEsc'
+      AND (gst_type LIKE 'gst%' OR gst_amount > 0)
       AND payment_status != 'unpaid'
     ORDER BY created_at DESC
 ";
@@ -90,7 +96,7 @@ while ($row = mysqli_fetch_assoc($res)) {
     $days[$d]['bills']   += 1;
 }
 
-//  2. Fetch Due Payments Cleared Today / In Month (from due_update_history) 
+//  2. Fetch Due Payments Cleared Today / In Month (from due_update_history for GST invoices) 
 if ($chkHistoryTable && mysqli_num_rows($chkHistoryTable) > 0) {
     $dueSql = "
         SELECT 
@@ -101,6 +107,7 @@ if ($chkHistoryTable && mysqli_num_rows($chkHistoryTable) > 0) {
         FROM due_update_history h
         LEFT JOIN invoices i ON h.invoice_id = i.id
         WHERE DATE(h.payment_date) BETWEEN '$monthStartEsc' AND '$monthEndEsc'
+          AND (i.gst_type LIKE 'gst%' OR i.gst_amount > 0)
           AND h.amount_paid > 0
         ORDER BY h.payment_date DESC
     ";

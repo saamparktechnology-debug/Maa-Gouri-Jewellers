@@ -1,6 +1,11 @@
 <?php
 session_start();
+// Automatically lock geomorphology section when visiting main income_expenses
+unset($_SESSION['geomorphology_unlocked']);
+unset($_SESSION['geomorphology_unlocked_at']);
+
 require_once 'config/database.php';
+
 require_once 'config/company_config.php';
 
 if(!isset($_SESSION['user_id'])) {
@@ -65,7 +70,7 @@ $expense_result = mysqli_query($conn, "SELECT * FROM expenses WHERE expense_date
 $total_expense = 0; $expense_records = [];
 while($row = mysqli_fetch_assoc($expense_result)) { $total_expense += $row['amount']; $expense_records[] = $row; }
 
-$sales_data      = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(total_amount),0) AS total_sales, COUNT(*) AS sales_count FROM invoices WHERE DATE(created_at) BETWEEN '$date_from' AND '$date_to'"));
+$sales_data      = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COALESCE(SUM(total_amount),0) AS total_sales, COUNT(*) AS sales_count FROM invoices WHERE (gst_type LIKE 'gst%' OR gst_amount > 0) AND DATE(created_at) BETWEEN '$date_from' AND '$date_to'"));
 $total_sales      = floatval($sales_data['total_sales']);
 $total_sales_count = intval($sales_data['sales_count']);
 $net_profit       = $total_income - $total_expense;
@@ -395,7 +400,9 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Tools</div>
 
+        <a href="product_summary.php"><i class="fas fa-boxes-packing"></i> PRODUCT SUMMARY</a>
         <a href="whatsapp_automation.php"><i class="fab fa-whatsapp"></i> WHATSAPP</a>
+
         <a href="purchase.php"><i class="fas fa-book"></i> PURCHASE</a>
         <a href="contacts.php"><i class="fas fa-address-book"></i> CONTACTS</a>
         <a href="accounts.php"><i class="fas fa-calculator"></i> ACCOUNTS</a>

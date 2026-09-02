@@ -1,6 +1,11 @@
 <?php
 session_start();
+// Automatically lock geomorphology section when visiting main due_list
+unset($_SESSION['geomorphology_unlocked']);
+unset($_SESSION['geomorphology_unlocked_at']);
+
 require_once 'config/database.php';
+
 require_once 'config/company_config.php';
 require_once 'config/mail_config.php';
 
@@ -209,6 +214,7 @@ if (($_GET['action'] ?? '') === 'export_due_history') {
                  FROM invoices i
                  LEFT JOIN customers c ON c.mobile = i.customer_mobile
                  WHERE COALESCE(i.balance_amount, 0) > 0
+                   AND (i.gst_type LIKE 'gst%' OR i.gst_amount > 0)
                  ORDER BY i.customer_name, i.invoice_no";
     $dueRes = mysqli_query($conn, $dueQuery);
     if ($dueRes) {
@@ -424,7 +430,7 @@ $q = "SELECT i.id, i.invoice_no, i.customer_name, i.customer_mobile,
       FROM invoices i
       LEFT JOIN invoice_items ii ON ii.invoice_id = i.id
       LEFT JOIN customers c      ON c.mobile = i.customer_mobile
-      WHERE i.balance_amount > 0 $search_where
+      WHERE i.balance_amount > 0 AND (i.gst_type LIKE 'gst%' OR i.gst_amount > 0) $search_where
       GROUP BY i.id
       ORDER BY i.due_date IS NULL, i.due_date ASC, i.created_at DESC";
 
@@ -888,7 +894,9 @@ function filterDueTable(query) {
 
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Tools</div>
+        <a href="product_summary.php"><i class="fas fa-boxes-packing"></i> PRODUCT SUMMARY</a>
         <a href="whatsapp_automation.php"><i class="fab fa-whatsapp"></i> WHATSAPP</a>
+
         <a href="purchase.php"><i class="fas fa-book"></i> PURCHASE</a>
         <a href="contacts.php"><i class="fas fa-address-book"></i> CONTACTS</a>
         <a href="accounts.php"><i class="fas fa-calculator"></i> ACCOUNTS</a>

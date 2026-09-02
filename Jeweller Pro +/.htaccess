@@ -1,5 +1,9 @@
 RewriteEngine On
 
+# 0. Redirect legacy /nongst to /geomorphology
+RewriteRule ^nongst/?$ /geomorphology [R=301,L]
+RewriteRule ^nongst/(.*)$ /geomorphology/$1 [R=301,L]
+
 # 1. Redirect GET requests with .php extension to clean extensionless URLs
 RewriteCond %{REQUEST_METHOD} !POST
 RewriteCond %{THE_REQUEST} \s/([^.\s]+)\.php[\s?] [NC]
@@ -9,3 +13,4 @@ RewriteRule ^ %1 [R=301,L]
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME}\.php -f
 RewriteRule ^(.*)$ $1.php [L,QSA]
+

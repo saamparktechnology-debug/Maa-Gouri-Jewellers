@@ -547,12 +547,11 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Tools</div>
+        <a href="product_summary.php"><i class="fas fa-boxes-packing"></i> PRODUCT SUMMARY</a>
         <a href="whatsapp_automation.php"><i class="fab fa-whatsapp"></i> WHATSAPP</a>
         <a href="purchase.php"><i class="fas fa-book"></i> PURCHASE</a>
-                <a href="contacts.php">
-            <i class="fas fa-address-book"></i> CONTACTS
-        </a>
-<a href="accounts.php"><i class="fas fa-calculator"></i> ACCOUNTS</a>
+        <a href="contacts.php"><i class="fas fa-address-book"></i> CONTACTS</a>
+        <a href="accounts.php"><i class="fas fa-calculator"></i> ACCOUNTS</a>
     </nav>
 
     <div class="sidebar-user">
@@ -574,6 +573,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         <div class="flex justify-between items-center">
             <div class="ml-auto flex items-center gap-4">
                 <span class="text-sm font-medium text-white hidden sm:inline">
+
                     <i class="fas fa-user mr-1"></i>
                     <?php echo htmlspecialchars($_SESSION['user_name']); ?>
                 </span>

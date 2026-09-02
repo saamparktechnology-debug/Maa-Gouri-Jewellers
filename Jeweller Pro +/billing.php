@@ -3,9 +3,15 @@ ini_set('display_errors', 1);
 ini_set('display_startup_errors', 1);
 error_reporting(E_ALL);
 session_start();
+// Automatically lock geomorphology section when visiting main billing
+unset($_SESSION['geomorphology_unlocked']);
+unset($_SESSION['geomorphology_unlocked_at']);
+
 require_once 'config/database.php';
 require_once 'config/company_config.php';
 require_once 'config/mail_config.php';
+require_once 'includes/activity_logger.php';
+
 
 $theme = isset($_COOKIE['theme']) ? $_COOKIE['theme'] : 'light';
 
@@ -54,6 +60,56 @@ if(isset($_GET['action']) && $_GET['action'] === 'search_mobile') {
     echo json_encode(['success' => true, 'bills' => $bills, 'count' => count($bills)]);
     exit();
 }
+
+// AJAX: Get all customers with active advance credit balance
+if(isset($_GET['action']) && $_GET['action'] === 'get_advance_customers') {
+    header('Content-Type: application/json');
+    $q = mysqli_query($conn, "
+        SELECT id, receipt_no, customer_name, customer_mobile, customer_address, advance_amount, used_amount, available_amount, created_at 
+        FROM customer_advances 
+        WHERE available_amount > 0 AND status != 'cancelled' 
+        ORDER BY created_at DESC
+    ");
+    $adv_list = [];
+    if($q) {
+        while($r = mysqli_fetch_assoc($q)) {
+            $adv_list[] = $r;
+        }
+    }
+    echo json_encode(['success' => true, 'customers' => $adv_list]);
+    exit();
+}
+
+// AJAX: Check if customer has active advance credit by mobile or name
+if(isset($_GET['action']) && $_GET['action'] === 'check_customer_advance') {
+    header('Content-Type: application/json');
+    $mobile = mysqli_real_escape_string($conn, trim($_GET['mobile'] ?? ''));
+    $name   = mysqli_real_escape_string($conn, trim($_GET['name'] ?? ''));
+    
+    $where = [];
+    if(!empty($mobile)) $where[] = "customer_mobile = '$mobile'";
+    if(!empty($name))   $where[] = "customer_name = '$name' OR customer_name LIKE '%$name%'";
+    
+    if(empty($where)) {
+        echo json_encode(['success' => true, 'has_advance' => false]);
+        exit();
+    }
+    
+    $w_sql = implode(' OR ', $where);
+    $q = mysqli_query($conn, "
+        SELECT id, receipt_no, customer_name, customer_mobile, customer_address, advance_amount, used_amount, available_amount 
+        FROM customer_advances 
+        WHERE ($w_sql) AND available_amount > 0 AND status != 'cancelled' 
+        ORDER BY available_amount DESC, created_at DESC LIMIT 1
+    ");
+    if($q && $row = mysqli_fetch_assoc($q)) {
+        echo json_encode(['success' => true, 'has_advance' => true, 'advance' => $row]);
+    } else {
+        echo json_encode(['success' => true, 'has_advance' => false]);
+    }
+    exit();
+}
+
 
 // AJAX: Save custom shop rates to server config file
 if(isset($_GET['action']) && $_GET['action'] === 'save_shop_rates') {
@@ -397,10 +453,37 @@ if($invoice_items_table && mysqli_num_rows($invoice_items_table) > 0) {
 }
 $available_huids = array_values($available_huids);
 
+// Preload active advance credit customers
+$active_advance_customers = [];
+$adv_cust_q = mysqli_query($conn, "
+    SELECT id, receipt_no, customer_name, customer_mobile, customer_address, advance_amount, used_amount, available_amount, created_at 
+    FROM customer_advances 
+    WHERE available_amount > 0 AND status != 'cancelled' 
+    ORDER BY created_at DESC
+");
+if($adv_cust_q) {
+    while($ar = mysqli_fetch_assoc($adv_cust_q)) {
+        $active_advance_customers[] = $ar;
+    }
+}
+
 // Handle billing submission
+
 if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
-    $customer_name    = mysqli_real_escape_string($conn, $_POST['customer_name']);
-    $customer_mobile  = mysqli_real_escape_string($conn, $_POST['customer_mobile']);
+    $customer_name    = mysqli_real_escape_string($conn, $_POST['customer_name'] ?? '');
+    $customer_mobile  = mysqli_real_escape_string($conn, $_POST['customer_mobile'] ?? '');
+
+    // Prevent rapid duplicate submissions (e.g. double-click)
+    $sub_hash = md5($customer_mobile . '|' . ($_POST['items'] ?? '') . '|' . ($_POST['paid_amount'] ?? '') . '|' . ($_POST['advance_adjusted'] ?? ''));
+    if (isset($_SESSION['last_sub_hash']) && $_SESSION['last_sub_hash'] === $sub_hash && (time() - ($_SESSION['last_sub_time'] ?? 0)) < 4) {
+        if (!empty($_SESSION['last_redirect_url'])) {
+            header("Location: " . $_SESSION['last_redirect_url']);
+            exit();
+        }
+    }
+    $_SESSION['last_sub_hash'] = $sub_hash;
+    $_SESSION['last_sub_time'] = time();
+
     $customer_address = mysqli_real_escape_string($conn, $_POST['customer_address'] ?? '');
     $customer_email   = mysqli_real_escape_string($conn, $_POST['customer_email'] ?? '');
     $gst_amount       = floatval($_POST['gst_amount'] ?? 0);
@@ -425,6 +508,59 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
     if(empty($due_date)) $due_date = 'NULL';
     else $due_date = "'" . $due_date . "'";
 
+    $session_uid = (isset($_SESSION['user_id']) && intval($_SESSION['user_id']) > 0) ? intval($_SESSION['user_id']) : 1;
+
+    // --- CHECK FOR ADVANCE CREDIT BOOKING DEPOSIT (NO ITEMS PURCHASED) ---
+    $is_adv_booking = intval($_POST['is_advance_credit_booking'] ?? 0);
+    $adv_deposit_amount = floatval($_POST['advance_deposit_amount'] ?? 0);
+    $raw_items_check = json_decode($_POST['items'] ?? '[]', true);
+    $items_empty = (!is_array($raw_items_check) || count($raw_items_check) === 0);
+
+    if ($is_adv_booking === 1 || ($items_empty && $adv_deposit_amount > 0) || ($items_empty && ($payment_status === 'unpaid' || $payment_status === 'advance') && $paid_amount > 0)) {
+        $final_adv_amt = ($adv_deposit_amount > 0) ? $adv_deposit_amount : $paid_amount;
+        if ($final_adv_amt > 0) {
+            $today = date('Ymd');
+            $prefix = 'ADV-' . $today . '-';
+            $q_adv = mysqli_query($conn, "SELECT receipt_no FROM customer_advances WHERE receipt_no LIKE 'ADV-%'");
+            $existing_adv_nums = [];
+            if ($q_adv) {
+                while ($adv_row = mysqli_fetch_assoc($q_adv)) {
+                    $parts = explode('-', $adv_row['receipt_no']);
+                    $num = intval(end($parts));
+                    if ($num > 0) $existing_adv_nums[] = $num;
+                }
+            }
+            $next_adv_num = empty($existing_adv_nums) ? 1 : max($existing_adv_nums) + 1;
+            while (in_array($next_adv_num, $existing_adv_nums)) $next_adv_num++;
+            $adv_receipt_no = $prefix . str_pad($next_adv_num, 4, '0', STR_PAD_LEFT);
+
+            $adv_notes = mysqli_real_escape_string($conn, trim($_POST['booking_notes'] ?? ''));
+            $delivery_date_val = ($due_date !== 'NULL') ? $due_date : "NULL";
+
+            if ($is_split) {
+                $payment_method = 'Cash+UPI';
+            }
+
+            $ins_adv = mysqli_query($conn, "
+                INSERT INTO customer_advances (receipt_no, customer_name, customer_mobile, customer_address, advance_amount, used_amount, available_amount, payment_method, cash_paid, upi_paid, booking_note, delivery_date, status, created_by)
+                VALUES ('$adv_receipt_no', '$customer_name', '$customer_mobile', '$customer_address', $final_adv_amt, 0.00, $final_adv_amt, '$payment_method', $cash_paid, $upi_paid, '$adv_notes', $delivery_date_val, 'active', $session_uid)
+            ");
+
+            if ($ins_adv) {
+                mysqli_query($conn, "INSERT INTO customers (name, mobile, address, email) VALUES ('$customer_name', '$customer_mobile', '$customer_address', '$customer_email') ON DUPLICATE KEY UPDATE name = '$customer_name', address = '$customer_address', email = '$customer_email'");
+                $success = "&#10003; Advance Credit Money Receipt <strong>$adv_receipt_no</strong> generated for <strong>₹" . number_format($final_adv_amt, 2) . "</strong>! <a href='view_pdf.php?advance_no=" . urlencode($adv_receipt_no) . "' target='_blank' class='underline font-bold text-amber-900 ml-2'>&#128438; Print Advance Receipt</a>";
+                goto skip_invoice;
+            } else {
+                $error = "&#10007; Error generating advance credit receipt: " . mysqli_error($conn);
+                goto skip_invoice;
+            }
+        }
+    }
+
+    // Advance Adjustment on Product Bill
+    $advance_adjusted = floatval($_POST['advance_adjusted'] ?? 0);
+    $applied_advance_id = intval($_POST['applied_advance_id'] ?? 0);
+
     if ($is_split) {
         $payment_method = 'Cash+UPI';
         $paid_amount    = $cash_paid + $upi_paid;
@@ -444,13 +580,14 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
     $making_charge_amount = $making_charge;
     $gst_amount = floatval($_POST['gst_amount'] ?? 0);
     $old_gold_amount = floatval($_POST['old_gold_amount'] ?? 0);
+    $discount = floatval($_POST['discount'] ?? 0);
     
-    // The $subtotal from JS already includes all per-item making charges, hallmarks, and discounts.
-    // Old Gold is deducted after tax so GST is calculated strictly on new items subtotal.
+    // Overall discount on total product price, advance credit and old gold deduction
     $subtotal_before_tax = $subtotal + $pola;
-    $total_before_round  = $subtotal_before_tax + $gst_amount - $old_gold_amount;
+    $total_before_round  = $subtotal_before_tax + $gst_amount - $discount - $old_gold_amount - $advance_adjusted;
     $total_amount  = max(0, round($total_before_round, 2));
     $round_off     = 0;
+
 
     $chkEmailColumn = mysqli_query($conn, "SHOW COLUMNS FROM customers LIKE 'email'");
     if($chkEmailColumn && mysqli_num_rows($chkEmailColumn) == 0) {
@@ -463,6 +600,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
     $manual_inv = trim($_POST['manual_invoice_no'] ?? '');
     if(!empty($manual_inv)) {
         $invoice_no = mysqli_real_escape_string($conn, $manual_inv);
+
         $dup = mysqli_query($conn, "SELECT id FROM invoices WHERE invoice_no = '$invoice_no'");
         if($dup && mysqli_num_rows($dup) > 0) {
             $error = "&#10007; Invoice No. '$invoice_no' already exists! Please use a different number.";
@@ -631,8 +769,11 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
         }
     }
 
-    $invoice_query = "INSERT INTO invoices (invoice_no, customer_name, customer_mobile, customer_address, customer_gstin, gst_type, subtotal, gst_amount, total_amount, payment_status, payment_method, paid_amount, balance_amount, cash_paid, upi_paid, account_paid, due_date, created_by, huid_code, old_gold_amount, old_gold_type)
-              VALUES ('$invoice_no', '$customer_name', '$customer_mobile', '$customer_address', '$customer_gstin', '$gst_type', $subtotal, $gst_amount, $total_amount, '$payment_status', '$payment_method', $paid_amount, $balance_amount, $cash_paid, $upi_paid, $account_paid, $due_date, $created_by_val, '$huid_code', $old_gold_amount, '$old_gold_type')";
+    $adv_id_sql = ($applied_advance_id > 0) ? $applied_advance_id : "NULL";
+
+    $invoice_query = "INSERT INTO invoices (invoice_no, customer_name, customer_mobile, customer_address, customer_gstin, gst_type, subtotal, gst_amount, total_amount, payment_status, payment_method, paid_amount, balance_amount, cash_paid, upi_paid, account_paid, due_date, created_by, huid_code, old_gold_amount, old_gold_type, advance_adjusted, advance_id, discount)
+              VALUES ('$invoice_no', '$customer_name', '$customer_mobile', '$customer_address', '$customer_gstin', '$gst_type', $subtotal, $gst_amount, $total_amount, '$payment_status', '$payment_method', $paid_amount, $balance_amount, $cash_paid, $upi_paid, $account_paid, $due_date, $created_by_val, '$huid_code', $old_gold_amount, '$old_gold_type', $advance_adjusted, $adv_id_sql, $discount)";
+
     $inv_exec = mysqli_query($conn, $invoice_query);
     if(!$inv_exec) {
         die("<div style='padding:30px;font-family:sans-serif;background:#fff1f2;color:#991b1b;border:2px solid #f87171;border-radius:12px;margin:40px auto;max-width:650px;'>
@@ -642,8 +783,62 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
         </div>");
     }
     if($inv_exec) {
+        // Record advance deduction & surplus handling from customer_advances
+        if ($advance_adjusted > 0 && $applied_advance_id > 0) {
+            $surplus_action = mysqli_real_escape_string($conn, $_POST['adv_surplus_action'] ?? 'keep_advance');
+            $surplus_amt = floatval($_POST['adv_surplus_amount'] ?? 0);
+            $refund_mode = mysqli_real_escape_string($conn, $_POST['adv_refund_mode'] ?? 'Cash');
+
+            if ($surplus_action === 'refund_customer' && $surplus_amt > 0.005) {
+                // Settle the entire advance, mark as fully adjusted, and log the excess refund
+                mysqli_query($conn, "
+                    UPDATE customer_advances 
+                    SET used_amount = advance_amount,
+                        available_amount = 0,
+                        status = 'fully_adjusted'
+                    WHERE id = $applied_advance_id
+                ");
+                mysqli_query($conn, "
+                    INSERT INTO advance_adjustments (advance_id, invoice_no, amount_adjusted)
+                    VALUES ($applied_advance_id, '$invoice_no', $advance_adjusted)
+                ");
+                log_product_activity($conn, [
+                    'activity_type' => 'billed',
+                    'product_id' => null,
+                    'product_name' => 'Advance Credit Refund',
+                    'category' => 'Advance',
+                    'serial_no' => '',
+                    'huid_code' => '',
+                    'quantity' => 1,
+                    'unit' => 'refund',
+                    'weight' => 0,
+                    'rate' => $surplus_amt,
+                    'total_amount' => $surplus_amt,
+                    'invoice_no' => $invoice_no,
+                    'customer_name' => $customer_name,
+                    'customer_mobile' => $customer_mobile,
+                    'details' => "Refunded excess advance ₹" . number_format($surplus_amt, 2) . " via $refund_mode to $customer_name against Invoice/Memo #$invoice_no",
+                    'performed_by' => $_SESSION['user_name'] ?? 'Admin'
+                ]);
+            } else {
+                // Keep remaining advance in customer credit: deduct only the billed amount
+                mysqli_query($conn, "
+                    UPDATE customer_advances 
+                    SET used_amount = used_amount + $advance_adjusted,
+                        available_amount = GREATEST(0, available_amount - $advance_adjusted),
+                        status = CASE WHEN (available_amount - $advance_adjusted) <= 0.005 THEN 'fully_adjusted' ELSE 'partially_used' END
+                    WHERE id = $applied_advance_id
+                ");
+                mysqli_query($conn, "
+                    INSERT INTO advance_adjustments (advance_id, invoice_no, amount_adjusted)
+                    VALUES ($applied_advance_id, '$invoice_no', $advance_adjusted)
+                ");
+            }
+        }
+
         $last_old_gold_amount = $old_gold_amount;
         $invoice_id = mysqli_insert_id($conn);
+
         $items = json_decode($_POST['items'], true);
         $col_prod_name = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'product_name'")) > 0;
         if(!$col_prod_name) mysqli_query($conn, "ALTER TABLE invoice_items ADD COLUMN product_name VARCHAR(200) NULL");
@@ -677,9 +872,13 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
         $col_item_gross = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'gross_wt'")) > 0;
         if(!$col_item_gross) mysqli_query($conn, "ALTER TABLE invoice_items ADD COLUMN gross_wt DECIMAL(10,3) DEFAULT 0");
         $col_item_net = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'net_wt'")) > 0;
-        if(!$col_item_net) mysqli_query($conn, "ALTER TABLE invoice_items ADD COLUMN net_wt DECIMAL(10,3) DEFAULT 0");
-        $col_item_gst = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'gst_type'")) > 0;
-        if(!$col_item_gst) mysqli_query($conn, "ALTER TABLE invoice_items ADD COLUMN gst_type VARCHAR(20) DEFAULT 'non_gst'");
+        // Ensure diamond and metal columns exist on invoice_items
+        $col_d_cent = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'diamond_cent'")) > 0;
+        if(!$col_d_cent) @mysqli_query($conn, "ALTER TABLE invoice_items ADD COLUMN diamond_cent VARCHAR(50) DEFAULT ''");
+        $col_m_kt = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'metal_kt'")) > 0;
+        if(!$col_m_kt) @mysqli_query($conn, "ALTER TABLE invoice_items ADD COLUMN metal_kt VARCHAR(50) DEFAULT ''");
+        $col_m_wt = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'metal_weight'")) > 0;
+        if(!$col_m_wt) @mysqli_query($conn, "ALTER TABLE invoice_items ADD COLUMN metal_weight VARCHAR(50) DEFAULT ''");
 
         if(is_array($items)) {
             foreach($items as $item) {
@@ -700,40 +899,62 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
                 $item_unit  = mysqli_real_escape_string($conn, $item['unit'] ?? 'g');
                 $u_lower    = strtolower(trim($item_unit));
                 $is_pair    = ($u_lower === 'pair' || $u_lower === 'pairs');
-                $raw_pcs    = floatval($item['pcs'] ?? $item['stock_deduct'] ?? 1);
-                $q_val      = floatval($quantity > 0 ? $quantity : ($item['quantity'] ?? 1));
-
-                if ($is_pair && $raw_pcs <= $q_val) {
-                    $pcs_deduct = $q_val * 2;
-                    $item_pcs   = intval($q_val * 2);
-                } else {
-                    $pcs_deduct = $raw_pcs;
-                    $item_pcs   = intval($raw_pcs);
-                }
-                if ($pcs_deduct <= 0) $pcs_deduct = 1;
-                if ($item_pcs <= 0) $item_pcs = 1;
+                $raw_pcs    = intval($item['pcs'] ?? $item['stock_deduct'] ?? ($is_pair ? 2 : 1));
+                if ($raw_pcs <= 0) $raw_pcs = $is_pair ? 2 : 1;
+                $pcs_deduct = $raw_pcs;
+                $item_pcs   = $raw_pcs;
 
                 $item_gross = floatval($item['gross_wt'] ?? ($item_unit === 'g' ? $quantity : 0));
                 $item_net   = floatval($item['net_wt'] ?? ($item_unit === 'g' ? $quantity : 0));
                 $item_gst_type = mysqli_real_escape_string($conn, trim($item['gst_type'] ?? 'non_gst'));
                 if (empty($item_gst_type)) $item_gst_type = 'non_gst';
 
+                $item_diamond_cent = mysqli_real_escape_string($conn, trim($item['diamond_cent'] ?? ''));
+                $item_metal_kt     = mysqli_real_escape_string($conn, trim($item['metal_kt'] ?? $item['gold_kt'] ?? ''));
+                $item_metal_weight = mysqli_real_escape_string($conn, trim($item['metal_weight'] ?? $item['gold_weight'] ?? ''));
+                $item_hallmark_type = mysqli_real_escape_string($conn, trim($item['hallmark_type'] ?? '22K'));
+
                 if($product_id === 'other' || !is_numeric($product_id)) {
-                    $item_query = "INSERT INTO invoice_items (invoice_id, product_id, product_name, serial_no, huid_code, hsn_code, quantity, price, total, making_charge, making_charge_pct, hallmark, discount, pcs, unit, gross_wt, net_wt, gst_type) VALUES ($invoice_id, NULL, '".$manual_name."', '".$manual_serial."', '".$manual_huid."', '".$manual_hsn."', $quantity, $price, $total, $item_making_charge, $item_making_charge_pct, $item_hallmark, $item_discount, $item_pcs, '".$item_unit."', $item_gross, $item_net, '".$item_gst_type."')";
+                    $item_query = "INSERT INTO invoice_items (invoice_id, product_id, product_name, serial_no, huid_code, hsn_code, quantity, price, total, making_charge, making_charge_pct, hallmark, hallmark_type, discount, pcs, unit, gross_wt, net_wt, gst_type, diamond_cent, metal_kt, metal_weight) VALUES ($invoice_id, NULL, '".$manual_name."', '".$manual_serial."', '".$manual_huid."', '".$manual_hsn."', $quantity, $price, $total, $item_making_charge, $item_making_charge_pct, $item_hallmark, '".$item_hallmark_type."', $item_discount, $item_pcs, '".$item_unit."', $item_gross, $item_net, '".$item_gst_type."', '".$item_diamond_cent."', '".$item_metal_kt."', '".$item_metal_weight."')";
                     mysqli_query($conn, $item_query);
+                    log_product_activity($conn, [
+                        'activity_type' => 'billed',
+                        'product_id' => null,
+                        'product_name' => $manual_name ?: 'Manual Jewellery Item',
+                        'category' => 'Custom Item',
+                        'serial_no' => $manual_serial,
+                        'huid_code' => $manual_huid,
+                        'quantity' => $item_pcs,
+                        'unit' => $item_unit,
+                        'weight' => $item_gross,
+                        'rate' => $price,
+                        'total_amount' => $total,
+                        'invoice_no' => $invoice_no,
+                        'customer_name' => $customer_name,
+                        'customer_mobile' => $customer_mobile,
+                        'details' => "Billed in Invoice/CashMemo #$invoice_no to " . ($customer_name ?: 'Customer'),
+                        'performed_by' => $_SESSION['user_name'] ?? 'Admin'
+                    ]);
                     continue;
                 }
                 $pid = intval($product_id);
 
-                $item_query = "INSERT INTO invoice_items (invoice_id, product_id, product_name, serial_no, huid_code, hsn_code, quantity, price, total, making_charge, making_charge_pct, hallmark, discount, pcs, unit, gross_wt, net_wt, gst_type)
-                               VALUES ($invoice_id, $pid, '".$manual_name."', '".$manual_serial."', '".$manual_huid."', '".$manual_hsn."', $quantity, $price, $total, $item_making_charge, $item_making_charge_pct, $item_hallmark, $item_discount, $item_pcs, '".$item_unit."', $item_gross, $item_net, '".$item_gst_type."')";
-                    mysqli_query($conn, $item_query);
+                // Fetch product category for activity logging
+                $prod_chk = mysqli_query($conn, "SELECT category FROM products WHERE id = $pid");
+                $p_cat = ($prod_chk && $p_info = mysqli_fetch_assoc($prod_chk)) ? ($p_info['category'] ?? '') : '';
 
-                $w_deduct = (isset($item['unit']) && $item['unit'] === 'g') ? floatval($item['quantity'] ?? 0) : 0;
+                $item_query = "INSERT INTO invoice_items (invoice_id, product_id, product_name, serial_no, huid_code, hsn_code, quantity, price, total, making_charge, making_charge_pct, hallmark, hallmark_type, discount, pcs, unit, gross_wt, net_wt, gst_type, diamond_cent, metal_kt, metal_weight)
+                               VALUES ($invoice_id, $pid, '".$manual_name."', '".$manual_serial."', '".$manual_huid."', '".$manual_hsn."', $quantity, $price, $total, $item_making_charge, $item_making_charge_pct, $item_hallmark, '".$item_hallmark_type."', $item_discount, $item_pcs, '".$item_unit."', $item_gross, $item_net, '".$item_gst_type."', '".$item_diamond_cent."', '".$item_metal_kt."', '".$item_metal_weight."')";
+                mysqli_query($conn, $item_query);
+
+                // Comprehensive weight deduction (gross/net weight or quantity if unit is grams)
+                $w_deduct = floatval($item['gross_wt'] ?? ($item['net_wt'] ?? 0));
+                if ($w_deduct <= 0 && ($item_unit === 'g' || $u_lower === 'g' || $u_lower === 'gm' || $u_lower === 'grams')) {
+                    $w_deduct = floatval($item['quantity'] ?? 0);
+                }
                 
                 if ($w_deduct > 0) {
-                    // Update weight first
-                    mysqli_query($conn, "UPDATE products SET weight = CAST(weight AS DECIMAL(10,3)) - $w_deduct, updated_at = NOW() WHERE id = $pid AND weight IS NOT NULL AND weight != ''");
+                    mysqli_query($conn, "UPDATE products SET weight = GREATEST(0, CAST(weight AS DECIMAL(10,3)) - $w_deduct), updated_at = NOW() WHERE id = $pid AND weight IS NOT NULL AND weight != ''");
                 }
                 
                 // 1. Deduct piece count from products.quantity
@@ -752,8 +973,30 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
                     }
                 }
                 
-                // 2. Auto-delete product from stock table if stock reaches 0 or less
-                mysqli_query($conn, "DELETE FROM products WHERE id = $pid AND quantity <= 0");
+                // 2. Safeguard: DO NOT hard delete zero-stock products. Mark as 0 and Out of Stock to keep barcode/catalog history intact.
+                mysqli_query($conn, "UPDATE products SET quantity = 0, status = 'Out of Stock' WHERE id = $pid AND quantity < 0");
+                mysqli_query($conn, "UPDATE products SET status = 'Out of Stock' WHERE id = $pid AND quantity = 0");
+
+                // 3. Log stock billed activity
+                log_product_activity($conn, [
+                    'activity_type' => 'billed',
+                    'product_id' => $pid,
+                    'product_name' => $manual_name ?: 'Stock Jewellery Item',
+                    'category' => $p_cat,
+                    'serial_no' => $manual_serial,
+                    'huid_code' => $manual_huid,
+                    'quantity' => $pcs_deduct,
+                    'unit' => $item_unit,
+                    'weight' => $w_deduct,
+                    'rate' => $price,
+                    'total_amount' => $total,
+                    'invoice_no' => $invoice_no,
+                    'customer_name' => $customer_name,
+                    'customer_mobile' => $customer_mobile,
+                    'details' => "Sold in Invoice/CashMemo #$invoice_no to " . ($customer_name ?: 'Customer') . " (Stock reduced by " . ($w_deduct > 0 ? "{$w_deduct}g" : "{$pcs_deduct} {$item_unit}") . ")",
+                    'performed_by' => $_SESSION['user_name'] ?? 'Admin'
+                ]);
+
             }
         }
         $redirect_url = 'view_pdf.php?invoice_no=' . urlencode($invoice_no);
@@ -1066,9 +1309,13 @@ window.addEventListener('load', function() {
         <div class="sidebar-divider"></div>
         <div class="sidebar-section-label">Tools</div>
 
+        <a href="product_summary.php">
+            <i class="fas fa-boxes-packing"></i> PRODUCT SUMMARY
+        </a>
         <a href="whatsapp_automation.php">
             <i class="fab fa-whatsapp"></i> WHATSAPP
         </a>
+
         <a href="purchase.php">
             <i class="fas fa-book"></i> PURCHASE
         </a>
@@ -1438,35 +1685,120 @@ function submitPayment() {
                     </div>
 
                     <!-- Customer Details -->
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                        <div>
-                            <label class="block mb-1 text-sm font-semibold" style="color:#7a4e0a;">Customer Name *</label>
-                            <input type="text" name="customer_name" id="customerName" required
-                                class="jewel-input w-full rounded-lg px-3 py-2 text-sm" placeholder="Full Name">
+                    <div class="p-4 rounded-xl mb-4" style="background:rgba(214,139,22,0.05);border:1.5px solid rgba(214,139,22,0.25);">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3 pb-2 border-b border-amber-200">
+                            <h3 class="text-sm font-bold flex items-center gap-1.5" style="color:#7a4e0a;">
+                                <i class="fas fa-user-circle" style="color:#d68b16;"></i> Customer Information
+                            </h3>
+                            
+                            <div class="flex items-center gap-2">
+                                <label for="advanceCustomerDropdownSelect" class="text-xs font-bold whitespace-nowrap" style="color:#78350f;">
+                                    ⚡ Advance Customer:
+                                </label>
+                                <select id="advanceCustomerDropdownSelect" onchange="onAdvanceCustomerSelectChange(this.value)" class="text-xs py-1.5 px-3 rounded-lg font-bold cursor-pointer transition shadow-sm" style="background:#78350f;color:#ffffff;border:1.5px solid #92400e;max-width:320px;">
+                                    <option value="" style="background:#fff;color:#1c1917;">-- ⚡ Select Advance Customer (<?php echo count($active_advance_customers); ?> Active) --</option>
+                                    <?php foreach($active_advance_customers as $ac): ?>
+                                    <option value="<?php echo $ac['id']; ?>" 
+                                            data-name="<?php echo htmlspecialchars($ac['customer_name'], ENT_QUOTES); ?>"
+                                            data-mobile="<?php echo htmlspecialchars($ac['customer_mobile'], ENT_QUOTES); ?>"
+                                            data-address="<?php echo htmlspecialchars($ac['customer_address'] ?? '', ENT_QUOTES); ?>"
+                                            data-amount="<?php echo floatval($ac['advance_amount'] ?? $ac['available_amount']); ?>"
+                                            data-available="<?php echo floatval($ac['available_amount']); ?>"
+                                            data-receipt="<?php echo htmlspecialchars($ac['receipt_no'], ENT_QUOTES); ?>"
+                                            style="background:#fff;color:#1c1917;">
+                                        👤 <?php echo htmlspecialchars($ac['customer_name']); ?> (₹<?php echo number_format($ac['available_amount'], 2); ?> Avail) - <?php echo htmlspecialchars($ac['customer_mobile']); ?>
+                                    </option>
+                                    <?php endforeach; ?>
+                                </select>
+
+                            </div>
                         </div>
-                        <div>
-                            <label class="block mb-1 text-sm font-semibold" style="color:#7a4e0a;">Mobile Number *</label>
-                            <input type="tel" name="customer_mobile" id="customerMobile" required
-                                class="jewel-input w-full rounded-lg px-3 py-2 text-sm" placeholder="10-digit mobile">
-                        </div>
-                        <div class="sm:col-span-2">
-                            <label class="block mb-1 text-sm font-semibold" style="color:#7a4e0a;">Address</label>
-                            <input type="text" name="customer_address" id="customerAddress"
-                                class="jewel-input w-full rounded-lg px-3 py-2 text-sm" placeholder="Customer Address">
-                        </div>
-                        <div>
-                            <label class="block mb-1 text-sm font-semibold" style="color:#7a4e0a;">Email <span style="color:#9ca3af;font-size:11px;">(Optional, required for reminder email)</span></label>
-                            <input type="email" name="customer_email" id="customerEmail"
-                                class="jewel-input w-full rounded-lg px-3 py-2 text-sm" placeholder="customer@email.com">
-                        </div>
-                        <div>
-                            <label class="block mb-1 text-sm font-semibold" style="color:#7a4e0a;">GSTIN <span style="color:#9ca3af;font-size:11px;">(Optional)</span></label>
-                            <input type="text" name="customer_gstin" id="customerGstin"
-                                class="jewel-input w-full rounded-lg px-3 py-2 text-sm" placeholder="e.g. 19ELQPP1010L1ZR"
-                                maxlength="15" style="text-transform:uppercase;"
-                                oninput="this.value=this.value.toUpperCase(); calculateTotal();">
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                            <div>
+                                <label class="block mb-1 text-sm font-semibold" style="color:#7a4e0a;">Customer Name *</label>
+                                <input type="text" name="customer_name" id="customerName" required
+                                    class="jewel-input w-full rounded-lg px-3 py-2 text-sm font-medium" placeholder="Enter full name" 
+                                    list="advanceCustomerDatalist"
+                                    autocomplete="off"
+                                    oninput="onCustomerDetailsInput()">
+                                <datalist id="advanceCustomerDatalist">
+                                    <?php foreach($active_advance_customers as $ac): ?>
+                                    <option value="<?php echo htmlspecialchars($ac['customer_name']); ?>">
+                                        ₹<?php echo number_format($ac['available_amount'], 2); ?> Advance Available &bull; Ph: <?php echo htmlspecialchars($ac['customer_mobile']); ?>
+                                    </option>
+                                    <?php endforeach; ?>
+                                </datalist>
+                            </div>
+
+                            <div>
+                                <label class="block mb-1 text-sm font-semibold" style="color:#7a4e0a;">Mobile Number *</label>
+                                <input type="tel" name="customer_mobile" id="customerMobile" required
+                                    class="jewel-input w-full rounded-lg px-3 py-2 text-sm font-medium" placeholder="10-digit mobile number" 
+                                    list="advanceMobileDatalist"
+                                    autocomplete="off"
+                                    oninput="onCustomerDetailsInput()">
+                                <datalist id="advanceMobileDatalist">
+                                    <?php foreach($active_advance_customers as $ac): ?>
+                                    <option value="<?php echo htmlspecialchars($ac['customer_mobile']); ?>">
+                                        <?php echo htmlspecialchars($ac['customer_name']); ?> (₹<?php echo number_format($ac['available_amount'], 2); ?> Advance)
+                                    </option>
+                                    <?php endforeach; ?>
+                                </datalist>
+                            </div>
+
+                            <!-- Active Advance Credit Customer Alert Banner -->
+                            <div id="advanceCreditCustomerBanner" class="sm:col-span-2 hidden p-3.5 rounded-xl text-xs transition" style="background:linear-gradient(135deg,#ecfdf5,#f0fdf4);border:2px solid #10b981;box-shadow:0 4px 12px rgba(16,185,129,0.15);">
+                                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                    <div class="flex items-center gap-3">
+                                        <div style="width:38px;height:38px;background:#059669;color:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">
+                                            💳
+                                        </div>
+                                        <div>
+                                            <div class="font-extrabold text-sm flex items-center gap-2 flex-wrap" style="color:#064e3b;">
+                                                <span>Active Advance Credit:</span>
+                                                <span id="bannerAdvAmount" class="text-sm font-black px-2.5 py-0.5 rounded-lg" style="background:#fff;color:#047857;border:1.5px solid #6ee7b7;">₹0.00</span>
+                                            </div>
+                                            <div class="text-xs font-medium mt-0.5 flex items-center gap-2 flex-wrap" style="color:#065f46;">
+                                                <span>Receipt: <strong id="bannerAdvReceipt" class="font-mono">-</strong></span>
+                                                <span>&bull;</span>
+                                                <span>Original Deposit: <strong id="bannerAdvTotal">₹0.00</strong></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button type="button" onclick="scrollAndFocusAdvanceAdjustment()" class="px-4 py-2 text-white font-extrabold rounded-lg text-xs transition shadow cursor-pointer flex items-center gap-1.5" style="background:linear-gradient(135deg,#059669,#047857);border:none;">
+                                            <span>Apply Advance to Bill</span> <i class="fas fa-arrow-down text-[10px]"></i>
+                                        </button>
+                                        <button type="button" onclick="clearCustomerAdvanceCredit()" title="Detach advance credit" class="px-3 py-2 font-bold rounded-lg text-xs transition cursor-pointer" style="background:#fff;color:#dc2626;border:1px solid #fca5a5;">
+                                            ✕ Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="sm:col-span-2">
+                                <label class="block mb-1 text-sm font-semibold" style="color:#7a4e0a;">Address</label>
+                                <input type="text" name="customer_address" id="customerAddress"
+                                    class="jewel-input w-full rounded-lg px-3 py-2 text-sm" placeholder="Customer Address">
+                            </div>
+                            <div>
+                                <label class="block mb-1 text-sm font-semibold" style="color:#7a4e0a;">Email <span style="color:#9ca3af;font-size:11px;">(Optional, required for reminder email)</span></label>
+                                <input type="email" name="customer_email" id="customerEmail"
+                                    class="jewel-input w-full rounded-lg px-3 py-2 text-sm" placeholder="customer@email.com">
+                            </div>
+                            <div>
+                                <label class="block mb-1 text-sm font-semibold" style="color:#7a4e0a;">GSTIN <span style="color:#9ca3af;font-size:11px;">(Optional)</span></label>
+                                <input type="text" name="customer_gstin" id="customerGstin"
+                                    class="jewel-input w-full rounded-lg px-3 py-2 text-sm" placeholder="e.g. 19ELQPP1010L1ZR"
+                                    maxlength="15" style="text-transform:uppercase;"
+                                    oninput="this.value=this.value.toUpperCase(); calculateTotal();">
+                            </div>
                         </div>
                     </div>
+
+
+
 
                     <!-- ADD ITEM SECTION -->
                     <div class="mb-4 p-4 rounded-xl" style="background:rgba(214,139,22,0.04);border:1.5px solid rgba(214,139,22,0.2);">
@@ -1508,7 +1840,9 @@ function submitPayment() {
                                             $pUnit = (strtolower($p['unit'] ?? '') === 'pair') ? 'pair' : 'pcs';
                                             $stockText = $isOutOfStock ? 'OUT OF STOCK' : ($p['quantity'] . ' ' . $pUnit);
                                             $displayName = !empty($p['item_name']) ? $p['item_name'] : $p['name'];
-                                            $display = $displayName . ' | SN:' . ($p['serial_no'] ?: '-') . ' | Stock: ' . $stockText;
+                                            $pCat = !empty($p['category']) ? $p['category'] : '';
+                                            $catBadge = $pCat ? "[$pCat] " : '';
+                                            $display = $catBadge . $displayName . ' | SN:' . ($p['serial_no'] ?: '-') . ' | Stock: ' . $stockText;
                                         ?>
                                         <option value="<?php echo $p['id']; ?>"
                                             data-price="<?php echo htmlspecialchars($p['price'] ?? 0); ?>"
@@ -1529,6 +1863,32 @@ function submitPayment() {
                                         </option>
                                         <?php endforeach; ?>
                                     </select>
+                                </div>
+                                <div class="mb-3" id="gramItemNameContainer">
+                                    <label class="block mb-1 text-xs font-semibold text-yellow-800">Specific Item Name / Ornament Type *</label>
+                                    <input list="ornamentTypeList" type="text" id="gramItemNameInput" placeholder="e.g. Gold Chain, Gold Bala, Payel, Ring..." class="jewel-input w-full rounded-lg px-3 py-2 text-sm" oninput="autoGramTotal()">
+                                    <datalist id="ornamentTypeList">
+                                        <option value="Gold Chain"></option>
+                                        <option value="Gold Bala"></option>
+                                        <option value="Gold Necklace"></option>
+                                        <option value="Gold Jhumka"></option>
+                                        <option value="Gold Tops"></option>
+                                        <option value="Gold Churi"></option>
+                                        <option value="Gold Choker"></option>
+                                        <option value="Ladies Ring"></option>
+                                        <option value="Gents Ring"></option>
+                                        <option value="Single Loket"></option>
+                                        <option value="Double Loket"></option>
+                                        <option value="Breslet Noya"></option>
+                                        <option value="Silver Ornaments"></option>
+                                        <option value="Silver Payel"></option>
+                                        <option value="Silver Chain"></option>
+                                        <option value="Silver Bala"></option>
+                                        <option value="Silver Ring"></option>
+                                        <option value="Silver Thali"></option>
+                                        <option value="Silver Bati"></option>
+                                        <option value="Silver Glass"></option>
+                                    </datalist>
                                 </div>
                                 <div id="gramStockProductInfo" class="hidden p-2 rounded-lg text-xs bg-green-50 border border-green-200 text-green-800 mb-3"></div>
                             </div>
@@ -1595,8 +1955,8 @@ function submitPayment() {
                                     </div>
                                     <div class="grid grid-cols-3 gap-2">
                                         <div>
-                                            <label class="block text-xs font-semibold text-gray-700 mb-0.5">Diamond Cent (Ct)</label>
-                                            <input type="number" id="posDiamondCent" placeholder="Cent (e.g. 25)" step="0.01" min="0" class="jewel-input w-full rounded-lg px-2.5 py-1.5 text-xs font-bold text-amber-900" oninput="calcDiamondBreakdown()">
+                                            <label class="block text-xs font-semibold text-gray-700 mb-0.5">Diamond Carat (Ct)</label>
+                                            <input type="number" id="posDiamondCent" placeholder="Carat (e.g. 0.25)" step="0.01" min="0" class="jewel-input w-full rounded-lg px-2.5 py-1.5 text-xs font-bold text-amber-900" oninput="calcDiamondBreakdown()">
                                         </div>
                                         <div>
                                             <label class="block text-xs font-semibold text-gray-700 mb-0.5">Rate / Ct (₹)</label>
@@ -1652,7 +2012,7 @@ function submitPayment() {
                                 </div>
                             </div>
 
-                            <!-- Rate, HUID, Weight, Qty & Live preview -->
+                            <!-- Rate & Rate Hint -->
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                                 <div>
                                     <label class="block mb-1 text-xs font-semibold text-yellow-800">Rate / Price (₹) *</label>
@@ -1661,33 +2021,39 @@ function submitPayment() {
                                 </div>
                                 <div>
                                     <label class="block mb-1 text-xs font-semibold text-yellow-800">HUID Code <span style="color:#9ca3af;">(Optional)</span></label>
-                                    <input type="text" name="huid_code" id="manualHuid" placeholder="F108D"
+                                    <input type="text" name="huid_code" id="manualHuid" placeholder="Leave blank if none"
                                         class="jewel-input w-full rounded-lg px-3 py-2 text-sm" list="huidList" oninput="populateHuidOptions()">
                                     <datalist id="huidList"></datalist>
                                 </div>
                             </div>
                             
-                            <div class="grid grid-cols-2 gap-3 mb-3">
+                            <!-- Gross Weight & Net Weight -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                                 <div>
-                                    <label class="block mb-1 text-xs font-semibold text-yellow-800">Weight (g)</label>
-                                    <input type="number" id="gramWeight" placeholder="Grams (e.g. 5.5)" step="0.001" min="0" class="jewel-input w-full rounded-lg px-3 py-2 text-sm" oninput="autoGramTotal()">
+                                    <label class="block mb-1 text-xs font-semibold text-yellow-800">Gross Weight (g) <span class="text-stone-400 font-normal">(Cut from Stock)</span> *</label>
+                                    <input type="number" id="gramGrossWeight" placeholder="Gross weight (e.g. 10.500)" step="0.001" min="0" class="jewel-input w-full rounded-lg px-3 py-2 text-sm" oninput="onGrossWeightInput()">
                                 </div>
                                 <div>
-                                    <label class="block mb-1 text-xs font-semibold text-yellow-800">Quantity & Unit *</label>
+                                    <label class="block mb-1 text-xs font-semibold text-yellow-800">Net Weight (g) <span class="text-emerald-700 font-bold">(Used for Price)</span> *</label>
+                                    <input type="number" id="gramNetWeight" placeholder="Net weight (e.g. 10.000)" step="0.001" min="0" class="jewel-input w-full rounded-lg px-3 py-2 text-sm" oninput="onNetWeightInput()">
+                                </div>
+                            </div>
+
+                            <!-- Quantity & Unit -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                                <div>
+                                    <label class="block mb-1 text-xs font-semibold text-yellow-800">Quantity &amp; Unit *</label>
                                     <div class="flex gap-2">
-                                        <input type="number" id="gramQty" value="1" step="1" min="1" class="jewel-input w-1/2 rounded-lg px-3 py-2 text-sm" oninput="autoGramTotal()">
-                                        <select id="gramUnit" class="jewel-input w-1/2 rounded-lg px-2 py-2 text-sm" onchange="autoGramTotal()">
-                                            <option value="pcs">Pcs</option>
-                                            <option value="pair">Pair</option>
+                                        <input type="number" id="gramQty" value="1" step="1" min="1" class="jewel-input w-1/2 rounded-lg px-3 py-2 text-sm" oninput="autoGramTotal()" onchange="autoGramTotal()" onkeyup="autoGramTotal()">
+                                        <select id="gramUnit" class="jewel-input w-1/2 rounded-lg px-2 py-2 text-sm" onchange="autoGramTotal()" oninput="autoGramTotal()">
+                                            <option value="pcs">Pcs (1 pc)</option>
+                                            <option value="pair">Pair (2 pcs)</option>
                                         </select>
                                     </div>
                                 </div>
-                            </div>
-                            
-                            <div class="grid grid-cols-1 gap-3 mb-3">
-                                <div id="gramTotalPreviewRow" style="display:none;">
+                                <div id="gramTotalPreviewRow" style="display:none;" class="flex flex-col justify-end">
                                     <label class="block mb-1 text-xs font-semibold text-green-700">Calculated Base Amount</label>
-                                    <div class="text-lg font-bold text-green-800 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg" id="gramTotalPreview">₹0.00</div>
+                                    <div class="text-base font-bold text-green-800 px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg" id="gramTotalPreview">₹0.00</div>
                                 </div>
                             </div>
                         </div>
@@ -1714,12 +2080,19 @@ function submitPayment() {
                                     <div id="itemMakingChargeHint" class="text-xs mt-1.5 font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200" style="display:none;"></div>
                                 </div>
                                 <div>
-                                    <label class="block mb-1.5 text-xs font-bold text-amber-900">Hallmark (₹)</label>
-                                    <input type="number" id="itemHallmark" value="" step="1" min="0" placeholder="0" class="jewel-input w-full rounded-xl px-3 py-2 text-sm font-semibold">
+                                    <label class="block mb-1.5 text-xs font-bold text-amber-900">Karat / Hallmark <span class="text-rose-600">*</span></label>
+                                    <select id="itemHallmarkType" class="jewel-input w-full rounded-xl px-2.5 py-2 text-xs font-bold">
+                                        <option value="22K">22K</option>
+                                        <option value="18K">18K</option>
+                                        <option value="14K">14K</option>
+                                        <option value="24K">24K</option>
+                                        <option value="925 Silver">925 Silver</option>
+                                        <option value="999 Fine Silver">999 Fine Silver</option>
+                                    </select>
                                 </div>
                                 <div>
-                                    <label class="block mb-1.5 text-xs font-bold text-amber-900">Discount (₹)</label>
-                                    <input type="number" id="itemDiscount" value="" step="1" min="0" placeholder="0" class="jewel-input w-full rounded-xl px-3 py-2 text-sm font-semibold">
+                                    <label class="block mb-1.5 text-xs font-bold text-amber-900">Hallmark Chg (₹)</label>
+                                    <input type="number" id="itemHallmark" value="" step="1" min="0" placeholder="0 (Optional)" class="jewel-input w-full rounded-xl px-3 py-2 text-sm font-semibold">
                                 </div>
                                 <div>
                                     <label class="block mb-1.5 text-xs font-bold text-amber-900">GST Rate</label>
@@ -1751,9 +2124,8 @@ function submitPayment() {
                                     <th class="px-3 py-2 text-center text-xs">GMS/Qty</th>
                                     <th class="px-3 py-2 text-right text-xs">Rate</th>
                                     <th class="px-3 py-2 text-right text-xs">Amount</th>
-                                    <th class="px-3 py-2 text-right text-xs" style="width:105px;">Making&nbsp;Chg&nbsp;(%)</th>
-                                    <th class="px-3 py-2 text-right text-xs" style="width:80px;">Hallmark</th>
-                                    <th class="px-3 py-2 text-right text-xs" style="width:80px;">Discount</th>
+                                    <th class="px-3 py-2 text-right text-xs" style="width:110px;">Making&nbsp;Chg&nbsp;(%)</th>
+                                    <th class="px-3 py-2 text-right text-xs" style="width:85px;">Hallmark</th>
                                     <th class="px-3 py-2 text-right text-xs">Net Total</th>
                                     <th class="px-3 py-2 text-center text-xs">GST</th>
                                     <th class="px-3 py-2 text-xs"></th>
@@ -1761,7 +2133,7 @@ function submitPayment() {
                             </thead>
                             <tbody id="itemsList">
                                 <tr id="emptyRow">
-                                    <td colspan="11" style="text-align:center;padding:20px;color:#9ca3af;font-size:12px;">
+                                    <td colspan="10" style="text-align:center;padding:20px;color:#9ca3af;font-size:12px;">
                                         No items added yet - enter details above to add products
                                     </td>
                                 </tr>
@@ -1785,9 +2157,82 @@ function submitPayment() {
                                 <div class="flex justify-between text-sm" style="color:#059669;">
                                     <span>Hallmark</span><span id="hallmarkAmount">&#8377;0.00</span>
                                 </div>
-                                <div class="flex justify-between text-sm" style="color:#dc2626;">
-                                    <span>Discount</span><span id="discountAmount">- &#8377;0.00</span>
+                                <div class="flex justify-between items-center text-sm py-1" style="color:#dc2626;border-top:1px dashed rgba(220,38,38,0.2);border-bottom:1px dashed rgba(220,38,38,0.2);">
+                                    <div class="flex items-center gap-1 font-bold text-xs" style="color:#dc2626;">
+                                        <i class="fas fa-tag"></i> <span>Discount on Total</span> <span class="font-semibold text-xs">(₹)</span>
+                                    </div>
+                                    <input type="number" id="overallDiscountInput" value="" step="1" min="0" placeholder="0" class="jewel-input rounded-lg px-2 py-1 text-sm text-right w-28 border-red-300 font-bold" style="color:#dc2626;" oninput="calculateTotal()">
                                 </div>
+
+
+                                <!-- ADVANCE CREDIT ADJUSTMENT (DIRECTLY ABOVE OLD GOLD) -->
+                                <div id="advanceAdjustmentContainer" class="p-3.5 rounded-xl border-2 border-amber-400 bg-gradient-to-b from-amber-50 to-amber-100/70 mb-2.5 space-y-2.5 text-xs shadow-sm" style="display:none;">
+                                    <div class="flex items-center justify-between pb-1.5 border-b border-amber-200">
+                                        <span class="font-black text-amber-950 flex items-center gap-1.5 text-xs">
+                                            <i class="fas fa-hand-holding-usd text-amber-700"></i> Advance Credit Available:
+                                        </span>
+                                        <span id="advAvailableBadge" class="font-black text-emerald-800 bg-emerald-100 border border-emerald-400 px-2 py-0.5 rounded-md text-xs shadow-sm">₹0.00</span>
+                                    </div>
+                                    
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <button type="button" id="btnAdvFull" onclick="setAdvanceAdjustmentMode('full')" class="py-2 px-2.5 rounded-lg font-extrabold border transition bg-amber-700 text-white border-amber-800 shadow-sm text-center text-xs hover:bg-amber-800 cursor-pointer">
+                                            ⚡ Take Full Advance
+                                        </button>
+                                        <button type="button" id="btnAdvCustom" onclick="setAdvanceAdjustmentMode('custom')" class="py-2 px-2.5 rounded-lg font-extrabold border transition bg-white text-stone-800 border-amber-300 text-center text-xs hover:bg-amber-50 cursor-pointer">
+                                            ✏️ Custom Amount
+                                        </button>
+                                    </div>
+
+                                    <div id="advCustomInputDiv" style="display:none;" class="flex items-center gap-2 pt-1 bg-white p-2 rounded-lg border border-amber-300">
+                                        <label class="font-extrabold text-amber-950 whitespace-nowrap text-xs">Deduct (₹):</label>
+                                        <input type="number" id="advCustomAmountInput" min="0" step="1" placeholder="0" class="jewel-input w-full rounded-md px-2 py-1 text-sm font-extrabold text-right border-amber-400 bg-amber-50/50" oninput="onCustomAdvanceInput()">
+                                    </div>
+
+                                    <!-- Excess / Surplus Advance Options (Shown when Bill Amount < Advance Available) -->
+                                    <div id="advSurplusContainer" style="display:none;" class="p-2.5 bg-amber-100/90 border border-amber-300 rounded-xl space-y-2 text-xs">
+                                        <div class="flex items-center justify-between font-bold text-amber-950 pb-1 border-b border-amber-200">
+                                            <span class="flex items-center gap-1"><i class="fas fa-coins text-amber-700"></i> Remaining Advance:</span>
+                                            <span id="advSurplusAmountBadge" class="font-extrabold text-amber-950 bg-amber-200/90 px-2 py-0.5 rounded text-xs">₹0.00</span>
+                                        </div>
+                                        <div class="text-[11px] text-stone-700 font-semibold">Choose action for excess credit:</div>
+                                        <div class="grid grid-cols-2 gap-2">
+                                            <label id="lblSurplusKeep" class="flex items-center gap-1.5 p-2 rounded-lg border-2 border-amber-700 bg-amber-200/80 cursor-pointer font-bold text-[11px] text-amber-950">
+                                                <input type="radio" name="adv_surplus_action_radio" value="keep_advance" checked onchange="onAdvSurplusActionChange(this.value)">
+                                                <span>🏦 Keep in Credit<br><span class="text-[9.5px] font-normal text-stone-600">(Save for future)</span></span>
+                                            </label>
+                                            <label id="lblSurplusRefund" class="flex items-center gap-1.5 p-2 rounded-lg border border-stone-300 bg-white cursor-pointer font-bold text-[11px] text-stone-700 hover:bg-amber-50">
+                                                <input type="radio" name="adv_surplus_action_radio" value="refund_customer" onchange="onAdvSurplusActionChange(this.value)">
+                                                <span>💵 Return to Customer<br><span class="text-[9.5px] font-normal text-stone-600">(Refund excess)</span></span>
+                                            </label>
+                                        </div>
+                                        <div id="advRefundModeDiv" style="display:none;" class="pt-1.5 border-t border-amber-200 flex items-center gap-2">
+                                            <label class="font-bold text-[11px] text-stone-700 whitespace-nowrap">Refund Mode:</label>
+                                            <select id="advRefundModeSelect" class="jewel-input flex-1 rounded px-2 py-1 text-xs font-semibold" onchange="onAdvRefundModeChange(this.value)">
+                                                <option value="Cash">Cash Return</option>
+                                                <option value="UPI / Online">UPI / Online Transfer</option>
+                                                <option value="Bank / Cheque">Bank / Cheque</option>
+                                            </select>
+                                        </div>
+                                        <div id="advSurplusSummaryNote" class="text-[10px] font-semibold text-emerald-800 bg-emerald-50 px-2 py-1 rounded border border-emerald-200">
+                                            Remaining balance will stay saved in customer advance credit.
+                                        </div>
+                                    </div>
+
+                                    <div class="flex justify-between items-center text-xs pt-1.5 border-t border-amber-200/80 font-bold text-amber-950">
+                                        <div class="flex items-center gap-2">
+                                            <span>Advance Deducted:</span>
+                                            <button type="button" onclick="setAdvanceAdjustmentMode('none')" class="text-[10px] text-rose-600 underline font-semibold hover:text-rose-800 cursor-pointer">Cancel</button>
+                                        </div>
+                                        <span id="advDeductionDisplay" class="font-black text-emerald-800 text-sm">- ₹0.00</span>
+                                    </div>
+                                </div>
+
+                                <div class="flex justify-between text-sm py-1 px-2 rounded-lg bg-amber-50 border border-amber-200" style="color:#78350f; display:none;" id="advanceAdjustedRow">
+                                    <span class="font-bold flex items-center gap-1"><i class="fas fa-check-circle text-emerald-600"></i> Advance Credit Adjusted</span>
+                                    <span id="advanceAdjustedDisplay" class="font-black text-emerald-700">- &#8377;0.00</span>
+                                </div>
+
+
                                 <div class="flex justify-between items-center text-sm pt-1 pb-1" style="color:#b91c1c;border-top:1px dashed rgba(185,28,28,0.2);border-bottom:1px dashed rgba(185,28,28,0.2);">
                                     <div class="flex items-center gap-1">
                                         <select id="oldGoldTypeSelect" class="jewel-input rounded px-1 py-0.5 text-xs font-bold border-red-300 bg-white" style="color:#b91c1c;" onchange="calculateTotal()">
@@ -1831,6 +2276,14 @@ function submitPayment() {
                     <input type="hidden" name="cash_paid" id="hiddenCashPaid" value="0">
                     <input type="hidden" name="upi_paid" id="hiddenUpiPaid" value="0">
                     <input type="hidden" name="is_split_payment" id="hiddenIsSplit" value="0">
+                    <input type="hidden" name="applied_advance_id" id="hiddenAppliedAdvanceId" value="0">
+                    <input type="hidden" name="advance_adjusted" id="hiddenAdvanceAdjusted" value="0">
+                    <input type="hidden" name="adv_surplus_action" id="hiddenAdvSurplusAction" value="keep_advance">
+                    <input type="hidden" name="adv_surplus_amount" id="hiddenAdvSurplusAmount" value="0">
+                    <input type="hidden" name="adv_refund_mode" id="hiddenAdvRefundMode" value="Cash">
+                    <input type="hidden" name="is_advance_credit_booking" id="hiddenIsAdvanceBooking" value="0">
+                    <input type="hidden" name="advance_deposit_amount" id="hiddenAdvanceDepositAmount" value="0">
+                    <input type="hidden" name="booking_notes" id="hiddenBookingNotes" value="">
 
                     <!-- PAYMENT STATUS -->
                     <div class="mt-5">
@@ -1842,7 +2295,7 @@ function submitPayment() {
                                     class="jewel-input w-full rounded-lg px-3 py-2 text-sm" onchange="togglePartPayment()">
                                     <option value="paid">Paid (Full Payment)</option>
                                     <option value="part">Part Payment (Due)</option>
-                                    <option value="unpaid">Advanced (Credit)</option>
+                                    <option value="advance">Advanced (Credit)</option>
                                 </select>
                             </div>
                             <div>
@@ -1856,6 +2309,30 @@ function submitPayment() {
                                 </select>
                             </div>
                         </div>
+
+                        <!-- ADVANCE BOOKING DEPOSIT BOX (WHEN ADVANCED (CREDIT) SELECTED) -->
+                        <div id="advanceBookingDiv" style="display:none;" class="mt-3 p-4 rounded-xl bg-amber-50/95 border-2 border-amber-400 shadow-sm">
+                            <div class="flex items-center gap-2 mb-1.5 text-amber-950 font-extrabold text-sm">
+                                <span>✨</span> <span>Advance Credit Deposit Details</span>
+                            </div>
+                            <p class="text-xs text-amber-800 mb-3 font-medium">Record advance deposit money without product selection. Generates an official Advance Credit Money Receipt.</p>
+                            
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block mb-1 text-xs font-bold text-amber-950">Advance Deposit Amount (₹) *</label>
+                                    <input type="number" id="advanceDepositInput" min="1" step="1" placeholder="Enter advance amount given..." class="jewel-input w-full rounded-lg px-3 py-2 text-sm font-bold border-amber-400 bg-white" oninput="onAdvanceDepositInput()">
+                                </div>
+                                <div>
+                                    <label class="block mb-1 text-xs font-bold text-amber-950">Expected Order / Delivery Date</label>
+                                    <input type="date" id="advanceDeliveryDate" class="jewel-input w-full rounded-lg px-3 py-2 text-sm border-amber-300 bg-white">
+                                </div>
+                                <div class="sm:col-span-2">
+                                    <label class="block mb-1 text-xs font-bold text-amber-950">Booking Purpose / Notes</label>
+                                    <input type="text" id="advanceBookingNotes" placeholder="e.g. Advance for 22K Gold Necklace wedding booking" class="jewel-input w-full rounded-lg px-3 py-2 text-sm border-amber-300 bg-white">
+                                </div>
+                            </div>
+                        </div>
+
 
                         <!-- Split Payment Box -->
                         <div id="splitPaymentDiv" style="display:none;" class="split-payment-box">
@@ -2193,7 +2670,15 @@ var items = [];
 var currentMainTab = 'gram';
 var currentGramSource = 'stock';
 var currentQtySource = 'stock';
+var netWeightManual = false;
 var currentMcMode = 'pct';
+var currentCustomerAdvance = 0;
+var currentAdvanceId = 0;
+var currentAdvanceReceipt = '';
+var advanceAdjustmentMode = 'none';
+var appliedAdvanceAmount = 0;
+var allAdvanceCustomers = <?php echo json_encode($active_advance_customers); ?>;
+
 const defaultItemTypeOptions = {
     'Gold 22K': ['Necklace','Chur','Bala','Chain','Tops','Single Loket','Double Loket','Churi','Jhuladul','Jhumka','Ladies Ring','Gold Choker','Gents Ring','Gents Breslet','Ladies Breslet','Tika','Takti','Mantasa','Pearl Choker','Bauti Chur','Soket Bauti','Breslet Noya','Stell Noya','Baby Ring','Bali','Pitaring','Baby Breslet','Pearl Sitahar','Nose Pin','Other'],
     'Gold 18K': ['Necklace','Chur','Bala','Chain','Tops','Single Loket','Double Loket','Churi','Jhuladul','Jhumka','Ladies Ring','Gold Choker','Gents Ring','Gents Breslet','Ladies Breslet','Tika','Takti','Mantasa','Pearl Choker','Bauti Chur','Soket Bauti','Breslet Noya','Stell Noya','Baby Ring','Bali','Pitaring','Baby Breslet','Pearl Sitahar','Nose Pin','Other'],
@@ -2301,7 +2786,8 @@ function filterGramStock(query) {
         const isOutOfStock = (parseFloat(p.quantity) <= 0);
         const pUnit = (p.unit || '').toLowerCase() === 'pair' ? 'pair' : 'pcs';
         const stockText = isOutOfStock ? 'OUT OF STOCK' : (p.quantity + ' ' + pUnit);
-        const display = (p.item_name || p.name) + ' | SN:' + (p.serial_no || '-') + ' | Stock: ' + stockText;
+        const catBadge = p.category ? '[' + p.category + '] ' : '';
+        const display = catBadge + (p.item_name || p.name) + ' | SN:' + (p.serial_no || '-') + ' | Stock: ' + stockText;
         const opt = document.createElement('option');
         opt.value = p.id;
         opt.textContent = display;
@@ -2330,7 +2816,7 @@ function filterGramStock(query) {
                 const item = document.createElement('div');
                 item.className = 'autocomplete-suggestion-item';
                 item.style.cssText = 'padding:8px 12px;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;background:#fff;';
-                item.innerHTML = '<div><strong style="color:#022c22;">' + (p.item_name || p.name) + '</strong> <span style="font-size:11px;color:#059669;">(' + p.category + ')</span></div><div style="font-size:11px;color:' + (isOut?'#dc2626':'#7a4e0a') + ';">SN: ' + (p.serial_no || '-') + ' | ' + (isOut ? 'OUT OF STOCK' : (p.quantity + ' ' + pUnit)) + '</div>';
+                item.innerHTML = '<div><strong style="color:#022c22;">' + (p.category ? '<span style="color:#b5730e;font-weight:bold;">[' + p.category + ']</span> ' : '') + (p.item_name || p.name) + '</strong></div><div style="font-size:11px;color:' + (isOut?'#dc2626':'#7a4e0a') + ';">SN: ' + (p.serial_no || '-') + ' | ' + (isOut ? 'OUT OF STOCK' : (p.quantity + ' ' + pUnit)) + '</div>';
                 item.onmouseover = function() { this.style.background = '#f5ead0'; };
                 item.onmouseout = function() { this.style.background = '#fff'; };
                 item.onclick = function() {
@@ -2355,11 +2841,28 @@ function clearGramStockSearch() {
     filterGramStock('');
 }
 
+function onGrossWeightInput() {
+    const grossEl = document.getElementById('gramGrossWeight');
+    const netEl = document.getElementById('gramNetWeight');
+    if (!netWeightManual && grossEl && netEl) {
+        netEl.value = grossEl.value;
+    }
+    autoGramTotal();
+}
+
+function onNetWeightInput() {
+    netWeightManual = true;
+    autoGramTotal();
+}
+
 function onGramStockChange() {
     const select = document.getElementById('gramStockProduct');
     const infoDiv = document.getElementById('gramStockProductInfo');
     const rateInput = document.getElementById('gramRate');
-    const weightInput = document.getElementById('gramWeight');
+    const grossInput = document.getElementById('gramGrossWeight');
+    const netInput = document.getElementById('gramNetWeight');
+    const nameInput = document.getElementById('gramItemNameInput');
+    const hmTypeSelect = document.getElementById('itemHallmarkType');
     const opt = select.options[select.selectedIndex];
     
     if (!opt || !opt.value) {
@@ -2372,16 +2875,65 @@ function onGramStockChange() {
     const name        = opt.dataset.itemName || opt.dataset.name || '';
     const category    = opt.dataset.category || '';
     const huid        = opt.dataset.huid || '';
+    const serial      = opt.dataset.serial || '';
     const stockWeight = parseFloat(opt.dataset.weight) || 0;
+
+    // Detect if this is generic/basket stock (e.g. "Gold Ornaments", "Silver Ornaments", "Mixed Gold Stock", "Others", numeric, or pooled without individual serial)
+    const nameLower = name.toLowerCase().trim();
+    const isBasketOrGeneric = nameLower === 'gold ornaments' || 
+                              nameLower === 'silver ornaments' || 
+                              nameLower === 'mixed gold stock' || 
+                              nameLower === 'others' || 
+                              nameLower === 'other' || 
+                              nameLower === '' || 
+                              /^\d+$/.test(nameLower) ||
+                              ((!serial || serial === '-') && (!huid || huid === '-') && qty > 1);
+
+    // Auto-fill Item Name: if basket/generic, leave BLANK so user must enter specific ornament name!
+    if (nameInput) {
+        if (isBasketOrGeneric) {
+            nameInput.value = '';
+            nameInput.placeholder = 'Enter specific ornament (e.g. Gold Chain, Bala, Payel...) *';
+            nameInput.focus();
+        } else {
+            nameInput.value = name;
+        }
+    }
 
     // Auto-fill HUID
     if (document.getElementById('manualHuid')) {
-        document.getElementById('manualHuid').value = huid;
+        document.getElementById('manualHuid').value = (huid && huid !== '-') ? huid : '';
     }
 
-    // Keep Weight input field clear for custom entry while autoGramTotal previews using available stock weight
-    if (weightInput) {
-        weightInput.value = '';
+    // Auto-fill smart Hallmark Type based on category
+    if (hmTypeSelect) {
+        const catL = (category || '').toLowerCase();
+        if (catL.includes('22')) hmTypeSelect.value = '22K';
+        else if (catL.includes('18')) hmTypeSelect.value = '18K';
+        else if (catL.includes('14')) hmTypeSelect.value = '14K';
+        else if (catL.includes('24')) hmTypeSelect.value = '24K';
+        else if (catL.includes('999') || catL.includes('fine silver')) hmTypeSelect.value = '999 Fine Silver';
+        else if (catL.includes('silver') || catL.includes('925')) hmTypeSelect.value = '925 Silver';
+        else hmTypeSelect.value = '22K';
+    }
+
+    // Auto-fill Gross & Net weight:
+    // For basket/generic products where weight in stock is bulk total weight, leave Gross & Net weight BLANK!
+    // Only prefill weight if the product is an individual item with predefined single piece weight.
+    netWeightManual = false;
+    const isSinglePieceWithWeight = (!isBasketOrGeneric && (qty === 1 || (serial !== '' && serial !== '-')) && stockWeight > 0);
+
+    if (grossInput) {
+        grossInput.value = isSinglePieceWithWeight ? stockWeight : '';
+        if (!isSinglePieceWithWeight) {
+            grossInput.placeholder = 'Gross wt in grams (Required) *';
+        }
+    }
+    if (netInput) {
+        netInput.value = isSinglePieceWithWeight ? stockWeight : '';
+        if (!isSinglePieceWithWeight) {
+            netInput.placeholder = 'Net wt in grams (Required) *';
+        }
     }
 
     // Automatically detect and select Pcs vs Pair strictly from product stock
@@ -2393,7 +2945,6 @@ function onGramStockChange() {
         } else if (stockUnit === 'pcs' || stockUnit === 'pc' || stockUnit === 'piece') {
             unitSelect.value = 'pcs';
         } else {
-            const nameLower = name.toLowerCase();
             const isPair = nameLower.includes('pair') || 
                            nameLower.includes('jhumka') || 
                            nameLower.includes('tops') || 
@@ -2411,7 +2962,6 @@ function onGramStockChange() {
     const mKt   = opt.dataset.metalKt || '';
     const mWt   = opt.dataset.metalWeight || '';
     const catLower = (category || '').toLowerCase();
-    const nameLower = (name || '').toLowerCase();
     const dCentVal = parseFloat(dCent) || 0;
     const goldWeightVal = parseFloat(mWt) || parseFloat(stockWeight) || 0;
 
@@ -2551,18 +3101,25 @@ function updateGramItemTypes() {
     const category = document.getElementById('gramCatSelect').value;
     const itemTypeSelect = document.getElementById('gramItemType');
     itemTypeSelect.innerHTML = '<option value="">-- Select Item Type --</option>';
-
-    const catLower = (category || '').toLowerCase();
-    const isDiamondCat = catLower.includes('diamond');
+    
+    // Auto-update Hallmark Type based on category
+    const hmTypeSelect = document.getElementById('itemHallmarkType');
+    if (hmTypeSelect && category) {
+        const catL = category.toLowerCase();
+        if (catL.includes('22')) hmTypeSelect.value = '22K';
+        else if (catL.includes('18')) hmTypeSelect.value = '18K';
+        else if (catL.includes('14')) hmTypeSelect.value = '14K';
+        else if (catL.includes('24')) hmTypeSelect.value = '24K';
+        else if (catL.includes('999') || catL.includes('fine silver')) hmTypeSelect.value = '999 Fine Silver';
+        else if (catL.includes('silver') || catL.includes('925')) hmTypeSelect.value = '925 Silver';
+    }
 
     const dBreakdown = document.getElementById('posDiamondBreakdownContainer');
     if (dBreakdown) {
-        if (isDiamondCat) {
+        if (category === 'Diamond') {
             dBreakdown.classList.remove('hidden');
             const dRateVal = shopRates.diamond || getShopRateForCategory('diamond') || (parseFloat(localStorage.getItem('shopRate_diamond')) || 0);
-            if (document.getElementById('posDiamondCent')) document.getElementById('posDiamondCent').value = '';
             if (document.getElementById('posDiamondRate')) document.getElementById('posDiamondRate').value = dRateVal > 0 ? dRateVal : '';
-            if (document.getElementById('posGoldKt')) document.getElementById('posGoldKt').value = '18K';
             if (document.getElementById('posGoldWeight')) document.getElementById('posGoldWeight').value = '';
             const goldRate10g = getShopRateForCategory('18K') * 10;
             if (document.getElementById('posGoldRate')) document.getElementById('posGoldRate').value = goldRate10g || '';
@@ -2592,11 +3149,11 @@ function updateGramItemTypes() {
     if (shopRate10g > 0) {
         rateInput.value = shopRate10g.toFixed(0);
         const hint = document.getElementById('gramRatePerGramHint');
-        if(hint) hint.textContent = '\u2248 \u20B9' + shopRatePerGram.toLocaleString('en-IN', {maximumFractionDigits:2}) + ' per gram (shop rate)';
+        if(hint) hint.textContent = '≈ ₹' + shopRatePerGram.toLocaleString('en-IN', {maximumFractionDigits:2}) + ' per gram (shop rate)';
     } else {
         rateInput.value = '';
         const hint = document.getElementById('gramRatePerGramHint');
-        if(hint) hint.textContent = '\u26A0 Set shop rate for ' + category + ' in the panel on the right first!';
+        if(hint) hint.textContent = '⚠ Set shop rate for ' + category + ' in the panel on the right first!';
         if(hint) hint.style.color = '#dc2626';
     }
     autoGramTotal();
@@ -2623,6 +3180,9 @@ function onGramItemTypeChange() {
                            valLower.includes('earring');
             unitSelect.value = isPair ? 'pair' : 'pcs';
         }
+        if (document.getElementById('gramItemNameInput')) {
+            document.getElementById('gramItemNameInput').value = opt.value;
+        }
     }
 
     if (!statusDiv) return;
@@ -2634,13 +3194,23 @@ function onGramItemTypeChange() {
 
     const inStock = (opt.dataset.inStock === 'true');
     const stockQty = parseFloat(opt.dataset.stockQty) || 0;
+    const stockWeight = parseFloat(opt.dataset.stockWeight) || 0;
+    const isOutOfStock = (opt.dataset.isOutOfStock === 'true');
 
-    if (inStock && stockQty > 0) {
-        statusDiv.innerHTML = '<span class="px-2 py-0.5 rounded text-xs font-bold bg-green-100 text-green-800 border border-green-300"> In Stock (' + stockQty + ' pcs available in inventory)</span>';
+    if (isOutOfStock) {
+        statusDiv.className = 'mt-1 text-xs font-bold text-red-600 flex items-center gap-1';
+        statusDiv.innerHTML = '<i class="fas fa-times-circle"></i> Out of Stock in Inventory (0 pcs available)';
+        statusDiv.classList.remove('hidden');
+    } else if (inStock) {
+        const wtInfo = stockWeight > 0 ? ' (' + stockWeight.toFixed(3) + 'g)' : '';
+        statusDiv.className = 'mt-1 text-xs font-semibold text-emerald-700 flex items-center gap-1';
+        statusDiv.innerHTML = '<i class="fas fa-check-circle"></i> In Stock: <strong>' + stockQty + ' pcs' + wtInfo + '</strong>';
+        statusDiv.classList.remove('hidden');
     } else {
-        statusDiv.innerHTML = '<span class="px-2 py-0.5 rounded text-xs font-bold bg-red-100 text-red-800 border border-red-300"> Out of Stock (0 items available in inventory)</span>';
+        statusDiv.className = 'mt-1 text-xs font-medium text-amber-700 flex items-center gap-1';
+        statusDiv.innerHTML = '<i class="fas fa-info-circle"></i> Not in stock database \u2014 will be billed as general item';
+        statusDiv.classList.remove('hidden');
     }
-    statusDiv.classList.remove('hidden');
 }
 
 function setMcMode(mode) {
@@ -2678,7 +3248,7 @@ function updateMakingChargeHint() {
     if (typeof currentMainTab === 'undefined' || currentMainTab === 'gram') {
         const checkedRadio = document.querySelector('input[name="gram_source"]:checked');
         const source = checkedRadio ? checkedRadio.value : (typeof currentGramSource !== 'undefined' ? currentGramSource : 'stock');
-        let weight = parseFloat(document.getElementById('gramWeight')?.value) || 0;
+        let weight = parseFloat(document.getElementById('gramGrossWeight')?.value) || 0;
         const rate10g = parseFloat(document.getElementById('gramRate')?.value) || 0;
         const qty = parseFloat(document.getElementById('gramQty')?.value) || 1;
         const dContainer = document.getElementById('posDiamondBreakdownContainer');
@@ -2723,46 +3293,51 @@ function autoGramTotal() {
     const source = checkedRadio ? checkedRadio.value : (typeof currentGramSource !== 'undefined' ? currentGramSource : 'stock');
     currentGramSource = source;
 
-    let typedWeight = parseFloat(document.getElementById('gramWeight')?.value) || 0;
-    let weight = typedWeight;
-    if (weight <= 0 && source === 'stock') {
-        const select = document.getElementById('gramStockProduct');
-        const opt = select && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
-        if (opt && opt.dataset.weight) {
-            weight = parseFloat(opt.dataset.weight) || 0;
-        }
+    let grossWeight = parseFloat(document.getElementById('gramGrossWeight')?.value) || 0;
+    let netWeight = parseFloat(document.getElementById('gramNetWeight')?.value) || 0;
+
+    // If net weight not specified but gross weight entered, net weight = gross weight
+    if (netWeight <= 0 && grossWeight > 0) {
+        netWeight = grossWeight;
     }
     
-    const rate10g = parseFloat(document.getElementById('gramRate').value) || 0;
+    // Pricing calculation strictly uses NET WEIGHT (Net Weight x Rate per gram x Pcs/Multiplier)
+    let calcWeight = netWeight;
+    
+    const rate10g = parseFloat(document.getElementById('gramRate')?.value) || 0;
     const qty = parseFloat(document.getElementById('gramQty')?.value) || 1;
-    let total = 0;
-    const hint = document.getElementById('gramRatePerGramHint');
     
     const unitEl = document.getElementById('gramUnit');
     const isPair = unitEl && unitEl.value === 'pair';
-    const unitLabel = isPair ? 'pairs' : 'pcs';
+    const unitLabel = isPair ? 'pair' : 'pcs';
+    const pcsMultiplier = isPair ? (qty * 2) : (qty > 0 ? qty : 1);
+    
+    let total = 0;
+    const hint = document.getElementById('gramRatePerGramHint');
     
     const dContainer = document.getElementById('posDiamondBreakdownContainer');
     const isDiamondBreakdown = dContainer && !dContainer.classList.contains('hidden');
 
     if (isDiamondBreakdown) {
-        total = parseFloat((qty * rate10g).toFixed(2));
+        total = parseFloat((pcsMultiplier * rate10g).toFixed(2));
         if(hint && rate10g > 0) {
-            hint.textContent = '≈ ₹' + rate10g.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}) + (isPair ? ' per pair × ' : ' per piece × ') + qty + ' ' + unitLabel;
+            hint.textContent = '≈ ₹' + rate10g.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}) + (isPair ? ' × ' + qty + ' Pair (' + pcsMultiplier + ' pcs)' : ' × ' + qty + ' pcs');
         } else if(hint) {
             hint.textContent = '';
         }
-    } else if (weight > 0) {
+    } else if (calcWeight > 0) {
         const ratePerGram = rate10g / 10;
-        total = parseFloat((weight * ratePerGram).toFixed(2));
+        total = parseFloat((calcWeight * ratePerGram).toFixed(2));
         if(hint && rate10g > 0) {
-            hint.textContent = '≈ ₹' + ratePerGram.toLocaleString('en-IN', {maximumFractionDigits:2}) + '/g × ' + weight + 'g' + (qty > 1 ? ' (' + qty + ' ' + unitLabel + ')' : '');
+            let grossNotice = (grossWeight > 0 && grossWeight !== calcWeight) ? ' (Gross: ' + grossWeight.toFixed(3) + 'g)' : '';
+            let pcsNotice = isPair ? ' [' + qty + ' Pair (' + pcsMultiplier + ' pcs)]' : (qty > 1 ? ' [' + qty + ' pcs]' : '');
+            hint.textContent = '≈ ₹' + ratePerGram.toLocaleString('en-IN', {maximumFractionDigits:2}) + '/g × ' + calcWeight.toFixed(3) + 'g Net' + grossNotice + pcsNotice;
         } else if(hint) {
             hint.textContent = '';
         }
     } else if (qty > 0 && rate10g > 0) {
-        total = parseFloat((qty * rate10g).toFixed(2));
-        if(hint) hint.textContent = '≈ ₹' + rate10g.toLocaleString('en-IN', {maximumFractionDigits:2}) + (isPair ? ' per pair × ' : ' per piece × ') + qty + ' ' + unitLabel;
+        total = parseFloat((pcsMultiplier * rate10g).toFixed(2));
+        if(hint) hint.textContent = '≈ ₹' + rate10g.toLocaleString('en-IN', {maximumFractionDigits:2}) + (isPair ? ' × ' + qty + ' Pair (' + pcsMultiplier + ' pcs)' : ' × ' + qty + ' pcs');
     } else if(hint) {
         hint.textContent = '';
     }
@@ -2795,220 +3370,242 @@ function submitCurrentItem() {
 function submitGramItem() {
     try {
         const checkedRadio = document.querySelector('input[name="gram_source"]:checked');
-    const source = checkedRadio ? checkedRadio.value : (typeof currentGramSource !== 'undefined' ? currentGramSource : 'stock');
-    currentGramSource = source;
+        const source = checkedRadio ? checkedRadio.value : (typeof currentGramSource !== 'undefined' ? currentGramSource : 'stock');
+        currentGramSource = source;
 
-    let productId = 'other';
-    let name = '';
-    let itemType = '';
-    let hsn = '7113';
-    let weight = parseFloat(document.getElementById('gramWeight')?.value) || 0;
-    let rate10g = parseFloat(document.getElementById('gramRate')?.value) || 0;
-    const qty = parseFloat(document.getElementById('gramQty')?.value) || 1;
-    
-    if (source === 'stock') {
-        const select = document.getElementById('gramStockProduct');
-        const opt = select && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
-        if (!opt || !opt.value) { alert('Please select a product from stock.'); return; }
-        productId = opt.value;
-        name = opt.dataset.itemName || opt.dataset.name || opt.text;
-        hsn = '7113';
+        let productId = 'other';
+        let name = '';
+        let itemType = '';
+        let hsn = '7113';
+        let grossWeight = parseFloat(document.getElementById('gramGrossWeight')?.value) || 0;
+        let netWeight = parseFloat(document.getElementById('gramNetWeight')?.value) || 0;
+        if (netWeight <= 0 && grossWeight > 0) netWeight = grossWeight;
+        if (grossWeight <= 0 && netWeight > 0) grossWeight = netWeight;
 
-        // Auto-fill weight from product data if left blank
-        if (weight <= 0 && opt.dataset.weight) {
-            weight = parseFloat(opt.dataset.weight) || 0;
-            if (weight > 0 && document.getElementById('gramWeight')) {
-                document.getElementById('gramWeight').value = weight;
+        let rate10g = parseFloat(document.getElementById('gramRate')?.value) || 0;
+        const qty = parseFloat(document.getElementById('gramQty')?.value) || 1;
+        
+        const customNameInput = document.getElementById('gramItemNameInput');
+        const customTypedName = customNameInput ? customNameInput.value.trim() : '';
+
+        if (source === 'stock') {
+            const select = document.getElementById('gramStockProduct');
+            const opt = select && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
+            if (!opt || !opt.value) { alert('Please select a product from stock.'); return; }
+            productId = opt.value;
+            name = customTypedName || opt.dataset.itemName || opt.dataset.name || opt.text;
+            hsn = '7113';
+
+            // Auto-fill rate from product price or shop rates if left blank
+            if (rate10g <= 0) {
+                const pPrice = parseFloat(opt.dataset.price) || 0;
+                const pCat = opt.dataset.category || '';
+                const shopR = getShopRateForCategory(pCat) * 10;
+                rate10g = pPrice > 0 ? pPrice : (shopR > 0 ? shopR : 0);
+                if (rate10g > 0 && document.getElementById('gramRate')) {
+                    document.getElementById('gramRate').value = rate10g.toFixed(0);
+                }
+            }
+        } else if (source === 'category') {
+            const cat = document.getElementById('gramCatSelect')?.value;
+            const typeSelect = document.getElementById('gramItemType');
+            const type = typeSelect ? typeSelect.value : '';
+            if (!cat) { alert('Please select a category.'); return; }
+            if (!type && !customTypedName) { alert('Please select or enter an item type.'); return; }
+
+            productId = 'other';
+            name = customTypedName || type;
+            itemType = type;
+            hsn = '7113';
+
+            if (rate10g <= 0) {
+                const shopR = getShopRateForCategory(cat) * 10;
+                if (shopR > 0) {
+                    rate10g = shopR;
+                    if (document.getElementById('gramRate')) document.getElementById('gramRate').value = rate10g.toFixed(0);
+                }
+            }
+        } else {
+            const nameEl = document.getElementById('gramManualName');
+            const hsnEl = document.getElementById('gramManualHsn');
+            name = (nameEl ? nameEl.value.trim() : '') || customTypedName;
+            hsn = (hsnEl ? hsnEl.value.trim() : '') || '7113';
+            if (!name) { alert('Please enter an item description.'); return; }
+        }
+        
+        if (!name || name.trim() === '' || name.toLowerCase() === 'others' || name.toLowerCase() === 'gold ornaments' || name.toLowerCase() === 'silver ornaments' || name.toLowerCase() === 'mixed gold stock' || /^\d+$/.test(name.trim())) {
+            alert('⚠️ Please enter the specific ornament / item name (e.g. Gold Chain, Gold Bala, Payel, Ring, etc.)');
+            if (customNameInput) customNameInput.focus();
+            return;
+        }
+
+        // Validate Gross & Net weight
+        if (grossWeight <= 0 && netWeight <= 0) {
+            alert('⚠️ Please enter Gross Weight and Net Weight for this item.');
+            if (document.getElementById('gramGrossWeight')) document.getElementById('gramGrossWeight').focus();
+            return;
+        }
+        
+        if (rate10g <= 0) { alert('Please enter a rate / price for the item.'); return; }
+        if (qty <= 0) { alert('Please enter quantity.'); return; }
+        
+        let baseAmount = 0;
+        let unit = 'g';
+        let itemPrice = 0;
+        
+        const unitEl = document.getElementById('gramUnit');
+        const isPair = unitEl && unitEl.value === 'pair';
+        const pcsMultiplier = isPair ? (qty * 2) : (qty > 0 ? qty : 1);
+        
+        const dContainer = document.getElementById('posDiamondBreakdownContainer');
+        const isDiamondBreakdown = dContainer && !dContainer.classList.contains('hidden');
+
+        if (isDiamondBreakdown) {
+            baseAmount = parseFloat((pcsMultiplier * rate10g).toFixed(2));
+            unit = netWeight > 0 ? 'g' : (isPair ? 'pair' : 'pcs');
+            itemPrice = rate10g;
+        } else if (netWeight > 0) {
+            // Price calculation strictly on Net Weight * Rate per gram (Weight is total scale weight)
+            let ratePerGram = rate10g / 10;
+            baseAmount = parseFloat((netWeight * ratePerGram).toFixed(2));
+            unit = isPair ? 'pair' : (grossWeight > 0 ? 'g' : 'pcs');
+            itemPrice = ratePerGram;
+        } else {
+            baseAmount = parseFloat((pcsMultiplier * rate10g).toFixed(2));
+            unit = isPair ? 'pair' : 'pcs';
+            itemPrice = rate10g;
+        }
+        
+        const mcInputVal = parseFloat(document.getElementById('itemMakingCharge')?.value) || 0;
+        let imcPct = 0;
+        let imcAmt = 0;
+
+        if (typeof currentMcMode !== 'undefined' && currentMcMode === 'pct') {
+            imcPct = mcInputVal;
+            imcAmt = parseFloat((baseAmount * (mcInputVal / 100)).toFixed(2));
+        } else {
+            imcAmt = mcInputVal;
+            imcPct = baseAmount > 0 ? parseFloat(((mcInputVal / baseAmount) * 100).toFixed(2)) : 0;
+        }
+
+        const hmType = document.getElementById('itemHallmarkType')?.value || '22K';
+        const ihm = parseFloat(document.getElementById('itemHallmark')?.value) || 0;
+        const idisc = parseFloat(document.getElementById('itemDiscount')?.value) || 0;
+        const igst = document.getElementById('itemGstType')?.value || 'non_gst';
+        const itemTotal = parseFloat((baseAmount + imcAmt + ihm - idisc).toFixed(2));
+        
+        const inputHuid = document.getElementById('manualHuid') ? document.getElementById('manualHuid').value.trim() : '';
+
+        let dCent = 0;
+        let dRate = 0;
+        let gWt = 0;
+        let gKt = '';
+        let gR10g = 0;
+
+        if (dContainer && !dContainer.classList.contains('hidden')) {
+            dCent = parseFloat(document.getElementById('posDiamondCent')?.value) || 0;
+            dRate = parseFloat(document.getElementById('posDiamondRate')?.value) || 0;
+            gWt = parseFloat(document.getElementById('posGoldWeight')?.value) || 0;
+            gKt = document.getElementById('posGoldKt')?.value || '18K';
+            gR10g = parseFloat(document.getElementById('posGoldRate')?.value) || 0;
+        }
+
+        if (dCent > 0 && dRate <= 0) {
+            dRate = shopRates.diamond || getShopRateForCategory('diamond') || (parseFloat(localStorage.getItem('shopRate_diamond')) || 0);
+        }
+        if (gWt > 0 && gR10g <= 0) {
+            gR10g = (getShopRateForCategory(gKt || '18K') * 10) || 0;
+        }
+
+        let finalName = name;
+        if (gWt > 0 || dCent > 0) {
+            let dualDetails = [];
+            if (gWt > 0) {
+                dualDetails.push(gKt + ' Gold: ' + gWt.toFixed(3) + 'g');
+            }
+            if (dCent > 0) {
+                dualDetails.push('Diamond: ' + dCent.toFixed(2) + ' Ct');
+            }
+            if (dualDetails.length > 0) {
+                finalName += ' [' + dualDetails.join(' | ') + ']';
             }
         }
-
-        // Auto-fill rate from product price or shop rates if left blank
-        if (rate10g <= 0) {
-            const pPrice = parseFloat(opt.dataset.price) || 0;
-            const pCat = opt.dataset.category || '';
-            const shopR = getShopRateForCategory(pCat) * 10;
-            rate10g = pPrice > 0 ? pPrice : (shopR > 0 ? shopR : 0);
-            if (rate10g > 0 && document.getElementById('gramRate')) {
-                document.getElementById('gramRate').value = rate10g.toFixed(0);
-            }
+        if (isPair && finalName.toLowerCase().indexOf('pair') === -1) {
+            finalName += ' (Pair)';
         }
-    } else if (source === 'category') {
-        const cat = document.getElementById('gramCatSelect')?.value;
-        const typeSelect = document.getElementById('gramItemType');
-        const type = typeSelect ? typeSelect.value : '';
-        if (!cat) { alert('Please select a category.'); return; }
-        if (!type) { alert('Please select an item type.'); return; }
 
-        productId = 'other';
-        name = type;  // e.g. "Jhumka"
-        itemType = type;
-        hsn = '7113';
-
-        if (rate10g <= 0) {
-            const shopR = getShopRateForCategory(cat) * 10;
-            if (shopR > 0) {
-                rate10g = shopR;
-                if (document.getElementById('gramRate')) document.getElementById('gramRate').value = rate10g.toFixed(0);
-            }
+        let stockSerial = '';
+        let stockHuid = '';
+        if (source === 'stock') {
+            const sel = document.getElementById('gramStockProduct');
+            const opt = sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
+            stockSerial = opt ? (opt.dataset.serial || '') : '';
+            stockHuid = opt ? (opt.dataset.huid || '') : '';
         }
-    } else {
-        const nameEl = document.getElementById('gramManualName');
-        const hsnEl = document.getElementById('gramManualHsn');
-        name = nameEl ? nameEl.value.trim() : '';
-        hsn = (hsnEl ? hsnEl.value.trim() : '') || '7113';
-        if (!name) { alert('Please enter an item description.'); return; }
-    }
-    
-    if (rate10g <= 0) { alert('Please enter a rate / price for the item.'); return; }
-    if (qty <= 0) { alert('Please enter quantity.'); return; }
-    
-    let baseAmount = 0;
-    let unit = 'g';
-    let itemPrice = 0;
-    
-    const unitEl = document.getElementById('gramUnit');
-    const isPair = unitEl && unitEl.value === 'pair';
-    
-    const dContainer = document.getElementById('posDiamondBreakdownContainer');
-    const isDiamondBreakdown = dContainer && !dContainer.classList.contains('hidden');
 
-    if (isDiamondBreakdown) {
-        baseAmount = parseFloat((qty * rate10g).toFixed(2));
-        unit = weight > 0 ? 'g' : (isPair ? 'pair' : 'pcs');
-        itemPrice = rate10g;
-    } else if (weight > 0) {
-        let ratePerGram = rate10g / 10;
-        baseAmount = parseFloat((weight * ratePerGram).toFixed(2));
-        unit = 'g';
-        itemPrice = ratePerGram;
-    } else {
-        baseAmount = parseFloat((qty * rate10g).toFixed(2));
-        unit = isPair ? 'pair' : 'pcs';
-        itemPrice = rate10g;
-    }
-    
-    const mcInputVal = parseFloat(document.getElementById('itemMakingCharge')?.value) || 0;
-    let imcPct = 0;
-    let imcAmt = 0;
+        const pcsToDeduct = pcsMultiplier;
 
-    if (typeof currentMcMode !== 'undefined' && currentMcMode === 'pct') {
-        imcPct = mcInputVal;
-        imcAmt = parseFloat((baseAmount * (mcInputVal / 100)).toFixed(2));
-    } else {
-        imcAmt = mcInputVal;
-        imcPct = baseAmount > 0 ? parseFloat(((mcInputVal / baseAmount) * 100).toFixed(2)) : 0;
-    }
-
-    const ihm = parseFloat(document.getElementById('itemHallmark')?.value) || 0;
-    const idisc = parseFloat(document.getElementById('itemDiscount')?.value) || 0;
-    const igst = document.getElementById('itemGstType')?.value || 'non_gst';
-    const itemTotal = parseFloat((baseAmount + imcAmt + ihm - idisc).toFixed(2));
-    
-    const inputHuid = document.getElementById('manualHuid') ? document.getElementById('manualHuid').value.trim() : '';
-
-    let dCent = 0;
-    let dRate = 0;
-    let gWt = 0;
-    let gKt = '';
-    let gR10g = 0;
-
-    if (dContainer && !dContainer.classList.contains('hidden')) {
-        dCent = parseFloat(document.getElementById('posDiamondCent')?.value) || 0;
-        dRate = parseFloat(document.getElementById('posDiamondRate')?.value) || 0;
-        gWt = parseFloat(document.getElementById('posGoldWeight')?.value) || 0;
-        gKt = document.getElementById('posGoldKt')?.value || '18K';
-        gR10g = parseFloat(document.getElementById('posGoldRate')?.value) || 0;
-    }
-
-    if (dCent > 0 && dRate <= 0) {
-        dRate = shopRates.diamond || getShopRateForCategory('diamond') || (parseFloat(localStorage.getItem('shopRate_diamond')) || 0);
-    }
-    if (gWt > 0 && gR10g <= 0) {
-        gR10g = (getShopRateForCategory(gKt || '18K') * 10) || 0;
-    }
-
-    let finalName = name;
-    if (gWt > 0 || dCent > 0) {
-        let dualDetails = [];
-        if (gWt > 0) {
-            dualDetails.push(gKt + ' Gold: ' + gWt.toFixed(3) + 'g');
+        items.push({
+            product_id: productId,
+            name: finalName,
+            item_type: itemType,
+            hsn: hsn,
+            quantity: isPair ? qty : (grossWeight > 0 ? grossWeight : qty),
+            unit: isPair ? 'pair' : (grossWeight > 0 ? 'g' : 'pcs'),
+            pcs: pcsToDeduct,
+            gross_wt: grossWeight,
+            net_wt: netWeight,
+            unit_net_wt: netWeight,
+            unit_gross_wt: grossWeight,
+            stock_deduct: pcsToDeduct,
+            hallmark_type: hmType,
+            price: itemPrice,
+            base_amount: baseAmount,
+            mc_mode: currentMcMode,
+            making_charge_pct: imcPct,
+            making_charge: imcAmt,
+            hallmark: ihm,
+            discount: idisc,
+            total: itemTotal,
+            gst_type: igst,
+            is_manual: (source === 'manual'),
+            is_item_only: (source === 'category'),
+            serial_no: stockSerial || inputHuid,
+            huid_code: inputHuid || stockHuid || stockSerial,
+            diamond_cent: dCent,
+            diamond_rate: dRate,
+            gold_weight: gWt > 0 ? gWt : (netWeight > 0 ? netWeight : 0),
+            gold_kt: gKt,
+            gold_rate_10g: gR10g
+        });
+        
+        updateItemsList();
+        calculateTotal();
+        resetItemCharges();
+        
+        // Reset fields safely
+        if (document.getElementById('gramGrossWeight')) document.getElementById('gramGrossWeight').value = '';
+        if (document.getElementById('gramNetWeight')) document.getElementById('gramNetWeight').value = '';
+        if (document.getElementById('gramItemNameInput')) document.getElementById('gramItemNameInput').value = '';
+        if (document.getElementById('gramRate')) document.getElementById('gramRate').value = '';
+        if (document.getElementById('manualHuid')) document.getElementById('manualHuid').value = '';
+        if (document.getElementById('gramQty')) document.getElementById('gramQty').value = '1';
+        netWeightManual = false;
+        
+        if (source === 'stock') {
+            if (document.getElementById('gramStockProduct')) document.getElementById('gramStockProduct').value = '';
+            if (document.getElementById('gramStockProductInfo')) document.getElementById('gramStockProductInfo').classList.add('hidden');
+            if (document.getElementById('gramUnit')) document.getElementById('gramUnit').value = 'pcs';
+            if (typeof filterGramStock === 'function') filterGramStock('');
+        } else if (source === 'category') {
+            if (document.getElementById('gramCatSelect')) document.getElementById('gramCatSelect').value = '';
+            if (document.getElementById('gramItemType')) document.getElementById('gramItemType').value = '';
+            if (document.getElementById('gramCatLiveRateBadge')) document.getElementById('gramCatLiveRateBadge').classList.add('hidden');
+        } else if (source === 'manual') {
+            if (document.getElementById('gramManualName')) document.getElementById('gramManualName').value = '';
         }
-        if (dCent > 0) {
-            dualDetails.push('Diamond: ' + dCent.toFixed(2) + ' Ct');
-        }
-        if (dualDetails.length > 0) {
-            finalName += ' [' + dualDetails.join(' | ') + ']';
-        }
-    }
-    if (isPair && finalName.toLowerCase().indexOf('pair') === -1) {
-        finalName += ' (Pair)';
-    }
-    if (qty > 1 && weight > 0 && !finalName.includes('(' + qty)) {
-        finalName += ' (' + qty + (isPair ? ' pairs)' : ' pcs)');
-    }
-
-    let stockSerial = '';
-    if (source === 'stock') {
-        const sel = document.getElementById('gramStockProduct');
-        const opt = sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
-        stockSerial = opt ? (opt.dataset.serial || '') : '';
-    }
-
-    items.push({
-        product_id: productId,
-        name: finalName,
-        item_type: itemType,
-        hsn: hsn,
-        quantity: weight > 0 ? weight : qty,
-        unit: unit,
-        pcs: isPair ? (qty * 2) : qty,
-        gross_wt: weight > 0 ? weight : 0,
-        net_wt: weight > 0 ? weight : 0,
-        stock_deduct: isPair ? (qty * 2) : qty,
-        price: itemPrice,
-        base_amount: baseAmount,
-        mc_mode: currentMcMode,
-        making_charge_pct: imcPct,
-        making_charge: imcAmt,
-        hallmark: ihm,
-        discount: idisc,
-        total: itemTotal,
-        gst_type: igst,
-        is_manual: (source === 'manual'),
-        is_item_only: (source === 'category'),
-        serial_no: stockSerial || inputHuid,
-        huid_code: inputHuid,
-        diamond_cent: dCent,
-        diamond_rate: dRate,
-        gold_weight: gWt > 0 ? gWt : (weight > 0 ? weight : 0),
-        gold_kt: gKt,
-        gold_rate_10g: gR10g
-    });
-    
-    updateItemsList();
-    calculateTotal();
-    resetItemCharges();
-    
-    // Reset fields
-    document.getElementById('gramWeight').value = '';
-    document.getElementById('gramRate').value = '';
-    if (document.getElementById('manualHuid')) document.getElementById('manualHuid').value = '';
-    if (document.getElementById('gramQty')) document.getElementById('gramQty').value = '1';
-    
-    if (source === 'stock') {
-        document.getElementById('gramStockProduct').value = '';
-        document.getElementById('gramStockProductInfo').classList.add('hidden');
-        if (document.getElementById('gramUnit')) document.getElementById('gramUnit').value = 'pcs';
-        filterGramStock('');
-    } else if (source === 'category') {
-        document.getElementById('gramCatSelect').value = '';
-        document.getElementById('gramItemType').value = '';
-        document.getElementById('gramCatLiveRateBadge').classList.add('hidden');
-    } else if (source === 'manual') {
-        document.getElementById('gramManualName').value = '';
-    }
-    document.getElementById('gramTotalPreviewRow').style.display = 'none';
-    showNotif(' Added Item: ' + name, 'success');
+        if (document.getElementById('gramTotalPreviewRow')) document.getElementById('gramTotalPreviewRow').style.display = 'none';
+        showNotif(' Added Item: ' + name, 'success');
     } catch(e) {
         alert('⚠️ Error in submitGramItem:\n' + (e.message || e) + '\n\nStack:\n' + (e.stack || ''));
         console.error(e);
@@ -3022,8 +3619,9 @@ function filterQtyStock(query) {
     const select = document.getElementById('qtyStockProduct');
     const infoDiv = document.getElementById('qtyStockProductInfo');
     const suggDiv = document.getElementById('qtyStockSuggestions');
-    query = query.trim().toLowerCase();
-    infoDiv.classList.add('hidden');
+    if (!select) return;
+    query = (query || '').trim().toLowerCase();
+    if (infoDiv) infoDiv.classList.add('hidden');
     while(select.options.length > 1) select.remove(1);
     
     const filtered = query.length > 0
@@ -3039,7 +3637,8 @@ function filterQtyStock(query) {
         const isOutOfStock = (parseFloat(p.quantity) <= 0);
         const pUnit = (p.unit || '').toLowerCase() === 'pair' ? 'pair' : 'pcs';
         const stockText = isOutOfStock ? 'OUT OF STOCK' : (p.quantity + ' ' + pUnit);
-        const display = (p.item_name || p.name) + ' | SN:' + (p.serial_no || '-') + ' | Stock: ' + stockText;
+        const catBadge = p.category ? '[' + p.category + '] ' : '';
+        const display = catBadge + (p.item_name || p.name) + ' | SN:' + (p.serial_no || '-') + ' | Stock: ' + stockText;
         const opt = document.createElement('option');
         opt.value = p.id;
         opt.textContent = display;
@@ -3064,12 +3663,12 @@ function filterQtyStock(query) {
                 const item = document.createElement('div');
                 item.className = 'autocomplete-suggestion-item';
                 item.style.cssText = 'padding:8px 12px;cursor:pointer;border-bottom:1px solid #f3f4f6;display:flex;justify-content:space-between;align-items:center;background:#fff;';
-                item.innerHTML = '<div><strong style="color:#022c22;">' + (p.item_name || p.name) + '</strong> <span style="font-size:11px;color:#059669;">(' + p.category + ')</span></div><div style="font-size:11px;color:' + (isOut?'#dc2626':'#7a4e0a') + ';">SN: ' + (p.serial_no || '-') + ' | ' + (isOut ? 'OUT OF STOCK' : (p.quantity + ' ' + pUnit)) + '</div>';
+                item.innerHTML = '<div><strong style="color:#022c22;">' + (p.category ? '<span style="color:#b5730e;font-weight:bold;">[' + p.category + ']</span> ' : '') + (p.item_name || p.name) + '</strong></div><div style="font-size:11px;color:' + (isOut?'#dc2626':'#7a4e0a') + ';">SN: ' + (p.serial_no || '-') + ' | ' + (isOut ? 'OUT OF STOCK' : (p.quantity + ' ' + pUnit)) + '</div>';
                 item.onmouseover = function() { this.style.background = '#f5ead0'; };
                 item.onmouseout = function() { this.style.background = '#fff'; };
                 item.onclick = function() {
                     select.value = p.id;
-                    document.getElementById('qtyStockSearch').value = (p.item_name || p.name);
+                    if (document.getElementById('qtyStockSearch')) document.getElementById('qtyStockSearch').value = (p.item_name || p.name);
                     suggDiv.classList.add('hidden');
                     onQtyStockChange();
                 };
@@ -3083,7 +3682,7 @@ function filterQtyStock(query) {
 }
 
 function clearQtyStockSearch() {
-    document.getElementById('qtyStockSearch').value = '';
+    if (document.getElementById('qtyStockSearch')) document.getElementById('qtyStockSearch').value = '';
     const suggDiv = document.getElementById('qtyStockSuggestions');
     if (suggDiv) suggDiv.classList.add('hidden');
     filterQtyStock('');
@@ -3093,7 +3692,7 @@ function onQtyStockChange() {
     const select = document.getElementById('qtyStockProduct');
     const infoDiv = document.getElementById('qtyStockProductInfo');
     const rateInput = document.getElementById('qtyRate');
-    const qtyInput = document.getElementById('qtyCount');
+    if (!select || !infoDiv || !rateInput) return;
     const opt = select.options[select.selectedIndex];
     
     if (!opt || !opt.value) {
@@ -3101,19 +3700,20 @@ function onQtyStockChange() {
         return;
     }
     
-    const price = parseFloat(opt.dataset.price) || 0;
-    const qty = parseFloat(opt.dataset.qty) || 0;
-    const name = opt.dataset.itemName;
-    const stockWeight = parseFloat(opt.dataset.weight) || 0;
-    const wtInfo = stockWeight > 0 ? ' | Available Weight: <strong style="color:#059669;">' + stockWeight.toFixed(3) + ' g</strong>' : '';
-    
-    rateInput.value = price.toFixed(2);
-    qtyInput.value = 1;
+    const price    = parseFloat(opt.dataset.price) || 0;
+    const qty      = parseFloat(opt.dataset.qty) || 0;
+    const name     = opt.dataset.itemName || opt.dataset.name || '';
+    const category = opt.dataset.category || '';
     
     if (qty <= 0) {
-        infoDiv.innerHTML = '<strong style="color:#dc2626;">' + name + '</strong>' + wtInfo + ' | <strong style="color:#dc2626;"> OUT OF STOCK (0 pcs available)</strong>';
+        rateInput.value = '';
+        infoDiv.innerHTML = '<strong style="color:#dc2626;">' + name + '</strong> | <strong style="color:#dc2626;">OUT OF STOCK (0 pcs available)</strong>';
+    } else if (price > 0) {
+        rateInput.value = price.toFixed(0);
+        infoDiv.innerHTML = '<strong>' + name + '</strong> | Price: \u20B9' + price.toLocaleString('en-IN') + ' | Stock: <strong>' + qty + ' pcs</strong>';
     } else {
-        infoDiv.innerHTML = '<strong>' + name + '</strong> Selected. Price per Piece: ₹' + price.toFixed(2) + ' | Available Qty: <strong style="color:#059669;">' + qty + ' pcs</strong>' + wtInfo;
+        rateInput.value = '';
+        infoDiv.innerHTML = '<strong>' + name + '</strong> | Stock: <strong>' + qty + ' pcs</strong> | ⚠ Enter rate per piece manually';
     }
     infoDiv.classList.remove('hidden');
     
@@ -3121,8 +3721,9 @@ function onQtyStockChange() {
 }
 
 function updateQtyItemTypes() {
-    const category = document.getElementById('qtyCatSelect').value;
+    const category = document.getElementById('qtyCatSelect')?.value;
     const itemTypeSelect = document.getElementById('qtyItemType');
+    if (!itemTypeSelect) return;
     itemTypeSelect.innerHTML = '<option value="">-- Select Item Type --</option>';
     if (!category) return;
     
@@ -3143,23 +3744,23 @@ function autoQtyTotal() {
 
     let qty = 0;
     if (source === 'stock') {
-        qty = parseInt(document.getElementById('qtyCount').value) || 0;
+        qty = parseInt(document.getElementById('qtyCount')?.value) || 0;
     } else if (source === 'category') {
-        qty = parseInt(document.getElementById('qtyCountCat').value) || 0;
+        qty = parseInt(document.getElementById('qtyCountCat')?.value) || 0;
     } else {
-        qty = parseInt(document.getElementById('qtyCountManual').value) || 0;
+        qty = parseInt(document.getElementById('qtyCountManual')?.value) || 0;
     }
     
-    const rate = parseFloat(document.getElementById('qtyRate').value) || 0;
+    const rate = parseFloat(document.getElementById('qtyRate')?.value) || 0;
     const total = parseFloat((qty * rate).toFixed(2));
     
     const previewRow = document.getElementById('qtyTotalPreviewRow');
     const previewEl = document.getElementById('qtyTotalPreview');
     
-    if (total > 0) {
+    if (total > 0 && previewEl && previewRow) {
         previewEl.textContent = '₹' + total.toLocaleString('en-IN', {minimumFractionDigits: 2});
         previewRow.style.display = '';
-    } else {
+    } else if (previewRow) {
         previewRow.style.display = 'none';
     }
     updateMakingChargeHint();
@@ -3168,123 +3769,123 @@ function autoQtyTotal() {
 function submitQtyItem() {
     try {
         const checkedRadio = document.querySelector('input[name="qty_source"]:checked');
-    const source = checkedRadio ? checkedRadio.value : (typeof currentQtySource !== 'undefined' ? currentQtySource : 'stock');
-    currentQtySource = source;
+        const source = checkedRadio ? checkedRadio.value : (typeof currentQtySource !== 'undefined' ? currentQtySource : 'stock');
+        currentQtySource = source;
 
-    let productId = 'other';
-    let name = '';
-    let itemType = '';
-    let hsn = '7113';
-    let qty = 0;
-    let rate = parseFloat(document.getElementById('qtyRate').value) || 0;
-    
-    if (source === 'stock') {
-        const select = document.getElementById('qtyStockProduct');
-        const opt = select.options[select.selectedIndex];
-        if (!opt || !opt.value) { alert('Please select a product from stock.'); return; }
-        productId = opt.value;
-        name = opt.dataset.itemName;
-        hsn = '7113';
-        qty = parseInt(document.getElementById('qtyCount').value) || 0;
+        let productId = 'other';
+        let name = '';
+        let itemType = '';
+        let hsn = '7113';
+        let qty = 0;
+        let rate = parseFloat(document.getElementById('qtyRate')?.value) || 0;
+        
+        if (source === 'stock') {
+            const select = document.getElementById('qtyStockProduct');
+            const opt = select && select.selectedIndex >= 0 ? select.options[select.selectedIndex] : null;
+            if (!opt || !opt.value) { alert('Please select a product from stock.'); return; }
+            productId = opt.value;
+            name = opt.dataset.itemName;
+            hsn = '7113';
+            qty = parseInt(document.getElementById('qtyCount')?.value) || 0;
 
-        // Stock pcs validation check
-        const stockQty = parseFloat(opt.dataset.qty) || 0;
-        let existingPcs = 0;
-        items.forEach(it => {
-            if (String(it.product_id) === String(productId)) {
-                existingPcs += (parseFloat(it.pcs) || parseFloat(it.quantity) || 1);
+            // Stock pcs validation check
+            const stockQty = parseFloat(opt.dataset.qty) || 0;
+            let existingPcs = 0;
+            items.forEach(it => {
+                if (String(it.product_id) === String(productId)) {
+                    existingPcs += (parseFloat(it.pcs) || parseFloat(it.quantity) || 1);
+                }
+            });
+            const totalReqPcs = existingPcs + qty;
+            if (stockQty <= 0) {
+                alert(' Out of Stock!\n"' + name + '" is currently out of stock (0 pcs available).');
+                return;
             }
-        });
-        const totalReqPcs = existingPcs + qty;
-        if (stockQty <= 0) {
-            alert(' Out of Stock!\n"' + name + '" is currently out of stock (0 pcs available).');
-            return;
+            if (totalReqPcs > stockQty) {
+                alert(' Exceeds Available Stock!\nOnly ' + stockQty + ' pcs available in stock for "' + name + '", but ' + totalReqPcs + ' pcs requested.');
+                return;
+            }
+        } else if (source === 'category') {
+            const cat = document.getElementById('qtyCatSelect')?.value;
+            const type = document.getElementById('qtyItemType')?.value;
+            if (!cat) { alert('Please select a category.'); return; }
+            if (!type) { alert('Please select an item type.'); return; }
+            productId = 'other';
+            name = type;  // e.g. "Jhumka"
+            itemType = type;
+            hsn = '7113';
+            qty = parseInt(document.getElementById('qtyCountCat')?.value) || 0;
+        } else {
+            const nameEl = document.getElementById('qtyManualName');
+            const hsnEl = document.getElementById('qtyManualHsn');
+            name = nameEl ? nameEl.value.trim() : '';
+            hsn = (hsnEl ? hsnEl.value.trim() : '') || '7113';
+            qty = parseInt(document.getElementById('qtyCountManual')?.value) || 0;
+            if (!name) { alert('Please enter an item description.'); return; }
         }
-        if (totalReqPcs > stockQty) {
-            alert(' Exceeds Available Stock!\nOnly ' + stockQty + ' pcs available in stock for "' + name + '", but ' + totalReqPcs + ' pcs requested.');
-            return;
+        
+        if (qty <= 0) { alert('Please enter quantity.'); return; }
+        if (rate <= 0) { alert('Please enter rate per piece.'); return; }
+        
+        const baseAmount = parseFloat((qty * rate).toFixed(2));
+        const imcPct = parseFloat(document.getElementById('itemMakingCharge')?.value) || 0;
+        const imc = parseFloat((baseAmount * (imcPct / 100)).toFixed(2));
+        const ihm = parseFloat(document.getElementById('itemHallmark')?.value) || 0;
+        const idisc = parseFloat(document.getElementById('itemDiscount')?.value) || 0;
+        const igst = document.getElementById('itemGstType')?.value || 'non_gst';
+        const itemTotal = parseFloat((baseAmount + imc + ihm - idisc).toFixed(2));
+        
+        let stockQtySerial = '';
+        if (source === 'stock') {
+            const sel = document.getElementById('qtyStockProduct');
+            const opt = sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
+            stockQtySerial = opt ? (opt.dataset.serial || '') : '';
         }
-    } else if (source === 'category') {
-        const cat = document.getElementById('qtyCatSelect').value;
-        const type = document.getElementById('qtyItemType').value;
-        if (!cat) { alert('Please select a category.'); return; }
-        if (!type) { alert('Please select an item type.'); return; }
-        productId = 'other';
-        name = type;  // e.g. "Jhumka"
-        itemType = type;
-        hsn = '7113';
-        qty = parseInt(document.getElementById('qtyCountCat').value) || 0;
-    } else {
-        const nameEl = document.getElementById('qtyManualName');
-        const hsnEl = document.getElementById('qtyManualHsn');
-        name = nameEl ? nameEl.value.trim() : '';
-        hsn = (hsnEl ? hsnEl.value.trim() : '') || '7113';
-        qty = parseInt(document.getElementById('qtyCountManual')?.value) || 0;
-        if (!name) { alert('Please enter an item description.'); return; }
-    }
-    
-    if (qty <= 0) { alert('Please enter quantity.'); return; }
-    if (rate <= 0) { alert('Please enter rate per piece.'); return; }
-    
-    const baseAmount = parseFloat((qty * rate).toFixed(2));
-    const imcPct = parseFloat(document.getElementById('itemMakingCharge')?.value) || 0;
-    const imc = parseFloat((baseAmount * (imcPct / 100)).toFixed(2));
-    const ihm = parseFloat(document.getElementById('itemHallmark')?.value) || 0;
-    const idisc = parseFloat(document.getElementById('itemDiscount')?.value) || 0;
-    const igst = document.getElementById('itemGstType')?.value || 'non_gst';
-    const itemTotal = parseFloat((baseAmount + imc + ihm - idisc).toFixed(2));
-    
-    let stockQtySerial = '';
-    if (source === 'stock') {
-        const sel = document.getElementById('qtyStockProduct');
-        const opt = sel && sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
-        stockQtySerial = opt ? (opt.dataset.serial || '') : '';
-    }
 
-    items.push({
-        product_id: productId,
-        name: name,
-        item_type: itemType,
-        hsn: hsn,
-        quantity: qty,
-        unit: 'pcs',
-        pcs: qty,
-        stock_deduct: qty,
-        price: rate,
-        base_amount: baseAmount,
-        making_charge_pct: imcPct,
-        making_charge: imc,
-        hallmark: ihm,
-        discount: idisc,
-        total: itemTotal,
-        gst_type: igst,
-        is_manual: (source === 'manual'),
-        is_item_only: (source === 'category'),
-        serial_no: stockQtySerial
-    });
-    
-    updateItemsList();
-    calculateTotal();
-    resetItemCharges();
-    
-    // Reset fields
-    document.getElementById('qtyCount').value = '';
-    document.getElementById('qtyCountCat').value = '';
-    document.getElementById('qtyCountManual').value = '';
-    document.getElementById('qtyRate').value = '';
-    document.getElementById('qtyManualName').value = '';
-    if (currentQtySource === 'stock') {
-        document.getElementById('qtyStockProduct').value = '';
-        document.getElementById('qtyStockProductInfo').classList.add('hidden');
-        filterQtyStock('');
-    } else if (currentQtySource === 'category') {
-        document.getElementById('qtyCatSelect').value = '';
-        document.getElementById('qtyItemType').value = '';
-    } else if (currentQtySource === 'manual') {
-        document.getElementById('qtyManualName').value = '';
-    }
-    document.getElementById('qtyTotalPreviewRow').style.display = 'none';
-    showNotif(' Added Qty Item: ' + name, 'success');
+        items.push({
+            product_id: productId,
+            name: name,
+            item_type: itemType,
+            hsn: hsn,
+            quantity: qty,
+            unit: 'pcs',
+            pcs: qty,
+            stock_deduct: qty,
+            price: rate,
+            base_amount: baseAmount,
+            making_charge_pct: imcPct,
+            making_charge: imc,
+            hallmark: ihm,
+            discount: idisc,
+            total: itemTotal,
+            gst_type: igst,
+            is_manual: (source === 'manual'),
+            is_item_only: (source === 'category'),
+            serial_no: stockQtySerial
+        });
+        
+        updateItemsList();
+        calculateTotal();
+        resetItemCharges();
+        
+        // Reset fields safely
+        if (document.getElementById('qtyCount')) document.getElementById('qtyCount').value = '';
+        if (document.getElementById('qtyCountCat')) document.getElementById('qtyCountCat').value = '';
+        if (document.getElementById('qtyCountManual')) document.getElementById('qtyCountManual').value = '';
+        if (document.getElementById('qtyRate')) document.getElementById('qtyRate').value = '';
+        if (document.getElementById('qtyManualName')) document.getElementById('qtyManualName').value = '';
+        if (currentQtySource === 'stock') {
+            if (document.getElementById('qtyStockProduct')) document.getElementById('qtyStockProduct').value = '';
+            if (document.getElementById('qtyStockProductInfo')) document.getElementById('qtyStockProductInfo').classList.add('hidden');
+            if (typeof filterQtyStock === 'function') filterQtyStock('');
+        } else if (currentQtySource === 'category') {
+            if (document.getElementById('qtyCatSelect')) document.getElementById('qtyCatSelect').value = '';
+            if (document.getElementById('qtyItemType')) document.getElementById('qtyItemType').value = '';
+        } else if (currentQtySource === 'manual') {
+            if (document.getElementById('qtyManualName')) document.getElementById('qtyManualName').value = '';
+        }
+        if (document.getElementById('qtyTotalPreviewRow')) document.getElementById('qtyTotalPreviewRow').style.display = 'none';
+        showNotif(' Added Qty Item: ' + name, 'success');
     } catch(e) {
         alert('⚠️ Error in submitQtyItem:\n' + (e.message || e) + '\n\nStack:\n' + (e.stack || ''));
         console.error(e);
@@ -3295,14 +3896,14 @@ function populateStockSelects() {
     filterGramStock('');
     filterQtyStock('');
 }
-   function resetItemCharges() {
-    document.getElementById('itemMakingCharge').value = '';
-    document.getElementById('itemHallmark').value = '';
-    document.getElementById('itemDiscount').value = '';
-    document.getElementById('itemGstType').value = 'non_gst';
-    setMcMode('pct');
+function resetItemCharges() {
+    if (document.getElementById('itemMakingCharge')) document.getElementById('itemMakingCharge').value = '';
+    if (document.getElementById('itemHallmark')) document.getElementById('itemHallmark').value = '';
+    if (document.getElementById('itemDiscount')) document.getElementById('itemDiscount').value = '';
+    if (document.getElementById('itemGstType')) document.getElementById('itemGstType').value = 'non_gst';
+    if (typeof setMcMode === 'function') setMcMode('pct');
     const hint = document.getElementById('itemMakingChargeHint');
-    if(hint) { hint.textContent = ''; hint.style.display = 'none'; }
+    if (hint) { hint.textContent = ''; hint.style.display = 'none'; }
 }
 
 document.addEventListener('input', function(e) {
@@ -3317,7 +3918,7 @@ document.addEventListener('input', function(e) {
 function updateItemsList() {
     const tbody = document.getElementById('itemsList');
     if(items.length === 0) {
-        tbody.innerHTML = '<tr id="emptyRow"><td colspan="11" style="text-align:center;padding:20px;color:#9ca3af;font-size:12px;">No items added yet \u2014 enter details above to add products</td></tr>';
+        tbody.innerHTML = '<tr id="emptyRow"><td colspan="10" style="text-align:center;padding:20px;color:#9ca3af;font-size:12px;">No items added yet \u2014 enter details above to add products</td></tr>';
         return;
     }
     let html = '';
@@ -3342,9 +3943,26 @@ function updateItemsList() {
         const hmValDisp = (hm > 0) ? hm : '';
         const discValDisp = (disc > 0) ? disc : '';
         const chargeInputStyle = 'width:60px;padding:3px 4px;border:1px solid #e5c98a;border-radius:5px;font-size:11px;text-align:right;';
-        const qtyDisp = (item.unit === 'g') 
-                ? (item.quantity + 'g' + ((item.pcs && item.pcs > 1) ? '<br><span style="font-size:10px;color:#9ca3af;">(' + item.pcs + ' pcs)</span>' : ''))
-                : (item.quantity > 0 ? item.quantity + ' ' + (item.unit || 'pcs') + ((item.unit === 'pair' || item.unit === 'pairs') ? '<br><span style="font-size:10px;color:#9ca3af;">(' + (item.pcs || (item.quantity * 2)) + ' pcs)</span>' : '') : '\u2014');
+        
+        let qtyDisp = '';
+        if (item.net_wt > 0 || item.gross_wt > 0) {
+            const netW = (item.net_wt > 0 ? item.net_wt : item.gross_wt).toFixed(3);
+            qtyDisp += '<div class="font-bold text-stone-900">' + netW + 'g <span style="font-size:10px;color:#059669;font-weight:600;">(Net)</span></div>';
+            if (item.gross_wt > 0 && item.gross_wt !== item.net_wt) {
+                qtyDisp += '<div style="font-size:10px;color:#6b7280;">Gross: ' + item.gross_wt.toFixed(3) + 'g</div>';
+            }
+            if (item.unit === 'pair' || (item.name && item.name.toLowerCase().includes('pair'))) {
+                qtyDisp += '<div style="font-size:10px;color:#7c3aed;font-weight:600;">' + (item.quantity || 1) + ' Pair (' + (item.pcs || ((item.quantity||1)*2)) + ' pcs)</div>';
+            } else if (item.pcs && item.pcs > 1 && item.unit !== 'g') {
+                qtyDisp += '<div style="font-size:10px;color:#6b7280;">(' + item.pcs + ' pcs)</div>';
+            }
+        } else {
+            qtyDisp = item.quantity > 0 ? item.quantity + ' ' + (item.unit || 'pcs') : '\u2014';
+            if (item.unit === 'pair') {
+                qtyDisp += '<div style="font-size:10px;color:#7c3aed;font-weight:600;">(' + (item.pcs || (item.quantity * 2)) + ' pcs)</div>';
+            }
+        }
+
         let rateDisp = '';
         if (item.gold_rate_10g > 0 || item.diamond_rate > 0) {
             let rParts = [];
@@ -3352,12 +3970,17 @@ function updateItemsList() {
             if (item.diamond_rate > 0) rParts.push('Diamond: ₹' + item.diamond_rate.toLocaleString('en-IN') + '/1Ct');
             rateDisp = '<div style="font-size:10px;line-height:1.2;font-weight:600;">' + rParts.join('<br>') + '</div>';
         } else {
-            rateDisp = item.price > 0 ? '\u20B9' + item.price.toFixed(2) + (item.unit === 'g' ? '/g' : '') : '\u2014';
+            rateDisp = item.price > 0 ? '\u20B9' + item.price.toFixed(2) + ((item.net_wt > 0 || item.unit === 'g') ? '/g' : '') : '\u2014';
         }
+
+        const hmBadge = item.hallmark_type ? '<span style="display:inline-block;padding:1px 5px;background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:4px;font-size:9.5px;font-weight:700;margin-left:4px;">' + htmlEsc(item.hallmark_type) + '</span>' : '';
+        const cleanHuid = (item.huid_code || '').trim().replace(/^HUID[:\s\-_]*/i, '');
+        const huidBadge = cleanHuid ? '<span style="display:inline-block;padding:1px 5px;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;border-radius:4px;font-size:9.5px;font-family:monospace;font-weight:600;margin-left:4px;">HUID: ' + htmlEsc(cleanHuid) + '</span>' : '';
 
         html += '<tr>' +
             '<td class="px-2 py-2 text-xs text-center" style="color:#9ca3af;">' + (idx+1) + '</td>' +
-            '<td class="px-2 py-2 text-xs" style="color:#374151;">' + icon + ' ' + htmlEsc(item.name) +
+            '<td class="px-2 py-2 text-xs" style="color:#374151;">' + icon + ' <strong>' + htmlEsc(item.name) + '</strong>' +
+                hmBadge + huidBadge +
                 (item.item_type ? '<span style="color:#b5730e;font-size:10px;"> [' + htmlEsc(item.item_type) + ']</span>' : '') +
                 badge + '<div style="color:#9ca3af;font-size:10px;">HSN: ' + (item.hsn || '7108') + '</div></td>' +
             '<td class="px-2 py-2 text-center text-xs font-medium" style="color:#4b5563;">' + qtyDisp + '</td>' +
@@ -3368,11 +3991,11 @@ function updateItemsList() {
                 '<div style="font-size:9.5px;color:#059669;font-weight:600;margin-top:1px;">' + mcSubDisp + '</div>' +
             '</td>' +
             '<td class="px-2 py-2 text-right text-xs"><input type="number" min="0" step="1" value="' + hmValDisp + '" placeholder="0" style="' + chargeInputStyle + '" onchange="updateItemCharge(' + idx + ',\'hallmark\',this.value)"></td>' +
-            '<td class="px-2 py-2 text-right text-xs"><input type="number" min="0" step="1" value="' + discValDisp + '" placeholder="0" style="' + chargeInputStyle + '" onchange="updateItemCharge(' + idx + ',\'discount\',this.value)"></td>' +
             '<td class="px-2 py-2 text-right text-xs font-semibold" style="color:#7a4e0a;">\u20B9' + item.total.toFixed(2) + '</td>' +
             '<td class="px-2 py-2 text-center text-xs">' + gstSelect + '</td>' +
             '<td class="px-2 py-2"><button onclick="removeItem(' + idx + ')" class="remove-btn">\u2715</button></td>' +
             '</tr>';
+
     });
     tbody.innerHTML = html;
 }
@@ -3397,8 +4020,7 @@ function updateItemCharge(idx, field, value) {
     
     const mc   = items[idx].making_charge || 0;
     const hm   = items[idx].hallmark || 0;
-    const disc = items[idx].discount || 0;
-    items[idx].total = parseFloat((base + mc + hm - disc).toFixed(2));
+    items[idx].total = parseFloat((base + mc + hm).toFixed(2));
     updateItemsList();
     calculateTotal();
 }
@@ -3444,11 +4066,13 @@ function populateHuidOptions() {
     });
 }
 
+
 function calculateTotal() {
     const subtotal = items.reduce((sum, item) => sum + item.total, 0);
     const makingAmt = items.reduce((sum, item) => sum + (item.making_charge || 0), 0);
     const hallmark  = items.reduce((sum, item) => sum + (item.hallmark || 0), 0);
-    const discount  = items.reduce((sum, item) => sum + (item.discount || 0), 0);
+    const discountEl = document.getElementById('overallDiscountInput');
+    const discount  = parseFloat(discountEl?.value) || 0;
     
     let cgst = 0, sgst = 0;
     items.forEach(item => {
@@ -3479,7 +4103,38 @@ function calculateTotal() {
     const oldGoldEl = document.getElementById('oldGoldAmountInput');
     const oldGold = parseFloat(oldGoldEl?.value) || 0;
 
-    const grand = Math.max(0, subtotal + cgst + sgst - oldGold);
+    // --- CALCULATE ADVANCE CREDIT DEDUCTION & GRAND TOTAL ---
+    const subtotalWithTax = subtotal + cgst + sgst;
+    const netPayableBeforeAdv = Math.max(0, subtotalWithTax - discount);
+
+    let calculatedAdvDeduct = 0;
+    let surplusAmount = 0;
+    const surplusAction = document.getElementById('hiddenAdvSurplusAction')?.value || 'keep_advance';
+
+    if (currentCustomerAdvance > 0 && netPayableBeforeAdv > 0) {
+        if (advanceAdjustmentMode === 'full') {
+            if (currentCustomerAdvance > netPayableBeforeAdv) {
+                surplusAmount = parseFloat((currentCustomerAdvance - netPayableBeforeAdv).toFixed(2));
+                if (surplusAction === 'refund_customer') {
+                    // Full advance is redeemed, excess returned
+                    calculatedAdvDeduct = currentCustomerAdvance;
+                } else {
+                    // Bill amount is deducted, remaining saved in credit
+                    calculatedAdvDeduct = netPayableBeforeAdv;
+                }
+            } else {
+                calculatedAdvDeduct = currentCustomerAdvance;
+                surplusAmount = 0;
+            }
+        } else if (advanceAdjustmentMode === 'custom') {
+            const customVal = parseFloat(document.getElementById('advCustomAmountInput')?.value) || 0;
+            calculatedAdvDeduct = Math.min(netPayableBeforeAdv, Math.min(currentCustomerAdvance, customVal));
+            surplusAmount = 0;
+        }
+    }
+    appliedAdvanceAmount = parseFloat(calculatedAdvDeduct.toFixed(2));
+
+    const grand = Math.max(0, netPayableBeforeAdv - Math.min(netPayableBeforeAdv, appliedAdvanceAmount) - oldGold);
     
     const fmt = v => '\u20B9' + v.toFixed(2);
     if (document.getElementById('totalWeightDisplay')) {
@@ -3494,10 +4149,69 @@ function calculateTotal() {
         const weightRow = document.getElementById('totalWeightRow');
         if (weightRow) weightRow.style.display = (totalGoldWeight > 0 || totalDiamondCent > 0 || totalPieces > 0) ? '' : 'none';
     }
-    document.getElementById('subtotal').textContent = fmt(subtotal - makingAmt - hallmark + discount);
+    document.getElementById('subtotal').textContent = fmt(subtotal - makingAmt - hallmark);
     document.getElementById('makingChargeAmount').textContent = fmt(makingAmt);
-    document.getElementById('hallmarkAmount').textContent = fmt(hallmark);
-    document.getElementById('discountAmount').textContent = '- ' + fmt(discount);
+    document.getElementById('hallmarkAmount').textContent     = fmt(hallmark);
+
+    // Update hidden form fields
+    document.getElementById('hiddenSubtotal').value     = (subtotal - makingAmt - hallmark).toFixed(2);
+    document.getElementById('hiddenGst').value          = (cgst + sgst).toFixed(2);
+    document.getElementById('hiddenTotal').value        = grand.toFixed(2);
+    document.getElementById('hiddenMakingCharge').value = makingAmt.toFixed(2);
+    document.getElementById('hiddenHallmark').value     = hallmark.toFixed(2);
+    document.getElementById('hiddenDiscount').value     = discount.toFixed(2);
+    document.getElementById('hiddenOldGold').value      = oldGold.toFixed(2);
+    document.getElementById('hiddenAdvanceAdjusted').value = (surplusAction === 'refund_customer' ? currentCustomerAdvance : Math.min(netPayableBeforeAdv, appliedAdvanceAmount)).toFixed(2);
+    document.getElementById('hiddenAppliedAdvanceId').value = (appliedAdvanceAmount > 0) ? currentAdvanceId : 0;
+
+
+    // Update Advance Credit UI displays & Surplus Handling Panel
+    const surplusDiv = document.getElementById('advSurplusContainer');
+    const surplusBadge = document.getElementById('advSurplusAmountBadge');
+    const surplusNote = document.getElementById('advSurplusSummaryNote');
+    const refundModeDiv = document.getElementById('advRefundModeDiv');
+
+    if (surplusDiv) {
+        if (advanceAdjustmentMode === 'full' && surplusAmount > 0.005) {
+            surplusDiv.style.display = 'block';
+            if (surplusBadge) surplusBadge.textContent = fmt(surplusAmount);
+            if (document.getElementById('hiddenAdvSurplusAmount')) document.getElementById('hiddenAdvSurplusAmount').value = surplusAmount.toFixed(2);
+            
+            if (surplusAction === 'refund_customer') {
+                if (refundModeDiv) refundModeDiv.style.display = 'flex';
+                const rMode = document.getElementById('advRefundModeSelect')?.value || 'Cash';
+                if (surplusNote) surplusNote.innerHTML = '<span class="text-rose-800">💵 <strong>' + fmt(surplusAmount) + '</strong> excess cash/online will be returned to customer via ' + rMode + '.</span>';
+                if (document.getElementById('advDeductionDisplay')) {
+                    document.getElementById('advDeductionDisplay').textContent = '- ' + fmt(netPayableBeforeAdv) + ' (+ ' + fmt(surplusAmount) + ' Return)';
+                }
+                if (document.getElementById('advanceAdjustedDisplay')) {
+                    document.getElementById('advanceAdjustedDisplay').textContent = '- ' + fmt(netPayableBeforeAdv) + ' (Excess ' + fmt(surplusAmount) + ' Refunded)';
+                    document.getElementById('advanceAdjustedRow').style.display = '';
+                }
+            } else {
+                if (refundModeDiv) refundModeDiv.style.display = 'none';
+                if (surplusNote) surplusNote.innerHTML = '<span class="text-emerald-800">🏦 Remaining <strong>' + fmt(surplusAmount) + '</strong> will stay saved in customer advance credit.</span>';
+                if (document.getElementById('advDeductionDisplay')) {
+                    document.getElementById('advDeductionDisplay').textContent = '- ' + fmt(appliedAdvanceAmount) + ' (₹' + surplusAmount.toFixed(0) + ' kept in Credit)';
+                }
+                if (document.getElementById('advanceAdjustedDisplay')) {
+                    document.getElementById('advanceAdjustedDisplay').textContent = '- ' + fmt(appliedAdvanceAmount);
+                    document.getElementById('advanceAdjustedRow').style.display = (appliedAdvanceAmount > 0) ? '' : 'none';
+                }
+            }
+        } else {
+            surplusDiv.style.display = 'none';
+            if (document.getElementById('hiddenAdvSurplusAmount')) document.getElementById('hiddenAdvSurplusAmount').value = '0';
+            if (document.getElementById('advDeductionDisplay')) {
+                document.getElementById('advDeductionDisplay').textContent = '- ' + fmt(appliedAdvanceAmount);
+            }
+            if (document.getElementById('advanceAdjustedDisplay')) {
+                document.getElementById('advanceAdjustedDisplay').textContent = '- ' + fmt(appliedAdvanceAmount);
+                document.getElementById('advanceAdjustedRow').style.display = (appliedAdvanceAmount > 0) ? '' : 'none';
+            }
+        }
+    }
+
     const selectedOldType = document.getElementById('oldGoldTypeSelect')?.value || 'Old Gold';
     if(document.getElementById('hiddenOldGoldType')) document.getElementById('hiddenOldGoldType').value = selectedOldType;
     if(document.getElementById('oldGoldLabel')) document.getElementById('oldGoldLabel').textContent = selectedOldType + ' Deduction';
@@ -3521,6 +4235,7 @@ function calculateTotal() {
     if (document.getElementById('hiddenGstType')) document.getElementById('hiddenGstType').value = overallGst;
     document.getElementById('hiddenItems').value     = JSON.stringify(buildItemsForSubmit());
     document.getElementById('hiddenMakingCharge').value = makingAmt;
+
     document.getElementById('hiddenHallmark').value  = hallmark;
     document.getElementById('hiddenDiscount').value  = discount;
     if(document.getElementById('hiddenOldGold')) document.getElementById('hiddenOldGold').value = oldGold;
@@ -3991,13 +4706,28 @@ function updateSplitDisplay() {
     }
 }
 
-// Part Payment
+// Part Payment & Advance Booking
 function togglePartPayment() {
     const status = document.getElementById('paymentStatus').value;
     const method = document.getElementById('paymentMethod').value;
     const partDiv = document.getElementById('partAmountDiv');
     const balDiv  = document.getElementById('balanceDisplay');
+    const advDiv  = document.getElementById('advanceBookingDiv');
+    const submitBtn = document.getElementById('submitBtn');
     const grand = parseFloat(document.getElementById('grandTotal').textContent.replace('\u20B9','').replace(/,/g,'')) || 0;
+
+    if (status === 'advance') {
+        if (advDiv) advDiv.style.display = 'block';
+        if (partDiv) partDiv.style.display = 'none';
+        if (balDiv) balDiv.style.display = 'none';
+        if (submitBtn) submitBtn.innerHTML = '✨ Generate Advance Credit Receipt ✨';
+        updateReminderButtonVisibility();
+        return;
+    } else {
+        if (advDiv) advDiv.style.display = 'none';
+        if (submitBtn) submitBtn.innerHTML = '✨ Generate Invoice ✨';
+    }
+
     if(method === 'Split') {
         const cash = parseFloat(document.getElementById('cashAmount').value) || 0;
         const upi  = parseFloat(document.getElementById('upiAmount').value)  || 0;
@@ -4031,6 +4761,231 @@ function togglePartPayment() {
     }
     updateReminderButtonVisibility();
 }
+
+// --- ADVANCE CUSTOMER DROPDOWN & AUTO-COMPLETE ---
+
+function onAdvanceCustomerSelectChange(advId) {
+
+    const sel = document.getElementById('advanceCustomerDropdownSelect');
+    if (!advId) {
+        clearCustomerAdvanceCredit();
+        return;
+    }
+
+    let customerData = null;
+
+    if (sel && sel.selectedIndex >= 0) {
+        const opt = sel.options[sel.selectedIndex];
+        if (opt && opt.dataset && opt.dataset.name) {
+            customerData = {
+                id: advId,
+                customer_name: opt.dataset.name,
+                customer_mobile: opt.dataset.mobile,
+                customer_address: opt.dataset.address,
+                available_amount: parseFloat(opt.dataset.available) || 0,
+                advance_amount: parseFloat(opt.dataset.amount) || 0,
+                receipt_no: opt.dataset.receipt
+            };
+        }
+    }
+
+    if (!customerData && Array.isArray(allAdvanceCustomers)) {
+        customerData = allAdvanceCustomers.find(c => String(c.id) === String(advId));
+    }
+
+    if (customerData) {
+        const nameInput = document.getElementById('customerName');
+        const mobileInput = document.getElementById('customerMobile');
+        const addressInput = document.getElementById('customerAddress');
+
+        if (nameInput) nameInput.value = customerData.customer_name || '';
+        if (mobileInput) mobileInput.value = customerData.customer_mobile || '';
+        if (addressInput && customerData.customer_address) {
+            addressInput.value = customerData.customer_address;
+        }
+
+        showCustomerAdvanceCredit(customerData);
+    }
+}
+
+function loadAdvanceCustomers() {
+    fetch('billing.php?action=get_advance_customers')
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && Array.isArray(data.customers)) {
+                allAdvanceCustomers = data.customers;
+                const select = document.getElementById('advanceCustomerDropdownSelect');
+                if (select) {
+                    select.innerHTML = '<option value="" style="background:#fff;color:#1c1917;">-- ⚡ Select Advance Customer (' + allAdvanceCustomers.length + ' Active) --</option>';
+                    allAdvanceCustomers.forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c.id;
+                        opt.dataset.name = c.customer_name || '';
+                        opt.dataset.mobile = c.customer_mobile || '';
+                        opt.dataset.address = c.customer_address || '';
+                        opt.dataset.available = c.available_amount || 0;
+                        opt.dataset.amount = c.advance_amount || c.available_amount || 0;
+                        opt.dataset.receipt = c.receipt_no || '';
+                        opt.style.background = '#fff';
+                        opt.style.color = '#1c1917';
+                        opt.textContent = '👤 ' + c.customer_name + ' (₹' + parseFloat(c.available_amount).toLocaleString('en-IN') + ' Avail) - ' + (c.customer_mobile || '');
+                        select.appendChild(opt);
+                    });
+                }
+            }
+        }).catch(err => console.log('Error loading advance customers:', err));
+}
+
+
+
+let customerInputTimer = null;
+function onCustomerDetailsInput() {
+    clearTimeout(customerInputTimer);
+    customerInputTimer = setTimeout(() => {
+        const mob = document.getElementById('customerMobile').value.trim();
+        const name = document.getElementById('customerName').value.trim();
+        
+        // Check in preloaded advance list first
+        const match = allAdvanceCustomers.find(c => 
+            (mob.length >= 4 && (c.customer_mobile || '').includes(mob)) ||
+            (name.length >= 3 && (c.customer_name || '').toLowerCase() === name.toLowerCase())
+        );
+
+        if (match) {
+            showCustomerAdvanceCredit(match);
+            const sel = document.getElementById('advanceCustomerDropdownSelect');
+            if (sel) sel.value = match.id;
+            return;
+        }
+
+        if (mob.length >= 4 || name.length >= 3) {
+            fetch('billing.php?action=check_customer_advance&mobile=' + encodeURIComponent(mob) + '&name=' + encodeURIComponent(name))
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success && data.has_advance && data.advance) {
+                        showCustomerAdvanceCredit(data.advance);
+                        const sel = document.getElementById('advanceCustomerDropdownSelect');
+                        if (sel) sel.value = data.advance.id;
+                    } else if (!currentAdvanceId) {
+                        clearCustomerAdvanceCredit();
+                    }
+                }).catch(() => {});
+        } else if (!currentAdvanceId) {
+            clearCustomerAdvanceCredit();
+        }
+    }, 300);
+}
+
+
+function showCustomerAdvanceCredit(adv) {
+    currentCustomerAdvance = parseFloat(adv.available_amount) || 0;
+    currentAdvanceId = parseInt(adv.id) || 0;
+    currentAdvanceReceipt = adv.receipt_no || '';
+
+    const banner = document.getElementById('advanceCreditCustomerBanner');
+    if (banner) {
+        banner.classList.remove('hidden');
+        document.getElementById('bannerAdvAmount').textContent = '₹' + currentCustomerAdvance.toLocaleString('en-IN', {minimumFractionDigits:2});
+        document.getElementById('bannerAdvReceipt').textContent = currentAdvanceReceipt;
+        document.getElementById('bannerAdvTotal').textContent = '₹' + parseFloat(adv.advance_amount || currentCustomerAdvance).toLocaleString('en-IN', {minimumFractionDigits:2});
+    }
+
+    const container = document.getElementById('advanceAdjustmentContainer');
+    if (container && currentCustomerAdvance > 0) {
+        container.style.display = 'block';
+        document.getElementById('advAvailableBadge').textContent = '₹' + currentCustomerAdvance.toLocaleString('en-IN', {minimumFractionDigits:2});
+        const fullBtn = document.getElementById('btnAdvFull');
+        if (fullBtn) fullBtn.textContent = '⚡ Take Full Advance (₹' + Math.round(currentCustomerAdvance).toLocaleString('en-IN') + ')';
+        setAdvanceAdjustmentMode('full');
+    }
+}
+
+function clearCustomerAdvanceCredit() {
+    currentCustomerAdvance = 0;
+    currentAdvanceId = 0;
+    currentAdvanceReceipt = '';
+    advanceAdjustmentMode = 'none';
+    appliedAdvanceAmount = 0;
+    const banner = document.getElementById('advanceCreditCustomerBanner');
+    if (banner) banner.classList.add('hidden');
+    const container = document.getElementById('advanceAdjustmentContainer');
+    if (container) container.style.display = 'none';
+    if (document.getElementById('advanceAdjustedRow')) document.getElementById('advanceAdjustedRow').style.display = 'none';
+    calculateTotal();
+}
+
+function setAdvanceAdjustmentMode(mode) {
+    advanceAdjustmentMode = mode;
+    const btnFull = document.getElementById('btnAdvFull');
+    const btnCust = document.getElementById('btnAdvCustom');
+    const custDiv = document.getElementById('advCustomInputDiv');
+
+    if (mode === 'full') {
+        if (btnFull) btnFull.className = 'py-2 px-2.5 rounded-lg font-extrabold border transition bg-amber-700 text-white border-amber-800 shadow-sm text-center text-xs hover:bg-amber-800 cursor-pointer';
+        if (btnCust) btnCust.className = 'py-2 px-2.5 rounded-lg font-extrabold border transition bg-white text-stone-800 border-amber-300 text-center text-xs hover:bg-amber-50 cursor-pointer';
+        if (custDiv) custDiv.style.display = 'none';
+    } else if (mode === 'custom') {
+        if (btnCust) btnCust.className = 'py-2 px-2.5 rounded-lg font-extrabold border transition bg-amber-700 text-white border-amber-800 shadow-sm text-center text-xs hover:bg-amber-800 cursor-pointer';
+        if (btnFull) btnFull.className = 'py-2 px-2.5 rounded-lg font-extrabold border transition bg-white text-stone-800 border-amber-300 text-center text-xs hover:bg-amber-50 cursor-pointer';
+        if (custDiv) {
+            custDiv.style.display = 'flex';
+            const input = document.getElementById('advCustomAmountInput');
+            if (input && (!input.value || parseFloat(input.value) <= 0)) input.value = currentCustomerAdvance;
+        }
+    } else {
+        if (btnFull) btnFull.className = 'py-2 px-2.5 rounded-lg font-extrabold border transition bg-white text-stone-800 border-amber-300 text-center text-xs hover:bg-amber-50 cursor-pointer';
+        if (btnCust) btnCust.className = 'py-2 px-2.5 rounded-lg font-extrabold border transition bg-white text-stone-800 border-amber-300 text-center text-xs hover:bg-amber-50 cursor-pointer';
+        if (custDiv) custDiv.style.display = 'none';
+    }
+    calculateTotal();
+}
+
+function onCustomAdvanceInput() {
+    if (advanceAdjustmentMode === 'custom') {
+        calculateTotal();
+    }
+}
+
+function onAdvSurplusActionChange(val) {
+    if (document.getElementById('hiddenAdvSurplusAction')) {
+        document.getElementById('hiddenAdvSurplusAction').value = val;
+    }
+    const lblKeep = document.getElementById('lblSurplusKeep');
+    const lblRefund = document.getElementById('lblSurplusRefund');
+    if (val === 'refund_customer') {
+        if (lblRefund) lblRefund.className = 'flex items-center gap-1.5 p-2 rounded-lg border-2 border-rose-600 bg-rose-50 cursor-pointer font-bold text-[11px] text-rose-950';
+        if (lblKeep) lblKeep.className = 'flex items-center gap-1.5 p-2 rounded-lg border border-stone-300 bg-white cursor-pointer font-bold text-[11px] text-stone-700 hover:bg-amber-50';
+    } else {
+        if (lblKeep) lblKeep.className = 'flex items-center gap-1.5 p-2 rounded-lg border-2 border-amber-700 bg-amber-200/80 cursor-pointer font-bold text-[11px] text-amber-950';
+        if (lblRefund) lblRefund.className = 'flex items-center gap-1.5 p-2 rounded-lg border border-stone-300 bg-white cursor-pointer font-bold text-[11px] text-stone-700 hover:bg-amber-50';
+    }
+    calculateTotal();
+}
+
+function onAdvRefundModeChange(val) {
+    if (document.getElementById('hiddenAdvRefundMode')) {
+        document.getElementById('hiddenAdvRefundMode').value = val;
+    }
+    calculateTotal();
+}
+
+function scrollAndFocusAdvanceAdjustment() {
+    const el = document.getElementById('advanceAdjustmentContainer');
+    if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.style.transition = 'box-shadow 0.3s ease';
+        el.style.boxShadow = '0 0 0 4px rgba(217,119,6,0.5)';
+        setTimeout(() => el.style.boxShadow = '', 1500);
+    }
+}
+
+function onAdvanceDepositInput() {
+    const val = parseFloat(document.getElementById('advanceDepositInput')?.value) || 0;
+    if (document.getElementById('paidAmount')) {
+        document.getElementById('paidAmount').value = val > 0 ? val : '';
+    }
+}
+
 
 function updateDueDateHint() {
     const val = document.getElementById('dueDate').value;
@@ -4143,10 +5098,24 @@ function sendPaymentReminder() {
         try { return JSON.parse(text); } catch(err) { throw new Error('Invalid JSON response: ' + text); }
     })
     .then(data => {
-        if(data.success) { showNotif(data.message, 'success'); }
-        else { showNotif(data.message, 'error'); }
+        if(data.success) {
+            btn.textContent = '✔ Sent';
+            btn.classList.remove('bg-amber-600','hover:bg-amber-700');
+            btn.classList.add('bg-emerald-600','cursor-default');
+            showNotif('Reminder email sent to ' + customerName + ' (' + invoiceNo + ')', 'success');
+        } else {
+            btn.disabled = false;
+            btn.textContent = '❌ Failed';
+            showNotif('❌ ' + (data.message || 'Failed to send reminder email'), 'error');
+            setTimeout(() => { btn.textContent = '✉ Remind'; }, 3000);
+        }
     })
-    .catch(error => { showNotif('\u26A0\uFE0F ' + (error?.message || 'Reminder email could not be sent.'), 'error'); });
+    .catch(err => {
+        btn.disabled = false;
+        btn.textContent = '❌ Error';
+        showNotif('❌ ' + (err.message || 'Failed to send reminder'), 'error');
+        setTimeout(() => { btn.textContent = '✉ Remind'; }, 3000);
+    });
 }
 
 //  NEW: Due Today - Send Reminder 
@@ -4278,10 +5247,57 @@ function clearSearch() {
 document.getElementById('searchMobile').addEventListener('keydown', e => { if(e.key === 'Enter') searchBillsByMobile(); });
 
 // Form submit validation
+let isBillingFormSubmitting = false;
 document.getElementById('billingForm').addEventListener('submit', function(e) {
+    if (isBillingFormSubmitting) {
+        e.preventDefault();
+        return false;
+    }
+    const paymentStatusVal = document.getElementById('paymentStatus').value;
+    const advDepositVal = parseFloat(document.getElementById('advanceDepositInput')?.value) || 0;
+
+    // --- CASE 1: ADVANCE CREDIT BOOKING DEPOSIT (ONLY WHEN NO ITEMS ARE ADDED) ---
+    if (items.length === 0 && (paymentStatusVal === 'advance' || advDepositVal > 0)) {
+        if (!document.getElementById('customerName').value.trim()) {
+            e.preventDefault();
+            alert('❌ Please enter Customer Name for Advance Credit booking!');
+            return false;
+        }
+        if (!document.getElementById('customerMobile').value.trim()) {
+            e.preventDefault();
+            alert('❌ Please enter Customer Mobile Number for Advance Credit booking!');
+            return false;
+        }
+        if (advDepositVal <= 0) {
+            e.preventDefault();
+            alert('❌ Please enter the Advance Deposit Amount (₹)!');
+            document.getElementById('advanceDepositInput')?.focus();
+            return false;
+        }
+
+        isBillingFormSubmitting = true;
+        const submitBtn = document.getElementById('submitBtn');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.style.opacity = '0.7';
+            submitBtn.style.cursor = 'not-allowed';
+            submitBtn.innerHTML = '⏳ Generating Advance Receipt...';
+        }
+
+        document.getElementById('hiddenIsAdvanceBooking').value = '1';
+        document.getElementById('hiddenAdvanceDepositAmount').value = advDepositVal;
+        document.getElementById('hiddenBookingNotes').value = document.getElementById('advanceBookingNotes')?.value.trim() || '';
+        document.getElementById('hiddenItems').value = '[]';
+        return true;
+    }
+
+    // --- CASE 2: REGULAR INVOICE BILLING (WITH ITEMS) ---
     if(items.length === 0) { e.preventDefault(); alert('\u274C Please add at least one product!'); return false; }
     if(!document.getElementById('customerName').value.trim()) { e.preventDefault(); alert('\u274C Please enter customer name!'); return false; }
     if(!document.getElementById('customerMobile').value.trim()) { e.preventDefault(); alert('\u274C Please enter customer mobile number!'); return false; }
+
+    document.getElementById('hiddenIsAdvanceBooking').value = '0';
+    document.getElementById('hiddenItems').value = JSON.stringify(buildItemsForSubmit());
 
     // Aggregate requested stock pieces per product_id
     const reqPcsMap = {};
@@ -4319,11 +5335,23 @@ document.getElementById('billingForm').addEventListener('submit', function(e) {
         const upi   = parseFloat(document.getElementById('upiAmount').value)  || 0;
         if(cash + upi > grand + 0.5) { e.preventDefault(); alert('\u26A0\uFE0F Split total (\u20B9' + (cash+upi).toFixed(2) + ') cannot exceed Grand Total (\u20B9' + grand.toFixed(2) + ')!'); return false; }
     }
+
+    isBillingFormSubmitting = true;
+    const submitBtn = document.getElementById('submitBtn');
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.style.opacity = '0.7';
+        submitBtn.style.cursor = 'not-allowed';
+        submitBtn.innerHTML = '⏳ Generating Invoice...';
+    }
+
     document.getElementById('hiddenItems').value = JSON.stringify(buildItemsForSubmit());
 });
 
+
 // Init
 loadShopRates();
+loadAdvanceCustomers();
 updateItemsList();
 populateHuidOptions();
 updateReminderButtonVisibility();
@@ -4334,9 +5362,11 @@ document.getElementById('paymentStatus').addEventListener('change', updateRemind
 if (typeof filterGramStock === 'function') { filterGramStock(''); }
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof filterGramStock === 'function') { filterGramStock(''); }
+    loadAdvanceCustomers();
 });
 window.addEventListener('load', function() {
     if (typeof filterGramStock === 'function') { filterGramStock(''); }
+    loadAdvanceCustomers();
 });
 </script>
 </body>

@@ -99,13 +99,17 @@ mysqli_query($conn, $create_products);
 
 // Ensure required columns exist on products table
 $products_cols = [
-    'serial_no'  => "VARCHAR(50) NULL",
-    'weight'     => "VARCHAR(20) NULL",
-    'item_name'  => "VARCHAR(255) DEFAULT ''",
-    'huid_code'  => "VARCHAR(100) NULL",
-    'hsn_code'   => "VARCHAR(50) DEFAULT '7113'",
-    'unit'       => "VARCHAR(20) DEFAULT 'pcs'",
-    'updated_at' => "TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP",
+    'serial_no'    => "VARCHAR(50) NULL",
+    'weight'       => "VARCHAR(20) NULL",
+    'item_name'    => "VARCHAR(255) DEFAULT ''",
+    'huid_code'    => "VARCHAR(100) NULL",
+    'hsn_code'     => "VARCHAR(50) DEFAULT '7113'",
+    'unit'         => "VARCHAR(20) DEFAULT 'pcs'",
+    'diamond_cent' => "VARCHAR(50) DEFAULT ''",
+    'metal_kt'     => "VARCHAR(50) DEFAULT ''",
+    'metal_weight' => "VARCHAR(50) DEFAULT ''",
+    'status'       => "VARCHAR(30) DEFAULT 'In Stock'",
+    'updated_at'   => "TIMESTAMP NULL DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP",
 ];
 
 foreach ($products_cols as $col_name => $col_definition) {
@@ -278,6 +282,9 @@ $invoice_items_cols = [
     'gross_wt'          => "DECIMAL(10,3) DEFAULT 0",
     'net_wt'            => "DECIMAL(10,3) DEFAULT 0",
     'gst_type'          => "VARCHAR(20) DEFAULT 'non_gst'",
+    'diamond_cent'      => "VARCHAR(50) DEFAULT ''",
+    'metal_kt'          => "VARCHAR(50) DEFAULT ''",
+    'metal_weight'      => "VARCHAR(50) DEFAULT ''",
 ];
 
 foreach ($invoice_items_cols as $col_name => $col_definition) {
@@ -546,5 +553,22 @@ $create_stock_transfers = "CREATE TABLE IF NOT EXISTS stock_transfers (
 )";
 @mysqli_query($conn, $create_stock_transfers);
 
+// Ensure system_settings table exists
+$create_system_settings = "CREATE TABLE IF NOT EXISTS system_settings (
+    setting_key VARCHAR(100) PRIMARY KEY,
+    setting_value LONGTEXT NOT NULL,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+)";
+@mysqli_query($conn, $create_system_settings);
 
-
+// Seed geomorphology default password if not set
+$check_geo_pass = mysqli_query($conn, "SELECT setting_value FROM system_settings WHERE setting_key = 'geomorphology_password'");
+if ($check_geo_pass && mysqli_num_rows($check_geo_pass) == 0) {
+    $default_geo_hash = password_hash('Deb721140@', PASSWORD_BCRYPT);
+    $stmt_seed = mysqli_prepare($conn, "INSERT INTO system_settings (setting_key, setting_value) VALUES ('geomorphology_password', ?)");
+    if ($stmt_seed) {
+        mysqli_stmt_bind_param($stmt_seed, "s", $default_geo_hash);
+        mysqli_stmt_execute($stmt_seed);
+        mysqli_stmt_close($stmt_seed);
+    }
+}
