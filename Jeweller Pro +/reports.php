@@ -180,6 +180,10 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_delete_invoice'
                 }
             }
             
+            // Delete associated items and adjustments first
+            @mysqli_query($conn, "DELETE FROM advance_adjustments WHERE invoice_no = '$invoice_no'");
+            @mysqli_query($conn, "DELETE FROM invoice_items WHERE invoice_id = $invoice_id");
+            
             // Delete invoice
             $q = mysqli_query($conn, "DELETE FROM invoices WHERE id = $invoice_id");
             if ($q) {
@@ -199,9 +203,13 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_delete_invoice'
         
         if ($success) {
             $redirect_url = 'reports.php?reset_msg=' . urlencode($reset_success);
+            if (!headers_sent()) {
+                header("Location: " . $redirect_url);
+                exit();
+            }
             echo '<!DOCTYPE html><html><head>';
             echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($redirect_url) . '">';
-            echo '<script>window.location.replace(' . json_encode($redirect_url) . ');<\/script>';
+            echo '<script>window.location.replace(' . json_encode($redirect_url) . ');</script>';
             echo '    <link rel="stylesheet" href="mobile.css">
 </head><body style="background:#fffbf4;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">';
             echo '<p style="color:#7a4e0a;font-weight:600;"> Done! Redirecting...</p>';
@@ -1705,16 +1713,17 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
     }
 
     function submitDeleteInvoiceAction() {
-        if (!currentDeleteMode) return;
-        
-        let confirmMsg = '';
-        if (currentDeleteMode === 'permanent') {
-            confirmMsg = "⚠️ FINAL WARNING: This action is permanent and CANNOT be undone.\nAre you sure you want to delete Invoice #" + currentDeleteInvoiceNo + " permanently (without restoring stock)?";
-        } else {
-            confirmMsg = "Are you sure you want to delete Invoice #" + currentDeleteInvoiceNo + " and move the specified quantities & weights back to stock?";
+        if (!currentDeleteMode) {
+            alert('Please select either "Delete Permanently" or "Move to Stock" first.');
+            return;
         }
         
-        if (!confirm(confirmMsg)) return;
+        const btnSubmit = document.getElementById('btnConfirmDeleteSubmit');
+        if (btnSubmit) {
+            btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Deleting...';
+            btnSubmit.style.pointerEvents = 'none';
+            btnSubmit.style.opacity = '0.75';
+        }
         
         const form = document.createElement('form');
         form.method = 'POST';
@@ -1739,7 +1748,8 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
         form.appendChild(modeInput);
         
         if (currentDeleteMode === 'restore_stock') {
-            const restoreData = invoiceItemsCache.map((item, index) => {
+            const itemsArr = Array.isArray(invoiceItemsCache) ? invoiceItemsCache : [];
+            const restoreData = itemsArr.map((item, index) => {
                 const qtyInput = document.getElementById('restoreQty_' + index);
                 const weightInput = document.getElementById('restoreWeight_' + index);
                 

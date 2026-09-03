@@ -887,16 +887,17 @@ if ($inv_res) {
         }
 
         function submitDeleteInvoiceAction() {
-            if (!currentDeleteMode) return;
-            
-            let confirmMsg = '';
-            if (currentDeleteMode === 'permanent') {
-                confirmMsg = "⚠️ FINAL WARNING: This action is permanent and CANNOT be undone.\nAre you sure you want to delete Cash Memo #" + currentDeleteInvoiceNo + " permanently (without restoring stock)?";
-            } else {
-                confirmMsg = "Are you sure you want to delete Cash Memo #" + currentDeleteInvoiceNo + " and move the specified quantities & weights back to stock?";
+            if (!currentDeleteMode) {
+                alert('Please select either "Delete Permanently" or "Move to Stock" first.');
+                return;
             }
             
-            if (!confirm(confirmMsg)) return;
+            const btnSubmit = document.getElementById('btnConfirmDeleteSubmit');
+            if (btnSubmit) {
+                btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Deleting...';
+                btnSubmit.style.pointerEvents = 'none';
+                btnSubmit.style.opacity = '0.75';
+            }
             
             const form = document.createElement('form');
             form.method = 'POST';
