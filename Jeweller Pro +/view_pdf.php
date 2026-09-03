@@ -1065,13 +1065,19 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                         ?>
                         <?php
                             $hm_type = trim($it['hallmark_type'] ?? '');
-                            if (empty($hm_type) && !empty($cat_disp) && preg_match('/\b(24k|22k|18k|14k|12k|9k|silver|platinum)\b/i', $cat_disp, $hm_m)) {
-                                $hm_type = strtoupper($hm_m[1]);
+                            if (empty($hm_type) || strcasecmp($hm_type, 'none') === 0 || strcasecmp($hm_type, 'na') === 0) {
+                                if (!empty($cat_disp) && preg_match('/\b(24k|22k|18k|14k|12k|9k|silver|platinum)\b/i', $cat_disp, $hm_m)) {
+                                    $hm_type = strtoupper($hm_m[1]);
+                                } else if (preg_match('/\b(stone|mala|pearl|gemstone|mukut|box|gift|other)\b/i', ($cat_disp . ' ' . $name))) {
+                                    $hm_type = '';
+                                } else if (strcasecmp($hm_type, 'none') === 0 || strcasecmp($hm_type, 'na') === 0) {
+                                    $hm_type = '';
+                                } else {
+                                    $hm_type = '22K';
+                                }
                             }
-                            if (empty($hm_type)) {
-                                $hm_type = '22K';
-                            }
-                            $hm_badge_text = (stripos($hm_type, 'hallmark') !== false) ? $hm_type : 'Hallmark: ' . $hm_type;
+                            $show_hm = (!empty($hm_type) && strcasecmp($hm_type, 'none') !== 0 && strcasecmp($hm_type, 'na') !== 0);
+                            $hm_badge_text = $show_hm ? ((stripos($hm_type, 'hallmark') !== false) ? $hm_type : 'Hallmark: ' . $hm_type) : '';
 
                             // Clean product description to avoid duplicating purity already stated in Hallmark badge
                             $display_title = $clean_name;
@@ -1094,7 +1100,9 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                                     <?php endif; ?>
                                 </div>
                                 <div class="item-sub" style="font-size:8px; color:#475569; margin-top:2.5px; line-height:1.4;">
+                                    <?php if($show_hm): ?>
                                     <span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:1px 5px;border-radius:3px;font-weight:700;font-size:8px;"><?php echo htmlspecialchars($hm_badge_text); ?></span>
+                                    <?php endif; ?>
                                     <?php if(!empty($huid)): ?>
                                     <span style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;padding:1px 4.5px;border-radius:3px;font-weight:600;font-family:monospace;font-size:8px;">HUID: <?php echo htmlspecialchars($huid); ?></span>
                                     <?php endif; ?>
@@ -1103,13 +1111,23 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                                     <?php endif; ?>
                                     <br>
                                     <span>Qty: <strong><?php echo (stripos($clean_name, 'pair') !== false || strtolower($unit) === 'pair') ? '1 Pair (' . $item_pcs . ' pcs)' : $item_pcs . ' Pcs'; ?></strong></span>
-                                    <?php if($gross_wt > 0 && $net_wt > 0 && abs($gross_wt - $net_wt) > 0.001): ?>
-                                        &bull; <span>Gross Wt: <strong><?php echo number_format($gross_wt, 3); ?>g</strong></span>
-                                        &bull; <span>Net Wt: <strong><?php echo number_format($net_wt, 3); ?>g</strong></span>
-                                    <?php elseif($net_wt > 0): ?>
-                                        &bull; <span>Net Wt: <strong><?php echo number_format($net_wt, 3); ?>g</strong></span>
-                                    <?php elseif($gross_wt > 0): ?>
-                                        &bull; <span>Gross Wt: <strong><?php echo number_format($gross_wt, 3); ?>g</strong></span>
+                                    <?php 
+                                        $is_manual_item = empty($it['product_id']) || $it['product_id'] === 'other' || !is_numeric($it['product_id']);
+                                        $manual_weight = ($net_wt > 0) ? $net_wt : $gross_wt;
+                                    ?>
+                                    <?php if($is_manual_item): ?>
+                                        <?php if($manual_weight > 0): ?>
+                                            &bull; <span>Weight: <strong><?php echo number_format($manual_weight, 3); ?>g</strong></span>
+                                        <?php endif; ?>
+                                    <?php else: ?>
+                                        <?php if($gross_wt > 0 && $net_wt > 0 && abs($gross_wt - $net_wt) > 0.001): ?>
+                                            &bull; <span>Gross Wt: <strong><?php echo number_format($gross_wt, 3); ?>g</strong></span>
+                                            &bull; <span>Net Wt: <strong><?php echo number_format($net_wt, 3); ?>g</strong></span>
+                                        <?php elseif($net_wt > 0): ?>
+                                            &bull; <span>Net Wt: <strong><?php echo number_format($net_wt, 3); ?>g</strong></span>
+                                        <?php elseif($gross_wt > 0): ?>
+                                            &bull; <span>Gross Wt: <strong><?php echo number_format($gross_wt, 3); ?>g</strong></span>
+                                        <?php endif; ?>
                                     <?php endif; ?>
                                 </div>
                             </td>

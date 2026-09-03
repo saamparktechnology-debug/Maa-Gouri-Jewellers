@@ -2101,8 +2101,8 @@ function submitPayment() {
                                 </div>
                             </div>
                             
-                            <!-- Gross Weight & Net Weight -->
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                            <!-- Gross Weight & Net Weight (For Stock & Category items) -->
+                            <div id="weightFieldsGrossNet" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
                                 <div>
                                     <label class="block mb-1 text-xs font-semibold text-yellow-800">Gross Weight (g) <span class="text-stone-400 font-normal">(Cut from Stock)</span> *</label>
                                     <input type="number" id="gramGrossWeight" placeholder="Gross weight (e.g. 10.500)" step="0.001" min="0" class="jewel-input w-full rounded-lg px-3 py-2 text-sm" oninput="onGrossWeightInput()">
@@ -2111,6 +2111,12 @@ function submitPayment() {
                                     <label class="block mb-1 text-xs font-semibold text-yellow-800">Net Weight (g) <span class="text-emerald-700 font-bold">(Used for Price)</span> *</label>
                                     <input type="number" id="gramNetWeight" placeholder="Net weight (e.g. 10.000)" step="0.001" min="0" class="jewel-input w-full rounded-lg px-3 py-2 text-sm" oninput="onNetWeightInput()">
                                 </div>
+                            </div>
+
+                            <!-- Single Weight Field (For Manual Entry items only) -->
+                            <div id="weightFieldsManual" class="hidden mb-3">
+                                <label class="block mb-1 text-xs font-semibold text-yellow-800">Weight (g) <span class="text-stone-400 font-normal">(Optional for Piece / Mala / Stone)</span></label>
+                                <input type="number" id="gramManualWeight" placeholder="Weight in grams (optional)" step="0.001" min="0" class="jewel-input w-full rounded-lg px-3 py-2 text-sm" oninput="autoGramTotal()">
                             </div>
 
                             <!-- Quantity & Unit -->
@@ -2154,15 +2160,18 @@ function submitPayment() {
                                     <div id="itemMakingChargeHint" class="text-xs mt-1.5 font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200" style="display:none;"></div>
                                 </div>
                                 <div>
-                                    <label class="block mb-1.5 text-xs font-bold text-amber-900">Karat / Hallmark <span class="text-rose-600">*</span></label>
-                                    <select id="itemHallmarkType" class="jewel-input w-full rounded-xl px-2.5 py-2 text-xs font-bold">
-                                        <option value="22K">22K</option>
+                                    <label class="block mb-1.5 text-xs font-bold text-amber-900">Karat / Hallmark</label>
+                                    <select id="itemHallmarkType" class="jewel-input w-full rounded-xl px-2.5 py-2 text-xs font-bold" onchange="onHallmarkTypeChange()">
+                                        <option value="None">None / NA</option>
+                                        <option value="22K" selected>22K</option>
                                         <option value="18K">18K</option>
                                         <option value="14K">14K</option>
                                         <option value="24K">24K</option>
                                         <option value="925 Silver">925 Silver</option>
                                         <option value="999 Fine Silver">999 Fine Silver</option>
+                                        <option value="Custom">Custom...</option>
                                     </select>
+                                    <input type="text" id="itemHallmarkCustom" placeholder="Type custom hallmark (e.g. 21K, 916)" class="hidden jewel-input w-full rounded-xl px-2.5 py-1.5 text-xs font-bold mt-1.5 border-amber-400 bg-amber-50/40">
                                 </div>
                                 <div>
                                     <label class="block mb-1.5 text-xs font-bold text-amber-900">Hallmark Chg (₹)</label>
@@ -2805,12 +2814,28 @@ function switchSource(tab, source) {
         document.getElementById('gramSourceCategory').classList.add('hidden');
         document.getElementById('gramSourceManual').classList.add('hidden');
         
+        const grossNetDiv = document.getElementById('weightFieldsGrossNet');
+        const manualWtDiv = document.getElementById('weightFieldsManual');
+        const hmSelect = document.getElementById('itemHallmarkType');
+        const custHm = document.getElementById('itemHallmarkCustom');
+
         if (source === 'stock') {
             document.getElementById('gramSourceStock').classList.remove('hidden');
+            if (grossNetDiv) grossNetDiv.classList.remove('hidden');
+            if (manualWtDiv) manualWtDiv.classList.add('hidden');
+            if (custHm) { custHm.value = ''; custHm.classList.add('hidden'); }
         } else if (source === 'category') {
             document.getElementById('gramSourceCategory').classList.remove('hidden');
+            if (grossNetDiv) grossNetDiv.classList.remove('hidden');
+            if (manualWtDiv) manualWtDiv.classList.add('hidden');
+            if (custHm) { custHm.value = ''; custHm.classList.add('hidden'); }
         } else {
             document.getElementById('gramSourceManual').classList.remove('hidden');
+            if (grossNetDiv) grossNetDiv.classList.add('hidden');
+            if (manualWtDiv) manualWtDiv.classList.remove('hidden');
+            // Manual entry defaults Karat / Hallmark to None
+            if (hmSelect) hmSelect.value = 'None';
+            if (custHm) { custHm.value = ''; custHm.classList.add('hidden'); }
         }
     } else {
         currentQtySource = source;
@@ -2827,6 +2852,19 @@ function switchSource(tab, source) {
         }
     }
     resetItemCharges();
+}
+
+function onHallmarkTypeChange() {
+    const sel = document.getElementById('itemHallmarkType');
+    const custInput = document.getElementById('itemHallmarkCustom');
+    if (!sel || !custInput) return;
+    if (sel.value === 'Custom') {
+        custInput.classList.remove('hidden');
+        custInput.focus();
+    } else {
+        custInput.classList.add('hidden');
+        custInput.value = '';
+    }
 }
 
 // ====================  GRAM FORM LOGIC ====================
@@ -2983,12 +3021,14 @@ function onGramStockChange() {
     // Auto-fill smart Hallmark Type based on category
     if (hmTypeSelect) {
         const catL = (category || '').toLowerCase();
+        const nameL = (name || '').toLowerCase();
         if (catL.includes('22')) hmTypeSelect.value = '22K';
         else if (catL.includes('18')) hmTypeSelect.value = '18K';
         else if (catL.includes('14')) hmTypeSelect.value = '14K';
         else if (catL.includes('24')) hmTypeSelect.value = '24K';
         else if (catL.includes('999') || catL.includes('fine silver')) hmTypeSelect.value = '999 Fine Silver';
         else if (catL.includes('silver') || catL.includes('925')) hmTypeSelect.value = '925 Silver';
+        else if (catL.includes('stone') || catL.includes('mala') || catL.includes('other') || nameL.includes('mala') || nameL.includes('stone')) hmTypeSelect.value = 'None';
         else hmTypeSelect.value = '22K';
     }
 
@@ -3000,15 +3040,11 @@ function onGramStockChange() {
 
     if (grossInput) {
         grossInput.value = isSinglePieceWithWeight ? stockWeight : '';
-        if (!isSinglePieceWithWeight) {
-            grossInput.placeholder = 'Gross wt in grams (Required) *';
-        }
+        grossInput.placeholder = 'Gross wt in grams (Optional for Stone/Mala/Pcs)';
     }
     if (netInput) {
         netInput.value = isSinglePieceWithWeight ? stockWeight : '';
-        if (!isSinglePieceWithWeight) {
-            netInput.placeholder = 'Net wt in grams (Required) *';
-        }
+        netInput.placeholder = 'Net wt in grams (Optional for Stone/Mala/Pcs)';
     }
 
     // Automatically detect and select Pcs vs Pair strictly from product stock
@@ -3080,12 +3116,20 @@ function onGramStockChange() {
         const hint = document.getElementById('gramRatePerGramHint');
         if(hint) hint.textContent = '≈ ₹' + shopRatePerGram.toLocaleString('en-IN', {maximumFractionDigits:2}) + ' per gram (shop rate used in billing)';
         infoDiv.innerHTML = '<strong>' + name + '</strong> | Shop Rate: ₹' + shopRatePerGram.toLocaleString('en-IN', {maximumFractionDigits:2}) + '/g | Available Qty: <strong style="color:#059669;">' + qty + ' pcs</strong>' + wtInfo;
+    } else if (price > 0) {
+        // Direct item price (e.g. Stone, Mala, Mukut, Box, or fixed-price items)
+        rateInput.value = price.toFixed(0);
+        const hint = document.getElementById('gramRatePerGramHint');
+        if(hint) hint.textContent = '≈ ₹' + price.toLocaleString('en-IN', {maximumFractionDigits:2}) + ' per piece';
+        infoDiv.innerHTML = '<strong>' + name + '</strong> | Price: ₹' + price.toLocaleString('en-IN', {maximumFractionDigits:2}) + ' / pc | Available Qty: <strong style="color:#059669;">' + qty + ' pcs</strong>' + wtInfo;
     } else {
         rateInput.value = '';
         const hint = document.getElementById('gramRatePerGramHint');
-        if(hint) hint.textContent = '⚠ Set shop rate for ' + (category || 'this category') + ' in the panel on the right first!';
-        if(hint) hint.style.color = '#dc2626';
-        infoDiv.innerHTML = '<strong>' + name + '</strong> | Available Qty: <strong style="color:#059669;">' + qty + ' pcs</strong>' + wtInfo + ' | ⚠ Set shop rate first!';
+        if(hint) {
+            hint.textContent = 'Enter rate / price per piece or weight';
+            hint.style.color = '#7a4e0a';
+        }
+        infoDiv.innerHTML = '<strong>' + name + '</strong> | Available Qty: <strong style="color:#059669;">' + qty + ' pcs</strong>' + wtInfo;
     }
 
     infoDiv.classList.remove('hidden');
@@ -3187,6 +3231,8 @@ function updateGramItemTypes() {
         else if (catL.includes('24')) hmTypeSelect.value = '24K';
         else if (catL.includes('999') || catL.includes('fine silver')) hmTypeSelect.value = '999 Fine Silver';
         else if (catL.includes('silver') || catL.includes('925')) hmTypeSelect.value = '925 Silver';
+        else if (catL.includes('stone') || catL.includes('mala') || catL.includes('other') || catL.includes('diamond')) hmTypeSelect.value = 'None';
+        else hmTypeSelect.value = '22K';
     }
 
     const dBreakdown = document.getElementById('posDiamondBreakdownContainer');
@@ -3224,12 +3270,22 @@ function updateGramItemTypes() {
     if (shopRate10g > 0) {
         rateInput.value = shopRate10g.toFixed(0);
         const hint = document.getElementById('gramRatePerGramHint');
-        if(hint) hint.textContent = '≈ ₹' + shopRatePerGram.toLocaleString('en-IN', {maximumFractionDigits:2}) + ' per gram (shop rate)';
+        if(hint) {
+            hint.textContent = '≈ ₹' + shopRatePerGram.toLocaleString('en-IN', {maximumFractionDigits:2}) + ' per gram (shop rate)';
+            hint.style.color = '#059669';
+        }
     } else {
         rateInput.value = '';
         const hint = document.getElementById('gramRatePerGramHint');
-        if(hint) hint.textContent = '⚠ Set shop rate for ' + category + ' in the panel on the right first!';
-        if(hint) hint.style.color = '#dc2626';
+        if(hint) {
+            if (category === 'Stone' || category === 'Others') {
+                hint.textContent = 'Enter rate / price per piece or weight';
+                hint.style.color = '#7a4e0a';
+            } else {
+                hint.textContent = '⚠ Set shop rate for ' + category + ' in the panel on the right first!';
+                hint.style.color = '#dc2626';
+            }
+        }
     }
     autoGramTotal();
     onGramItemTypeChange();
@@ -3368,15 +3424,23 @@ function autoGramTotal() {
     const source = checkedRadio ? checkedRadio.value : (typeof currentGramSource !== 'undefined' ? currentGramSource : 'stock');
     currentGramSource = source;
 
-    let grossWeight = parseFloat(document.getElementById('gramGrossWeight')?.value) || 0;
-    let netWeight = parseFloat(document.getElementById('gramNetWeight')?.value) || 0;
+    let grossWeight = 0;
+    let netWeight = 0;
 
-    // If net weight not specified but gross weight entered, net weight = gross weight
-    if (netWeight <= 0 && grossWeight > 0) {
-        netWeight = grossWeight;
+    if (source === 'manual') {
+        const manualWt = parseFloat(document.getElementById('gramManualWeight')?.value) || 0;
+        grossWeight = manualWt;
+        netWeight = manualWt;
+    } else {
+        grossWeight = parseFloat(document.getElementById('gramGrossWeight')?.value) || 0;
+        netWeight = parseFloat(document.getElementById('gramNetWeight')?.value) || 0;
+        // If net weight not specified but gross weight entered, net weight = gross weight
+        if (netWeight <= 0 && grossWeight > 0) {
+            netWeight = grossWeight;
+        }
     }
     
-    // Pricing calculation strictly uses NET WEIGHT (Net Weight x Rate per gram x Pcs/Multiplier)
+    // Pricing calculation uses NET WEIGHT (Net Weight x Rate per gram)
     let calcWeight = netWeight;
     
     const rate10g = parseFloat(document.getElementById('gramRate')?.value) || 0;
@@ -3404,9 +3468,14 @@ function autoGramTotal() {
         const ratePerGram = rate10g / 10;
         total = parseFloat((calcWeight * ratePerGram).toFixed(2));
         if(hint && rate10g > 0) {
-            let grossNotice = (grossWeight > 0 && grossWeight !== calcWeight) ? ' (Gross: ' + grossWeight.toFixed(3) + 'g)' : '';
-            let pcsNotice = isPair ? ' [' + qty + ' Pair (' + pcsMultiplier + ' pcs)]' : (qty > 1 ? ' [' + qty + ' pcs]' : '');
-            hint.textContent = '≈ ₹' + ratePerGram.toLocaleString('en-IN', {maximumFractionDigits:2}) + '/g × ' + calcWeight.toFixed(3) + 'g Net' + grossNotice + pcsNotice;
+            if (source === 'manual') {
+                let pcsNotice = isPair ? ' [' + qty + ' Pair (' + pcsMultiplier + ' pcs)]' : (qty > 1 ? ' [' + qty + ' pcs]' : '');
+                hint.textContent = '≈ ₹' + ratePerGram.toLocaleString('en-IN', {maximumFractionDigits:2}) + '/g × ' + calcWeight.toFixed(3) + 'g' + pcsNotice;
+            } else {
+                let grossNotice = (grossWeight > 0 && grossWeight !== calcWeight) ? ' (Gross: ' + grossWeight.toFixed(3) + 'g)' : '';
+                let pcsNotice = isPair ? ' [' + qty + ' Pair (' + pcsMultiplier + ' pcs)]' : (qty > 1 ? ' [' + qty + ' pcs]' : '');
+                hint.textContent = '≈ ₹' + ratePerGram.toLocaleString('en-IN', {maximumFractionDigits:2}) + '/g × ' + calcWeight.toFixed(3) + 'g Net' + grossNotice + pcsNotice;
+            }
         } else if(hint) {
             hint.textContent = '';
         }
@@ -3452,10 +3521,19 @@ function submitGramItem() {
         let name = '';
         let itemType = '';
         let hsn = '7113';
-        let grossWeight = parseFloat(document.getElementById('gramGrossWeight')?.value) || 0;
-        let netWeight = parseFloat(document.getElementById('gramNetWeight')?.value) || 0;
-        if (netWeight <= 0 && grossWeight > 0) netWeight = grossWeight;
-        if (grossWeight <= 0 && netWeight > 0) grossWeight = netWeight;
+        let grossWeight = 0;
+        let netWeight = 0;
+
+        if (source === 'manual') {
+            const manualWt = parseFloat(document.getElementById('gramManualWeight')?.value) || 0;
+            grossWeight = manualWt;
+            netWeight = manualWt;
+        } else {
+            grossWeight = parseFloat(document.getElementById('gramGrossWeight')?.value) || 0;
+            netWeight = parseFloat(document.getElementById('gramNetWeight')?.value) || 0;
+            if (netWeight <= 0 && grossWeight > 0) netWeight = grossWeight;
+            if (grossWeight <= 0 && netWeight > 0) grossWeight = netWeight;
+        }
 
         let rate10g = parseFloat(document.getElementById('gramRate')?.value) || 0;
         const qty = parseFloat(document.getElementById('gramQty')?.value) || 1;
@@ -3471,10 +3549,17 @@ function submitGramItem() {
             name = customTypedName || opt.dataset.itemName || opt.dataset.name || opt.text;
             hsn = '7113';
 
+            const pCat = opt.dataset.category || '';
+            const isNonMetalStock = pCat.toLowerCase().includes('stone') || pCat.toLowerCase().includes('mala') || pCat.toLowerCase().includes('other');
+            if (!isNonMetalStock && grossWeight <= 0 && netWeight <= 0) {
+                alert('⚠️ Please enter Gross Weight and Net Weight for this stock item.');
+                if (document.getElementById('gramGrossWeight')) document.getElementById('gramGrossWeight').focus();
+                return;
+            }
+
             // Auto-fill rate from product price or shop rates if left blank
             if (rate10g <= 0) {
                 const pPrice = parseFloat(opt.dataset.price) || 0;
-                const pCat = opt.dataset.category || '';
                 const shopR = getShopRateForCategory(pCat) * 10;
                 rate10g = pPrice > 0 ? pPrice : (shopR > 0 ? shopR : 0);
                 if (rate10g > 0 && document.getElementById('gramRate')) {
@@ -3487,6 +3572,13 @@ function submitGramItem() {
             const type = typeSelect ? typeSelect.value : '';
             if (!cat) { alert('Please select a category.'); return; }
             if (!type && !customTypedName) { alert('Please select or enter an item type.'); return; }
+
+            const isNonMetalCat = cat.toLowerCase().includes('stone') || cat.toLowerCase().includes('other');
+            if (!isNonMetalCat && grossWeight <= 0 && netWeight <= 0) {
+                alert('⚠️ Please enter Gross Weight and Net Weight for this item.');
+                if (document.getElementById('gramGrossWeight')) document.getElementById('gramGrossWeight').focus();
+                return;
+            }
 
             productId = 'other';
             name = customTypedName || type;
@@ -3511,13 +3603,6 @@ function submitGramItem() {
         if (!name || name.trim() === '' || name.toLowerCase() === 'others' || name.toLowerCase() === 'gold ornaments' || name.toLowerCase() === 'silver ornaments' || name.toLowerCase() === 'mixed gold stock' || /^\d+$/.test(name.trim())) {
             alert('⚠️ Please enter the specific ornament / item name (e.g. Gold Chain, Gold Bala, Payel, Ring, etc.)');
             if (customNameInput) customNameInput.focus();
-            return;
-        }
-
-        // Validate Gross & Net weight
-        if (grossWeight <= 0 && netWeight <= 0) {
-            alert('⚠️ Please enter Gross Weight and Net Weight for this item.');
-            if (document.getElementById('gramGrossWeight')) document.getElementById('gramGrossWeight').focus();
             return;
         }
         
@@ -3563,7 +3648,11 @@ function submitGramItem() {
             imcPct = baseAmount > 0 ? parseFloat(((mcInputVal / baseAmount) * 100).toFixed(2)) : 0;
         }
 
-        const hmType = document.getElementById('itemHallmarkType')?.value || '22K';
+        let hmType = document.getElementById('itemHallmarkType')?.value || (source === 'manual' ? 'None' : '22K');
+        if (hmType === 'Custom') {
+            const custHm = document.getElementById('itemHallmarkCustom')?.value.trim();
+            hmType = custHm || 'None';
+        }
         const ihm = parseFloat(document.getElementById('itemHallmark')?.value) || 0;
         const idisc = parseFloat(document.getElementById('itemDiscount')?.value) || 0;
         const igst = document.getElementById('itemGstType')?.value || 'non_gst';
@@ -3661,6 +3750,8 @@ function submitGramItem() {
         // Reset fields safely
         if (document.getElementById('gramGrossWeight')) document.getElementById('gramGrossWeight').value = '';
         if (document.getElementById('gramNetWeight')) document.getElementById('gramNetWeight').value = '';
+        if (document.getElementById('gramManualWeight')) document.getElementById('gramManualWeight').value = '';
+        if (document.getElementById('gramManualName')) document.getElementById('gramManualName').value = '';
         if (document.getElementById('gramItemNameInput')) document.getElementById('gramItemNameInput').value = '';
         if (document.getElementById('gramRate')) document.getElementById('gramRate').value = '';
         if (document.getElementById('manualHuid')) document.getElementById('manualHuid').value = '';
@@ -3979,6 +4070,12 @@ function resetItemCharges() {
     if (typeof setMcMode === 'function') setMcMode('pct');
     const hint = document.getElementById('itemMakingChargeHint');
     if (hint) { hint.textContent = ''; hint.style.display = 'none'; }
+    if (typeof currentGramSource !== 'undefined' && currentGramSource === 'manual') {
+        const hmSelect = document.getElementById('itemHallmarkType');
+        if (hmSelect) hmSelect.value = 'None';
+        const custHm = document.getElementById('itemHallmarkCustom');
+        if (custHm) { custHm.value = ''; custHm.classList.add('hidden'); }
+    }
 }
 
 document.addEventListener('input', function(e) {
@@ -4024,7 +4121,22 @@ function updateItemsList() {
         const chargeInputStyle = 'width:60px;padding:3px 4px;border:1px solid #e5c98a;border-radius:5px;font-size:11px;text-align:right;';
         
         let qtyDisp = '';
-        if (item.net_wt > 0 || item.gross_wt > 0) {
+        if (item.is_manual) {
+            if (item.net_wt > 0 || item.gross_wt > 0) {
+                const w = (item.net_wt > 0 ? item.net_wt : item.gross_wt).toFixed(3);
+                qtyDisp += '<div class="font-bold text-stone-900">' + w + 'g</div>';
+                if (item.unit === 'pair') {
+                    qtyDisp += '<div style="font-size:10px;color:#7c3aed;font-weight:600;">' + (item.quantity || 1) + ' Pair (' + (item.pcs || ((item.quantity||1)*2)) + ' pcs)</div>';
+                } else if (item.pcs && item.pcs > 1) {
+                    qtyDisp += '<div style="font-size:10px;color:#6b7280;">(' + item.pcs + ' pcs)</div>';
+                }
+            } else {
+                qtyDisp = item.quantity > 0 ? item.quantity + ' ' + (item.unit || 'pcs') : '\u2014';
+                if (item.unit === 'pair') {
+                    qtyDisp += '<div style="font-size:10px;color:#7c3aed;font-weight:600;">(' + (item.pcs || (item.quantity * 2)) + ' pcs)</div>';
+                }
+            }
+        } else if (item.net_wt > 0 || item.gross_wt > 0) {
             const netW = (item.net_wt > 0 ? item.net_wt : item.gross_wt).toFixed(3);
             qtyDisp += '<div class="font-bold text-stone-900">' + netW + 'g <span style="font-size:10px;color:#059669;font-weight:600;">(Net)</span></div>';
             if (item.gross_wt > 0 && item.gross_wt !== item.net_wt) {
@@ -4052,7 +4164,8 @@ function updateItemsList() {
             rateDisp = item.price > 0 ? '\u20B9' + item.price.toFixed(2) + ((item.net_wt > 0 || item.unit === 'g') ? '/g' : '') : '\u2014';
         }
 
-        const hmBadge = item.hallmark_type ? '<span style="display:inline-block;padding:1px 5px;background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:4px;font-size:9.5px;font-weight:700;margin-left:4px;">' + htmlEsc(item.hallmark_type) + '</span>' : '';
+        const showHm = item.hallmark_type && item.hallmark_type.toLowerCase() !== 'none' && item.hallmark_type.toLowerCase() !== 'na' && item.hallmark_type.trim() !== '';
+        const hmBadge = showHm ? '<span style="display:inline-block;padding:1px 5px;background:#fef3c7;color:#92400e;border:1px solid #fde68a;border-radius:4px;font-size:9.5px;font-weight:700;margin-left:4px;">' + htmlEsc(item.hallmark_type) + '</span>' : '';
         const cleanHuid = (item.huid_code || '').trim().replace(/^HUID[:\s\-_]*/i, '');
         const huidBadge = cleanHuid ? '<span style="display:inline-block;padding:1px 5px;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;border-radius:4px;font-size:9.5px;font-family:monospace;font-weight:600;margin-left:4px;">HUID: ' + htmlEsc(cleanHuid) + '</span>' : '';
 
