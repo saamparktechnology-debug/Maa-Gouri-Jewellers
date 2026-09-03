@@ -5321,6 +5321,35 @@ function clearSearch() {
 
 document.getElementById('searchMobile').addEventListener('keydown', e => { if(e.key === 'Enter') searchBillsByMobile(); });
 
+// Handle Enter key across Billing Form
+document.getElementById('billingForm').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+        const target = e.target;
+        if (!target) return;
+        if (target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON') return;
+
+        // If user is inside item entry fields (Gross Wt, Net Wt, Qty, Item Name, Making Charge, etc.), Enter adds item to bill
+        const itemContainer = target.closest('#panelGram');
+        if (itemContainer) {
+            e.preventDefault();
+            if (typeof submitCurrentItem === 'function') {
+                submitCurrentItem();
+            }
+            return;
+        }
+
+        // If user is in Totals / Discounts / Old Gold / Payment inputs, Enter generates the invoice
+        e.preventDefault();
+        if (typeof calculateTotal === 'function') {
+            calculateTotal();
+        }
+        const submitBtn = document.getElementById('submitBtn');
+        if (submitBtn) {
+            submitBtn.click();
+        }
+    }
+});
+
 // Form submit validation
 let isBillingFormSubmitting = false;
 document.getElementById('billingForm').addEventListener('submit', function(e) {
@@ -5328,6 +5357,12 @@ document.getElementById('billingForm').addEventListener('submit', function(e) {
         e.preventDefault();
         return false;
     }
+
+    // Force recalculate totals and sync all hidden inputs right before submission
+    if (typeof calculateTotal === 'function') {
+        calculateTotal();
+    }
+
     const paymentStatusVal = document.getElementById('paymentStatus').value;
     const advDepositVal = parseFloat(document.getElementById('advanceDepositInput')?.value) || 0;
 
