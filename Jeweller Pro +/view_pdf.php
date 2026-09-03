@@ -348,18 +348,33 @@ $inv = mysqli_fetch_assoc($inv_res);
 
 
 // Fetch invoice items
-$col_gst_type_check = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'gst_type'")) > 0;
-$select_gst_type = $col_gst_type_check ? "ii.gst_type," : "'non_gst' AS gst_type,";
-$col_pcs_check = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'pcs'")) > 0;
-$select_pcs = $col_pcs_check ? "ii.pcs, ii.unit, ii.gross_wt, ii.net_wt," : "1 AS pcs, 'g' AS unit, ii.quantity AS gross_wt, ii.quantity AS net_wt,";
+$existing_item_cols = [];
+$cols_res = mysqli_query($conn, "SHOW COLUMNS FROM invoice_items");
+if ($cols_res) {
+    while ($c_row = mysqli_fetch_assoc($cols_res)) {
+        $existing_item_cols[strtolower($c_row['Field'])] = true;
+    }
+}
+
+$select_gst_type = isset($existing_item_cols['gst_type']) ? "ii.gst_type," : "'non_gst' AS gst_type,";
+$select_pcs = isset($existing_item_cols['pcs']) ? "ii.pcs, ii.unit, ii.gross_wt, ii.net_wt," : "1 AS pcs, 'g' AS unit, ii.quantity AS gross_wt, ii.quantity AS net_wt,";
+$select_hm_type = isset($existing_item_cols['hallmark_type']) ? "ii.hallmark_type," : "'' AS hallmark_type,";
+$select_hm = isset($existing_item_cols['hallmark']) ? "ii.hallmark," : "0.00 AS hallmark,";
+$select_mc = isset($existing_item_cols['making_charge']) ? "ii.making_charge," : "0.00 AS making_charge,";
+$select_mc_pct = isset($existing_item_cols['making_charge_pct']) ? "ii.making_charge_pct," : "0.00 AS making_charge_pct,";
+$select_disc = isset($existing_item_cols['discount']) ? "ii.discount," : "0.00 AS discount,";
+$select_huid = isset($existing_item_cols['huid_code']) ? "ii.huid_code AS huid_code," : "'' AS huid_code,";
+$select_hsn = isset($existing_item_cols['hsn_code']) ? "ii.hsn_code AS hsn_code" : "'' AS hsn_code";
+$select_prod_name = isset($existing_item_cols['product_name']) ? "COALESCE(NULLIF(ii.product_name, ''), p.name) AS product_name," : "p.name AS product_name,";
+$select_serial_no = isset($existing_item_cols['serial_no']) ? "COALESCE(NULLIF(ii.serial_no, ''), p.serial_no) AS serial_no," : "p.serial_no AS serial_no,";
 
 $items_res = mysqli_query($conn, "
     SELECT ii.invoice_id, ii.product_id, ii.quantity, ii.price, ii.total,
-           ii.making_charge, ii.making_charge_pct, ii.hallmark, ii.hallmark_type, ii.discount, $select_gst_type $select_pcs
-           COALESCE(NULLIF(ii.product_name, ''), p.name) AS product_name,
-           COALESCE(NULLIF(ii.serial_no, ''), p.serial_no) AS serial_no,
-           ii.huid_code AS huid_code,
-           ii.hsn_code AS hsn_code
+           $select_mc $select_mc_pct $select_hm $select_hm_type $select_disc $select_gst_type $select_pcs
+           $select_prod_name
+           $select_serial_no
+           $select_huid
+           $select_hsn
     FROM invoice_items ii
     LEFT JOIN products p ON ii.product_id = p.id
     WHERE ii.invoice_id = " . intval($inv['id'])

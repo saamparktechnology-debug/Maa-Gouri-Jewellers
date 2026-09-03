@@ -314,6 +314,7 @@ $invoice_items_cols = [
     'making_charge'     => "DECIMAL(10,2) DEFAULT 0",
     'making_charge_pct' => "DECIMAL(5,2) DEFAULT 0",
     'hallmark'          => "DECIMAL(10,2) DEFAULT 0",
+    'hallmark_type'     => "VARCHAR(50) DEFAULT '22K'",
     'discount'          => "DECIMAL(10,2) DEFAULT 0",
     'huid_code'         => "VARCHAR(100) NULL",
     'pcs'               => "INT DEFAULT 1",

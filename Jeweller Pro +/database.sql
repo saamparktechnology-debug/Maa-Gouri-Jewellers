@@ -228,7 +228,21 @@ CREATE TABLE `invoice_items` (
   `total` decimal(10,2) DEFAULT NULL,
   `product_name` varchar(200) DEFAULT NULL,
   `serial_no` varchar(100) DEFAULT NULL,
-  `hsn_code` varchar(50) DEFAULT NULL
+  `hsn_code` varchar(50) DEFAULT NULL,
+  `making_charge` decimal(10,2) DEFAULT 0.00,
+  `making_charge_pct` decimal(5,2) DEFAULT 0.00,
+  `hallmark` decimal(10,2) DEFAULT 0.00,
+  `hallmark_type` varchar(50) DEFAULT '22K',
+  `discount` decimal(10,2) DEFAULT 0.00,
+  `huid_code` varchar(100) DEFAULT NULL,
+  `pcs` int(11) DEFAULT 1,
+  `unit` varchar(20) DEFAULT 'g',
+  `gross_wt` decimal(10,3) DEFAULT 0.000,
+  `net_wt` decimal(10,3) DEFAULT 0.000,
+  `gst_type` varchar(20) DEFAULT 'non_gst',
+  `diamond_cent` varchar(50) DEFAULT '',
+  `metal_kt` varchar(50) DEFAULT '',
+  `metal_weight` varchar(50) DEFAULT ''
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------

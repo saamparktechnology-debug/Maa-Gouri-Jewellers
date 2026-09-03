@@ -860,6 +860,8 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
         if(!$col_item_mc_pct) mysqli_query($conn, "ALTER TABLE invoice_items ADD COLUMN making_charge_pct DECIMAL(5,2) DEFAULT 0");
         $col_item_hm = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'hallmark'")) > 0;
         if(!$col_item_hm) mysqli_query($conn, "ALTER TABLE invoice_items ADD COLUMN hallmark DECIMAL(10,2) DEFAULT 0");
+        $col_item_hm_type = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'hallmark_type'")) > 0;
+        if(!$col_item_hm_type) mysqli_query($conn, "ALTER TABLE invoice_items ADD COLUMN hallmark_type VARCHAR(50) DEFAULT '22K'");
         $col_item_disc = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'discount'")) > 0;
         if(!$col_item_disc) mysqli_query($conn, "ALTER TABLE invoice_items ADD COLUMN discount DECIMAL(10,2) DEFAULT 0");
         $col_item_pcs = mysqli_num_rows(mysqli_query($conn, "SHOW COLUMNS FROM invoice_items LIKE 'pcs'")) > 0;
