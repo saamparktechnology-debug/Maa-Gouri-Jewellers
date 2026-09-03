@@ -5330,7 +5330,7 @@ document.getElementById('billingForm').addEventListener('keydown', function(e) {
     if (e.key === 'Enter') {
         const target = e.target;
         if (!target) return;
-        if (target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON') return;
+        if (target.tagName === 'TEXTAREA') return;
 
         // If user is inside item entry fields (Gross Wt, Net Wt, Qty, Item Name, Making Charge, etc.), Enter adds item to bill
         const itemContainer = target.closest('#panelGram');
@@ -5349,19 +5349,47 @@ document.getElementById('billingForm').addEventListener('keydown', function(e) {
             return;
         }
 
-        // If user is in Customer Mobile, Enter moves focus to product or next field
+        // If user is in Customer Mobile, Enter moves focus to product Gross Weight
         if (target.id === 'customerMobile') {
             e.preventDefault();
             document.getElementById('gramGrossWeight')?.focus() || target.blur();
             return;
         }
 
-        // If user is in Discount, Old Gold, Advance, or Payment inputs, Enter applies the value and blurs without submitting
+        // If user is in Discount, Old Gold, Advance, or Payment inputs, Enter triggers Invoice Generation with validation
         e.preventDefault();
         if (typeof calculateTotal === 'function') {
             calculateTotal();
         }
-        target.blur();
+
+        if (items.length === 0) {
+            alert('❌ Please add at least one product to the bill first!');
+            document.getElementById('gramGrossWeight')?.focus() || document.getElementById('gramStockSearch')?.focus();
+            return;
+        }
+
+        const custNameEl = document.getElementById('customerName');
+        if (custNameEl && !custNameEl.value.trim()) {
+            alert('❌ Please enter Customer Name!');
+            custNameEl.focus();
+            custNameEl.style.boxShadow = '0 0 0 3px rgba(220,38,38,0.4)';
+            setTimeout(() => custNameEl.style.boxShadow = '', 2000);
+            return;
+        }
+
+        const custMobEl = document.getElementById('customerMobile');
+        if (custMobEl && !custMobEl.value.trim()) {
+            alert('❌ Please enter Customer Mobile Number!');
+            custMobEl.focus();
+            custMobEl.style.boxShadow = '0 0 0 3px rgba(220,38,38,0.4)';
+            setTimeout(() => custMobEl.style.boxShadow = '', 2000);
+            return;
+        }
+
+        const submitBtn = document.getElementById('submitBtn');
+        if (submitBtn) {
+            submitBtn.click();
+        }
     }
 });
 
@@ -5383,13 +5411,15 @@ document.getElementById('billingForm').addEventListener('submit', function(e) {
 
     // --- CASE 1: ADVANCE CREDIT BOOKING DEPOSIT (ONLY WHEN NO ITEMS ARE ADDED) ---
     if (items.length === 0 && (paymentStatusVal === 'advance' || advDepositVal > 0)) {
-        if (!document.getElementById('customerName').value.trim()) {
+        const cName = document.getElementById('customerName')?.value.trim();
+        const cMob = document.getElementById('customerMobile')?.value.trim();
+        if (!cName) {
             e.preventDefault();
             alert('❌ Please enter Customer Name for Advance Credit booking!');
             document.getElementById('customerName')?.focus();
             return false;
         }
-        if (!document.getElementById('customerMobile').value.trim()) {
+        if (!cMob) {
             e.preventDefault();
             alert('❌ Please enter Customer Mobile Number for Advance Credit booking!');
             document.getElementById('customerMobile')?.focus();
@@ -5422,19 +5452,33 @@ document.getElementById('billingForm').addEventListener('submit', function(e) {
     // --- CASE 2: REGULAR INVOICE BILLING (WITH ITEMS) ---
     if(items.length === 0) { 
         e.preventDefault(); 
-        alert('\u274C Please add at least one product to the bill!'); 
+        alert('❌ Please add at least one product to the bill!'); 
         return false; 
     }
-    if(!document.getElementById('customerName').value.trim()) { 
+
+    const custName = document.getElementById('customerName')?.value.trim();
+    if(!custName) { 
         e.preventDefault(); 
-        alert('\u274C Please enter Customer Name before generating invoice!'); 
-        document.getElementById('customerName')?.focus();
+        alert('❌ Please enter Customer Name before generating invoice!'); 
+        const el = document.getElementById('customerName');
+        if (el) {
+            el.focus();
+            el.style.boxShadow = '0 0 0 3px rgba(220,38,38,0.4)';
+            setTimeout(() => el.style.boxShadow = '', 2000);
+        }
         return false; 
     }
-    if(!document.getElementById('customerMobile').value.trim()) { 
+
+    const custMob = document.getElementById('customerMobile')?.value.trim();
+    if(!custMob) { 
         e.preventDefault(); 
-        alert('\u274C Please enter Customer Mobile Number before generating invoice!'); 
-        document.getElementById('customerMobile')?.focus();
+        alert('❌ Please enter Customer Mobile Number before generating invoice!'); 
+        const el = document.getElementById('customerMobile');
+        if (el) {
+            el.focus();
+            el.style.boxShadow = '0 0 0 3px rgba(220,38,38,0.4)';
+            setTimeout(() => el.style.boxShadow = '', 2000);
+        }
         return false; 
     }
 

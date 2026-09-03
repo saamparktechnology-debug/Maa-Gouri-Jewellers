@@ -32,7 +32,7 @@ if (isset($_REQUEST['action']) && $_REQUEST['action'] === 'delete_log') {
             exit;
         }
     }
-    header("Location: " . basename($_SERVER['PHP_SELF']));
+    header("Location: product_summary.php");
     exit;
 }
 
@@ -47,12 +47,9 @@ if (isset($_REQUEST['action']) && $_REQUEST['action'] === 'clear_all_logs') {
     if ($del) {
         $_SESSION['flash_success'] = "All activity records have been cleared.";
     }
-    header("Location: " . basename($_SERVER['PHP_SELF']));
+    header("Location: product_summary.php");
     exit;
 }
-
-// Auto-sync missing logs from previous invoices and product entries
-sync_missing_activity_logs($conn);
 
 $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-preview.png','moti-removebg-preview.png'];
 $logo_file = 'assets/images/moti-removebg-preview.png';
@@ -1011,15 +1008,8 @@ function time_elapsed_string($datetime, $full = false) {
             }
 
             try {
-                const formData = new FormData();
-                formData.append('action', 'delete_log');
-                formData.append('log_id', logId);
-                formData.append('ajax', '1');
-
-                const endpoint = window.location.pathname;
-                const response = await fetch(endpoint, {
-                    method: 'POST',
-                    body: formData,
+                const response = await fetch('product_summary.php?action=delete_log&id=' + encodeURIComponent(logId) + '&ajax=1', {
+                    method: 'GET',
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 });
                 
@@ -1027,11 +1017,8 @@ function time_elapsed_string($datetime, $full = false) {
                 try {
                     data = await response.json();
                 } catch(e) {
-                    // Non-JSON response, fallback to reload
-                    if (response.ok) {
-                        window.location.reload();
-                        return;
-                    }
+                    window.location.href = 'product_summary.php?action=delete_log&id=' + encodeURIComponent(logId);
+                    return;
                 }
 
                 if (data && data.success) {
@@ -1042,18 +1029,16 @@ function time_elapsed_string($datetime, $full = false) {
                         setTimeout(() => {
                             row.remove();
                             applyLiveFilter();
-                            countTabTotals();
+                            if (typeof countTabTotals === 'function') countTabTotals();
                         }, 300);
                     }
                     showToast('Activity record removed successfully', 'success');
                 } else {
-                    // Fallback to direct GET navigation if JSON failed
-                    window.location.href = window.location.pathname + '?action=delete_log&id=' + logId;
+                    window.location.href = 'product_summary.php?action=delete_log&id=' + encodeURIComponent(logId);
                 }
             } catch (err) {
                 console.error(err);
-                // Fallback to direct GET navigation
-                window.location.href = window.location.pathname + '?action=delete_log&id=' + logId;
+                window.location.href = 'product_summary.php?action=delete_log&id=' + encodeURIComponent(logId);
             }
         }
 
@@ -1062,7 +1047,7 @@ function time_elapsed_string($datetime, $full = false) {
             if (!confirm('⚠️ Are you sure you want to CLEAR ALL product activity logs?\nThis will permanently delete the entire audit history.')) {
                 return;
             }
-            window.location.href = window.location.pathname + '?action=clear_all_logs';
+            window.location.href = 'product_summary.php?action=clear_all_logs';
         }
 
         // Toast notification helper

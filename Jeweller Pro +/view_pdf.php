@@ -1063,19 +1063,38 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                                 $rate_cell_html = '₹' . ind_format($rate) . ($unit === 'g' ? '/g' : '');
                             }
                         ?>
+                        <?php
+                            $hm_type = trim($it['hallmark_type'] ?? '');
+                            if (empty($hm_type) && !empty($cat_disp) && preg_match('/\b(24k|22k|18k|14k|12k|9k|silver|platinum)\b/i', $cat_disp, $hm_m)) {
+                                $hm_type = strtoupper($hm_m[1]);
+                            }
+                            if (empty($hm_type)) {
+                                $hm_type = '22K';
+                            }
+                            $hm_badge_text = (stripos($hm_type, 'hallmark') !== false) ? $hm_type : 'Hallmark: ' . $hm_type;
+
+                            // Clean product description to avoid duplicating purity already stated in Hallmark badge
+                            $display_title = $clean_name;
+                            $display_title = preg_replace('/\s*\((?:Gold\s*)?(?:24K|22K|18K|14K|12K|9K|Silver|Platinum)\)/i', '', $display_title);
+                            $display_title = preg_replace('/\s+(?:Gold\s+)?(?:24K|22K|18K|14K|12K|9K)\b/i', '', $display_title);
+                            $display_title = trim($display_title);
+
+                            $show_cat = false;
+                            if (!empty($cat_disp) && !preg_match('/^(?:Gold\s*)?(?:24K|22K|18K|14K|12K|9K|Gold|Silver|Platinum)$/i', trim($cat_disp))) {
+                                $show_cat = true;
+                            }
+                        ?>
                         <tr>
                             <td class="center"><?php echo $idx + 1; ?></td>
                             <td class="left">
                                 <div class="item-desc" style="font-size:10px; font-weight:700; color:#1e293b; line-height:1.2;">
-                                    <?php echo $clean_name; ?> 
-                                    <?php if (!empty($cat_disp)): ?>
+                                    <?php echo $display_title; ?> 
+                                    <?php if ($show_cat): ?>
                                     <span style="color:#7a4e0a; font-size:9.5px; font-weight:600;">(<?php echo htmlspecialchars($cat_disp); ?>)</span>
                                     <?php endif; ?>
                                 </div>
                                 <div class="item-sub" style="font-size:8px; color:#475569; margin-top:2.5px; line-height:1.4;">
-                                    <?php if(!empty($it['hallmark_type'])): ?>
-                                    <span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:1px 4.5px;border-radius:3px;font-weight:700;font-size:8px;"><?php echo htmlspecialchars($it['hallmark_type']); ?></span>
-                                    <?php endif; ?>
+                                    <span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:1px 5px;border-radius:3px;font-weight:700;font-size:8px;"><?php echo htmlspecialchars($hm_badge_text); ?></span>
                                     <?php if(!empty($huid)): ?>
                                     <span style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;padding:1px 4.5px;border-radius:3px;font-weight:600;font-family:monospace;font-size:8px;">HUID: <?php echo htmlspecialchars($huid); ?></span>
                                     <?php endif; ?>
