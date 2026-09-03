@@ -1830,10 +1830,13 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         }
 
         if (wContainer) {
+            const wInput = wContainer.querySelector('input');
             if (cat === 'Diamond') {
                 wContainer.classList.add('hidden');
+                if (wInput) wInput.removeAttribute('required');
             } else {
                 wContainer.classList.remove('hidden');
+                if (wInput) wInput.setAttribute('required', 'required');
             }
         }
 
