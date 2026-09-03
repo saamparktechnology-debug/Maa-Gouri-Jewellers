@@ -465,8 +465,7 @@ if($adv_cust_q) {
 }
 
 // Handle billing submission
-
-if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['create_invoice'])) {
+if($_SERVER['REQUEST_METHOD'] == 'POST' && (isset($_POST['create_invoice']) || isset($_POST['items']) || isset($_POST['subtotal']))) {
     $customer_name    = mysqli_real_escape_string($conn, $_POST['customer_name'] ?? '');
     $customer_mobile  = mysqli_real_escape_string($conn, $_POST['customer_mobile'] ?? '');
 
@@ -2261,6 +2260,7 @@ function submitPayment() {
                     </div>
 
                     <!-- Hidden form fields -->
+                    <input type="hidden" name="create_invoice" value="1">
                     <input type="hidden" name="subtotal" id="hiddenSubtotal" value="0">
                     <input type="hidden" name="gst_amount" id="hiddenGst" value="0">
                     <input type="hidden" name="total_amount" id="hiddenTotal" value="0">
@@ -5277,7 +5277,7 @@ document.getElementById('billingForm').addEventListener('submit', function(e) {
         isBillingFormSubmitting = true;
         const submitBtn = document.getElementById('submitBtn');
         if (submitBtn) {
-            submitBtn.disabled = true;
+            submitBtn.style.pointerEvents = 'none';
             submitBtn.style.opacity = '0.7';
             submitBtn.style.cursor = 'not-allowed';
             submitBtn.innerHTML = '⏳ Generating Advance Receipt...';
@@ -5338,7 +5338,7 @@ document.getElementById('billingForm').addEventListener('submit', function(e) {
     isBillingFormSubmitting = true;
     const submitBtn = document.getElementById('submitBtn');
     if (submitBtn) {
-        submitBtn.disabled = true;
+        submitBtn.style.pointerEvents = 'none';
         submitBtn.style.opacity = '0.7';
         submitBtn.style.cursor = 'not-allowed';
         submitBtn.innerHTML = '⏳ Generating Invoice...';
