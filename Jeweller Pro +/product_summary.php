@@ -8,6 +8,42 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
+// Handle Delete Activity Log Request
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['action']) && $_POST['action'] === 'delete_log') {
+        $log_id = intval($_POST['log_id'] ?? 0);
+        if ($log_id > 0) {
+            $del = mysqli_query($conn, "DELETE FROM product_activity_logs WHERE id = $log_id");
+            if (isset($_POST['ajax']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => (bool)$del, 'message' => $del ? 'Record deleted successfully' : mysqli_error($conn)]);
+                exit;
+            }
+            if ($del) {
+                $_SESSION['flash_success'] = "Activity record deleted successfully.";
+            } else {
+                $_SESSION['flash_error'] = "Failed to delete activity record: " . mysqli_error($conn);
+            }
+        }
+        header("Location: product_summary.php" . (!empty($_SERVER['QUERY_STRING']) ? '?' . $_SERVER['QUERY_STRING'] : ''));
+        exit;
+    }
+
+    if (isset($_POST['action']) && $_POST['action'] === 'clear_all_logs') {
+        $del = mysqli_query($conn, "TRUNCATE TABLE product_activity_logs");
+        if (isset($_POST['ajax'])) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => (bool)$del, 'message' => $del ? 'All logs cleared' : mysqli_error($conn)]);
+            exit;
+        }
+        if ($del) {
+            $_SESSION['flash_success'] = "All activity records have been cleared.";
+        }
+        header("Location: product_summary.php");
+        exit;
+    }
+}
+
 // Auto-sync missing logs from previous invoices and product entries
 sync_missing_activity_logs($conn);
 
@@ -366,6 +402,26 @@ function time_elapsed_string($datetime, $full = false) {
             </div>
         </div>
 
+        <?php if (!empty($_SESSION['flash_success'])): ?>
+        <div class="mt-4 p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold flex items-center justify-between shadow-sm">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-check-circle text-emerald-600 text-sm"></i>
+                <span><?php echo htmlspecialchars($_SESSION['flash_success']); unset($_SESSION['flash_success']); ?></span>
+            </div>
+            <button onclick="this.parentElement.remove()" class="text-emerald-500 hover:text-emerald-700">&times;</button>
+        </div>
+        <?php endif; ?>
+
+        <?php if (!empty($_SESSION['flash_error'])): ?>
+        <div class="mt-4 p-3.5 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs font-bold flex items-center justify-between shadow-sm">
+            <div class="flex items-center gap-2">
+                <i class="fas fa-exclamation-circle text-rose-600 text-sm"></i>
+                <span><?php echo htmlspecialchars($_SESSION['flash_error']); unset($_SESSION['flash_error']); ?></span>
+            </div>
+            <button onclick="this.parentElement.remove()" class="text-rose-500 hover:text-rose-700">&times;</button>
+        </div>
+        <?php endif; ?>
+
         <!-- KPI Metrics Grid -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mt-6">
             <!-- 1. Total Added -->
@@ -532,13 +588,18 @@ function time_elapsed_string($datetime, $full = false) {
 
         <!-- Activity Log Table -->
         <div class="bg-white rounded-2xl border border-amber-200 mt-4 shadow-sm overflow-hidden">
-            <div class="p-4 border-b border-stone-100 flex items-center justify-between">
+            <div class="p-4 border-b border-stone-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div class="flex items-center gap-2">
                     <h3 class="font-bold text-stone-900 text-sm md:text-base">Detailed Activity History</h3>
                     <span id="recordCountBadge" class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-xs font-bold"><?php echo mysqli_num_rows($logs_res); ?> records</span>
                 </div>
-                <div class="text-xs text-stone-500">
-                    Live interactive filtering enabled
+                <div class="flex items-center gap-2.5 no-print">
+                    <button type="button" onclick="confirmClearAllLogs()" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-200 hover:border-rose-600 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm" title="Clear all activity history">
+                        <i class="fas fa-trash-alt text-[10px]"></i> Clear All Logs
+                    </button>
+                    <div class="text-xs text-stone-500 hidden md:block">
+                        Live interactive filtering enabled
+                    </div>
                 </div>
             </div>
 
@@ -554,12 +615,13 @@ function time_elapsed_string($datetime, $full = false) {
                             <th class="py-3 px-3.5 text-right">Quantity / Weight</th>
                             <th class="py-3 px-3.5">Activity Remarks / Details</th>
                             <th class="py-3 px-3.5 text-center">Logged By</th>
+                            <th class="py-3 px-3.5 text-center no-print">Action</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-stone-100 text-xs text-stone-700" id="activityTableBody">
                         <?php if (mysqli_num_rows($logs_res) == 0): ?>
                         <tr id="emptyDbRow">
-                            <td colspan="8" class="py-12 text-center text-stone-400">
+                            <td colspan="9" class="py-12 text-center text-stone-400">
                                 <i class="fas fa-boxes text-3xl mb-2 text-stone-300"></i>
                                 <p class="font-medium text-sm">No product activity logs found.</p>
                             </td>
@@ -608,7 +670,8 @@ function time_elapsed_string($datetime, $full = false) {
                             data-type="<?php echo $atype; ?>"
                             data-category="<?php echo htmlspecialchars($log['category'] ?: ''); ?>"
                             data-date="<?php echo $date_iso; ?>"
-                            data-search="<?php echo htmlspecialchars($search_blob); ?>">
+                            data-search="<?php echo htmlspecialchars($search_blob); ?>"
+                            data-log-id="<?php echo intval($log['id']); ?>">
                             
                             <td class="row-index py-3 px-3.5 text-center text-stone-400 font-mono text-[11px]"><?php echo $idx++; ?></td>
                             
@@ -691,11 +754,21 @@ function time_elapsed_string($datetime, $full = false) {
                                     <i class="fas fa-user-shield text-[9px] mr-1 text-amber-700"></i><?php echo htmlspecialchars($log['performed_by']); ?>
                                 </span>
                             </td>
+
+                            <!-- Action: Delete -->
+                            <td class="py-3 px-3.5 text-center whitespace-nowrap no-print">
+                                <button type="button" onclick="deleteActivityLog(<?php echo intval($log['id']); ?>, this)" 
+                                        class="px-2.5 py-1 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-200 hover:border-rose-600 rounded-lg text-[11px] font-bold transition inline-flex items-center gap-1 shadow-sm group"
+                                        title="Delete this activity record">
+                                    <i class="fas fa-trash-alt text-[10px] group-hover:scale-110 transition-transform"></i>
+                                    <span>Delete</span>
+                                </button>
+                            </td>
                         </tr>
                         <?php endwhile; ?>
                         <?php endif; ?>
                         <tr id="noResultsRow" class="hidden">
-                            <td colspan="8" class="py-12 text-center text-stone-400">
+                            <td colspan="9" class="py-12 text-center text-stone-400">
                                 <i class="fas fa-search text-3xl mb-2 text-stone-300"></i>
                                 <p class="font-medium text-sm text-stone-600">No matching activities found for your search &amp; filter criteria.</p>
                                 <button type="button" onclick="resetAllFilters()" class="mt-3 px-3 py-1.5 bg-amber-100 text-amber-900 rounded-lg text-xs font-bold hover:bg-amber-200 transition">
@@ -898,7 +971,7 @@ function time_elapsed_string($datetime, $full = false) {
             for (let i = 0; i < rows.length; i++) {
                 if (rows[i].style.display === 'none') continue; // Only export visible filtered rows
                 const row = [], cols = rows[i].querySelectorAll('td, th');
-                for (let j = 0; j < cols.length; j++) {
+                for (let j = 0; j < cols.length - 1; j++) { // Skip the last action column in CSV
                     let text = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, ' ').replace(/"/g, '""').trim();
                     row.push('"' + text + '"');
                 }
@@ -912,6 +985,97 @@ function time_elapsed_string($datetime, $full = false) {
             document.body.appendChild(downloadLink);
             downloadLink.click();
             document.body.removeChild(downloadLink);
+        }
+
+        // Delete individual activity log with AJAX
+        async function deleteActivityLog(logId, btn) {
+            if (!confirm('Are you sure you want to delete this activity log record?')) {
+                return;
+            }
+
+            const row = btn ? btn.closest('tr') : document.querySelector(`tr[data-log-id="${logId}"]`);
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin text-[10px]"></i>';
+            }
+
+            try {
+                const formData = new FormData();
+                formData.append('action', 'delete_log');
+                formData.append('log_id', logId);
+                formData.append('ajax', '1');
+
+                const response = await fetch('product_summary.php', {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                });
+                const data = await response.json();
+
+                if (data && data.success) {
+                    if (row) {
+                        row.style.transition = 'all 0.3s ease';
+                        row.style.opacity = '0';
+                        row.style.transform = 'scale(0.95)';
+                        setTimeout(() => {
+                            row.remove();
+                            applyLiveFilter();
+                            countTabTotals();
+                        }, 300);
+                    }
+                    showToast('Activity record removed successfully', 'success');
+                } else {
+                    alert('Error deleting log: ' + (data.message || 'Unknown error'));
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="fas fa-trash-alt text-[10px]"></i> <span>Delete</span>';
+                    }
+                }
+            } catch (err) {
+                console.error(err);
+                // Fallback to standard form submit
+                const f = document.createElement('form');
+                f.method = 'POST';
+                f.action = 'product_summary.php';
+                f.innerHTML = '<input type="hidden" name="action" value="delete_log"><input type="hidden" name="log_id" value="' + logId + '">';
+                document.body.appendChild(f);
+                f.submit();
+            }
+        }
+
+        // Clear all activity logs
+        function confirmClearAllLogs() {
+            if (!confirm('⚠️ Are you sure you want to CLEAR ALL product activity logs?\nThis will permanently delete the entire audit history.')) {
+                return;
+            }
+            const f = document.createElement('form');
+            f.method = 'POST';
+            f.action = 'product_summary.php';
+            f.innerHTML = '<input type="hidden" name="action" value="clear_all_logs">';
+            document.body.appendChild(f);
+            f.submit();
+        }
+
+        // Toast notification helper
+        function showToast(message, type = 'success') {
+            let toast = document.getElementById('psToast');
+            if (!toast) {
+                toast = document.createElement('div');
+                toast.id = 'psToast';
+                toast.className = 'fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-xl text-xs font-bold flex items-center gap-2 transition-all duration-300 transform translate-y-10 opacity-0';
+                document.body.appendChild(toast);
+            }
+            toast.className = 'fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl shadow-xl text-xs font-bold flex items-center gap-2 transition-all duration-300 transform ' + 
+                (type === 'success' ? 'bg-emerald-900 text-emerald-100 border border-emerald-600' : 'bg-rose-900 text-rose-100 border border-rose-600');
+            toast.innerHTML = (type === 'success' ? '<i class="fas fa-check-circle text-emerald-300"></i> ' : '<i class="fas fa-exclamation-circle text-rose-300"></i> ') + message;
+            
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0');
+            }, 3000);
         }
     </script>
 </body>
