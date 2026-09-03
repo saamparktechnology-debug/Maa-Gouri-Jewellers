@@ -3520,7 +3520,7 @@ function submitGramItem() {
         let productId = 'other';
         let name = '';
         let itemType = '';
-        let hsn = '7113';
+        let hsn = '';
         let grossWeight = 0;
         let netWeight = 0;
 
@@ -3547,7 +3547,7 @@ function submitGramItem() {
             if (!opt || !opt.value) { alert('Please select a product from stock.'); return; }
             productId = opt.value;
             name = customTypedName || opt.dataset.itemName || opt.dataset.name || opt.text;
-            hsn = '7113';
+            hsn = opt.dataset.hsn || '7113';
 
             const pCat = opt.dataset.category || '';
             const isNonMetalStock = pCat.toLowerCase().includes('stone') || pCat.toLowerCase().includes('mala') || pCat.toLowerCase().includes('other');
@@ -3596,7 +3596,7 @@ function submitGramItem() {
             const nameEl = document.getElementById('gramManualName');
             const hsnEl = document.getElementById('gramManualHsn');
             name = (nameEl ? nameEl.value.trim() : '') || customTypedName;
-            hsn = (hsnEl ? hsnEl.value.trim() : '') || '7113';
+            hsn = hsnEl ? hsnEl.value.trim() : '';
             if (!name) { alert('Please enter an item description.'); return; }
         }
         
@@ -3656,6 +3656,9 @@ function submitGramItem() {
         const ihm = parseFloat(document.getElementById('itemHallmark')?.value) || 0;
         const idisc = parseFloat(document.getElementById('itemDiscount')?.value) || 0;
         const igst = document.getElementById('itemGstType')?.value || 'non_gst';
+        if (igst === 'non_gst') {
+            hsn = '';
+        }
         const itemTotal = parseFloat((baseAmount + imcAmt + ihm - idisc).toFixed(2));
         
         const inputHuid = document.getElementById('manualHuid') ? document.getElementById('manualHuid').value.trim() : '';
@@ -3752,6 +3755,7 @@ function submitGramItem() {
         if (document.getElementById('gramNetWeight')) document.getElementById('gramNetWeight').value = '';
         if (document.getElementById('gramManualWeight')) document.getElementById('gramManualWeight').value = '';
         if (document.getElementById('gramManualName')) document.getElementById('gramManualName').value = '';
+        if (document.getElementById('gramManualHsn')) document.getElementById('gramManualHsn').value = '';
         if (document.getElementById('gramItemNameInput')) document.getElementById('gramItemNameInput').value = '';
         if (document.getElementById('gramRate')) document.getElementById('gramRate').value = '';
         if (document.getElementById('manualHuid')) document.getElementById('manualHuid').value = '';
@@ -3941,7 +3945,7 @@ function submitQtyItem() {
         let productId = 'other';
         let name = '';
         let itemType = '';
-        let hsn = '7113';
+        let hsn = '';
         let qty = 0;
         let rate = parseFloat(document.getElementById('qtyRate')?.value) || 0;
         
@@ -3951,7 +3955,7 @@ function submitQtyItem() {
             if (!opt || !opt.value) { alert('Please select a product from stock.'); return; }
             productId = opt.value;
             name = opt.dataset.itemName;
-            hsn = '7113';
+            hsn = opt.dataset.hsn || '7113';
             qty = parseInt(document.getElementById('qtyCount')?.value) || 0;
 
             // Stock pcs validation check
@@ -3985,7 +3989,7 @@ function submitQtyItem() {
             const nameEl = document.getElementById('qtyManualName');
             const hsnEl = document.getElementById('qtyManualHsn');
             name = nameEl ? nameEl.value.trim() : '';
-            hsn = (hsnEl ? hsnEl.value.trim() : '') || '7113';
+            hsn = hsnEl ? hsnEl.value.trim() : '';
             qty = parseInt(document.getElementById('qtyCountManual')?.value) || 0;
             if (!name) { alert('Please enter an item description.'); return; }
         }
@@ -4169,12 +4173,15 @@ function updateItemsList() {
         const cleanHuid = (item.huid_code || '').trim().replace(/^HUID[:\s\-_]*/i, '');
         const huidBadge = cleanHuid ? '<span style="display:inline-block;padding:1px 5px;background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;border-radius:4px;font-size:9.5px;font-family:monospace;font-weight:600;margin-left:4px;">HUID: ' + htmlEsc(cleanHuid) + '</span>' : '';
 
+        const showHsn = (item.gst_type && item.gst_type !== 'non_gst' && item.hsn && item.hsn.trim() !== '' && item.hsn !== '0');
+        const hsnHtml = showHsn ? '<div style="color:#9ca3af;font-size:10px;">HSN: ' + htmlEsc(item.hsn) + '</div>' : '';
+
         html += '<tr>' +
             '<td class="px-2 py-2 text-xs text-center" style="color:#9ca3af;">' + (idx+1) + '</td>' +
             '<td class="px-2 py-2 text-xs" style="color:#374151;">' + icon + ' <strong>' + htmlEsc(item.name) + '</strong>' +
                 hmBadge + huidBadge +
                 (item.item_type ? '<span style="color:#b5730e;font-size:10px;"> [' + htmlEsc(item.item_type) + ']</span>' : '') +
-                badge + '<div style="color:#9ca3af;font-size:10px;">HSN: ' + (item.hsn || '7108') + '</div></td>' +
+                badge + hsnHtml + '</td>' +
             '<td class="px-2 py-2 text-center text-xs font-medium" style="color:#4b5563;">' + qtyDisp + '</td>' +
             '<td class="px-2 py-2 text-right text-xs" style="color:#374151;">' + rateDisp + '</td>' +
             '<td class="px-2 py-2 text-right text-xs" style="color:#374151;">\u20B9' + base.toFixed(2) + '</td>' +
@@ -4223,7 +4230,13 @@ function htmlEsc(str) {
 }
 
 function removeItem(index) { items.splice(index, 1); updateItemsList(); calculateTotal(); }
-function updateItemGst(index, value) { if(items[index]) { items[index].gst_type = value; calculateTotal(); } }
+function updateItemGst(index, value) { 
+    if(items[index]) { 
+        items[index].gst_type = value; 
+        updateItemsList(); 
+        calculateTotal(); 
+    } 
+}
 
 // Items added via Stock already carry their real product serial_no (HUID).
 // Manual / Category items don't have one, so fall back to the invoice-level

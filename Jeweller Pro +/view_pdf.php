@@ -1106,7 +1106,10 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                                     <?php if(!empty($huid)): ?>
                                     <span style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;padding:1px 4.5px;border-radius:3px;font-weight:600;font-family:monospace;font-size:8px;">HUID: <?php echo htmlspecialchars($huid); ?></span>
                                     <?php endif; ?>
-                                    <?php if($is_gst && !empty($it['hsn_code'])): ?>
+                                    <?php 
+                                        $show_item_hsn = ($is_gst && $item_tax_rate > 0 && $it_gst_type !== 'non_gst' && !empty($it['hsn_code']) && trim($it['hsn_code']) !== '' && trim($it['hsn_code']) !== '0');
+                                    ?>
+                                    <?php if($show_item_hsn): ?>
                                     <span>HSN: <?php echo htmlspecialchars($it['hsn_code']); ?></span>
                                     <?php endif; ?>
                                     <br>
