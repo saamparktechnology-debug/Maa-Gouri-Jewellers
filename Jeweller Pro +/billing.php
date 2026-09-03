@@ -3991,6 +3991,10 @@ document.addEventListener('input', function(e) {
 });
 
 function updateItemsList() {
+    try {
+        sessionStorage.setItem('billing_cart_items', JSON.stringify(items));
+    } catch(e) {}
+
     const tbody = document.getElementById('itemsList');
     if(items.length === 0) {
         tbody.innerHTML = '<tr id="emptyRow"><td colspan="10" style="text-align:center;padding:20px;color:#9ca3af;font-size:12px;">No items added yet \u2014 enter details above to add products</td></tr>';
@@ -5338,15 +5342,26 @@ document.getElementById('billingForm').addEventListener('keydown', function(e) {
             return;
         }
 
-        // If user is in Totals / Discounts / Old Gold / Payment inputs, Enter generates the invoice
+        // If user is in Customer Name, Enter moves focus to Customer Mobile
+        if (target.id === 'customerName') {
+            e.preventDefault();
+            document.getElementById('customerMobile')?.focus();
+            return;
+        }
+
+        // If user is in Customer Mobile, Enter moves focus to product or next field
+        if (target.id === 'customerMobile') {
+            e.preventDefault();
+            document.getElementById('gramGrossWeight')?.focus() || target.blur();
+            return;
+        }
+
+        // If user is in Discount, Old Gold, Advance, or Payment inputs, Enter applies the value and blurs without submitting
         e.preventDefault();
         if (typeof calculateTotal === 'function') {
             calculateTotal();
         }
-        const submitBtn = document.getElementById('submitBtn');
-        if (submitBtn) {
-            submitBtn.click();
-        }
+        target.blur();
     }
 });
 
@@ -5371,11 +5386,13 @@ document.getElementById('billingForm').addEventListener('submit', function(e) {
         if (!document.getElementById('customerName').value.trim()) {
             e.preventDefault();
             alert('❌ Please enter Customer Name for Advance Credit booking!');
+            document.getElementById('customerName')?.focus();
             return false;
         }
         if (!document.getElementById('customerMobile').value.trim()) {
             e.preventDefault();
             alert('❌ Please enter Customer Mobile Number for Advance Credit booking!');
+            document.getElementById('customerMobile')?.focus();
             return false;
         }
         if (advDepositVal <= 0) {
@@ -5394,6 +5411,7 @@ document.getElementById('billingForm').addEventListener('submit', function(e) {
             submitBtn.innerHTML = '⏳ Generating Advance Receipt...';
         }
 
+        try { sessionStorage.removeItem('billing_cart_items'); } catch(err) {}
         document.getElementById('hiddenIsAdvanceBooking').value = '1';
         document.getElementById('hiddenAdvanceDepositAmount').value = advDepositVal;
         document.getElementById('hiddenBookingNotes').value = document.getElementById('advanceBookingNotes')?.value.trim() || '';
@@ -5402,9 +5420,23 @@ document.getElementById('billingForm').addEventListener('submit', function(e) {
     }
 
     // --- CASE 2: REGULAR INVOICE BILLING (WITH ITEMS) ---
-    if(items.length === 0) { e.preventDefault(); alert('\u274C Please add at least one product!'); return false; }
-    if(!document.getElementById('customerName').value.trim()) { e.preventDefault(); alert('\u274C Please enter customer name!'); return false; }
-    if(!document.getElementById('customerMobile').value.trim()) { e.preventDefault(); alert('\u274C Please enter customer mobile number!'); return false; }
+    if(items.length === 0) { 
+        e.preventDefault(); 
+        alert('\u274C Please add at least one product to the bill!'); 
+        return false; 
+    }
+    if(!document.getElementById('customerName').value.trim()) { 
+        e.preventDefault(); 
+        alert('\u274C Please enter Customer Name before generating invoice!'); 
+        document.getElementById('customerName')?.focus();
+        return false; 
+    }
+    if(!document.getElementById('customerMobile').value.trim()) { 
+        e.preventDefault(); 
+        alert('\u274C Please enter Customer Mobile Number before generating invoice!'); 
+        document.getElementById('customerMobile')?.focus();
+        return false; 
+    }
 
     document.getElementById('hiddenIsAdvanceBooking').value = '0';
     document.getElementById('hiddenItems').value = JSON.stringify(buildItemsForSubmit());
@@ -5455,6 +5487,7 @@ document.getElementById('billingForm').addEventListener('submit', function(e) {
         submitBtn.innerHTML = '⏳ Generating Invoice...';
     }
 
+    try { sessionStorage.removeItem('billing_cart_items'); } catch(err) {}
     document.getElementById('hiddenItems').value = JSON.stringify(buildItemsForSubmit());
 });
 
@@ -5462,7 +5495,20 @@ document.getElementById('billingForm').addEventListener('submit', function(e) {
 // Init
 loadShopRates();
 loadAdvanceCustomers();
+
+// Restore in-progress cart items if page reloaded
+try {
+    const savedCart = sessionStorage.getItem('billing_cart_items');
+    if (savedCart) {
+        const parsed = JSON.parse(savedCart);
+        if (Array.isArray(parsed) && parsed.length > 0 && items.length === 0) {
+            items = parsed;
+        }
+    }
+} catch(e) {}
+
 updateItemsList();
+calculateTotal();
 populateHuidOptions();
 updateReminderButtonVisibility();
 document.getElementById('customerEmail').addEventListener('input', updateReminderButtonVisibility);
