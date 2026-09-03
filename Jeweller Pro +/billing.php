@@ -765,11 +765,87 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && (isset($_POST['create_invoice']) || i
         }
     }
 
-    $adv_id_sql = ($applied_advance_id > 0) ? $applied_advance_id : "NULL";
+    // Ensure all required columns exist on invoices table
+    $chk_inv_cols = [
+        'customer_id'        => 'INT NULL',
+        'customer_address'   => 'TEXT NULL',
+        'customer_gstin'     => 'VARCHAR(50) NULL',
+        'discount'           => 'DECIMAL(10,2) DEFAULT 0',
+        'advance_adjusted'   => 'DECIMAL(10,2) DEFAULT 0',
+        'advance_id'         => 'INT NULL',
+        'applied_advance_id' => 'INT NULL',
+        'old_gold_amount'    => 'DECIMAL(10,2) DEFAULT 0',
+        'old_gold_type'      => "VARCHAR(50) DEFAULT 'Old Gold'",
+        'old_gold_value'     => 'DECIMAL(10,2) DEFAULT 0',
+        'refund_amount'      => 'DECIMAL(10,2) DEFAULT 0',
+        'refund_mode'        => 'VARCHAR(50) NULL',
+        'payment_status'     => "VARCHAR(20) DEFAULT 'pending'",
+        'payment_method'     => "VARCHAR(20) DEFAULT 'Cash'",
+        'paid_amount'        => 'DECIMAL(10,2) DEFAULT 0',
+        'balance_amount'     => 'DECIMAL(10,2) DEFAULT 0',
+        'huid_code'          => 'VARCHAR(100) NULL',
+        'cash_paid'          => 'DECIMAL(10,2) DEFAULT 0',
+        'upi_paid'           => 'DECIMAL(10,2) DEFAULT 0',
+        'account_paid'       => 'DECIMAL(10,2) DEFAULT 0',
+        'due_date'           => 'DATE NULL',
+        'reminder_sent'      => 'TINYINT(1) DEFAULT 0',
+    ];
+    foreach ($chk_inv_cols as $c_name => $c_def) {
+        $c_chk = mysqli_query($conn, "SHOW COLUMNS FROM invoices LIKE '$c_name'");
+        if ($c_chk && mysqli_num_rows($c_chk) == 0) {
+            @mysqli_query($conn, "ALTER TABLE invoices ADD COLUMN $c_name $c_def");
+        }
+    }
 
-    $invoice_query = "INSERT INTO invoices (invoice_no, customer_name, customer_mobile, customer_address, customer_gstin, gst_type, subtotal, gst_amount, total_amount, payment_status, payment_method, paid_amount, balance_amount, cash_paid, upi_paid, account_paid, due_date, created_by, huid_code, old_gold_amount, old_gold_type, advance_adjusted, advance_id, discount)
-              VALUES ('$invoice_no', '$customer_name', '$customer_mobile', '$customer_address', '$customer_gstin', '$gst_type', $subtotal, $gst_amount, $total_amount, '$payment_status', '$payment_method', $paid_amount, $balance_amount, $cash_paid, $upi_paid, $account_paid, $due_date, $created_by_val, '$huid_code', $old_gold_amount, '$old_gold_type', $advance_adjusted, $adv_id_sql, $discount)";
+    $existing_inv_cols = [];
+    $all_cols_res = mysqli_query($conn, "SHOW COLUMNS FROM invoices");
+    if ($all_cols_res) {
+        while ($cr = mysqli_fetch_assoc($all_cols_res)) {
+            $existing_inv_cols[strtolower($cr['Field'])] = true;
+        }
+    }
 
+    $adv_id_val = ($applied_advance_id > 0) ? $applied_advance_id : null;
+
+    $inv_data = [
+        'invoice_no'         => "'$invoice_no'",
+        'customer_name'      => "'$customer_name'",
+        'customer_mobile'    => "'$customer_mobile'",
+        'customer_address'   => "'$customer_address'",
+        'customer_gstin'     => "'$customer_gstin'",
+        'gst_type'           => "'$gst_type'",
+        'subtotal'           => $subtotal,
+        'gst_amount'         => $gst_amount,
+        'total_amount'       => $total_amount,
+        'payment_status'     => "'$payment_status'",
+        'payment_method'     => "'$payment_method'",
+        'paid_amount'        => $paid_amount,
+        'balance_amount'     => $balance_amount,
+        'cash_paid'          => $cash_paid,
+        'upi_paid'           => $upi_paid,
+        'account_paid'       => $account_paid,
+        'due_date'           => $due_date,
+        'created_by'         => $created_by_val,
+        'huid_code'          => "'$huid_code'",
+        'old_gold_amount'    => $old_gold_amount,
+        'old_gold_type'      => "'$old_gold_type'",
+        'old_gold_value'     => $old_gold_amount,
+        'advance_adjusted'   => $advance_adjusted,
+        'advance_id'         => ($adv_id_val !== null ? $adv_id_val : 'NULL'),
+        'applied_advance_id' => ($adv_id_val !== null ? $adv_id_val : 'NULL'),
+        'discount'           => $discount,
+    ];
+
+    $insert_cols = [];
+    $insert_vals = [];
+    foreach ($inv_data as $col => $val) {
+        if (isset($existing_inv_cols[strtolower($col)])) {
+            $insert_cols[] = "`$col`";
+            $insert_vals[] = $val;
+        }
+    }
+
+    $invoice_query = "INSERT INTO invoices (" . implode(", ", $insert_cols) . ") VALUES (" . implode(", ", $insert_vals) . ")";
     $inv_exec = mysqli_query($conn, $invoice_query);
     if(!$inv_exec) {
         die("<div style='padding:30px;font-family:sans-serif;background:#fff1f2;color:#991b1b;border:2px solid #f87171;border-radius:12px;margin:40px auto;max-width:650px;'>

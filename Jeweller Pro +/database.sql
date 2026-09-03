@@ -208,6 +208,13 @@ CREATE TABLE `invoices` (
   `due_date` date DEFAULT NULL,
   `customer_address` varchar(255) DEFAULT '',
   `customer_gstin` varchar(20) DEFAULT '',
+  `huid_code` varchar(100) DEFAULT NULL,
+  `discount` decimal(10,2) DEFAULT 0.00,
+  `old_gold_amount` decimal(10,2) DEFAULT 0.00,
+  `old_gold_type` varchar(50) DEFAULT 'Old Gold',
+  `advance_adjusted` decimal(10,2) DEFAULT 0.00,
+  `advance_id` int(11) DEFAULT NULL,
+  `applied_advance_id` int(11) DEFAULT NULL,
   `round_off` decimal(10,2) DEFAULT 0.00,
   `is_split` tinyint(1) DEFAULT 0,
   `bill_type` varchar(10) DEFAULT 'invoice'
