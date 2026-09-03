@@ -8,40 +8,47 @@ if (!isset($_SESSION['user_id'])) {
     exit;
 }
 
-// Handle Delete Activity Log Request
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['action']) && $_POST['action'] === 'delete_log') {
-        $log_id = intval($_POST['log_id'] ?? 0);
-        if ($log_id > 0) {
-            $del = mysqli_query($conn, "DELETE FROM product_activity_logs WHERE id = $log_id");
-            if (isset($_POST['ajax']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')) {
-                header('Content-Type: application/json');
-                echo json_encode(['success' => (bool)$del, 'message' => $del ? 'Record deleted successfully' : mysqli_error($conn)]);
-                exit;
-            }
-            if ($del) {
-                $_SESSION['flash_success'] = "Activity record deleted successfully.";
-            } else {
-                $_SESSION['flash_error'] = "Failed to delete activity record: " . mysqli_error($conn);
-            }
-        }
-        header("Location: product_summary.php" . (!empty($_SERVER['QUERY_STRING']) ? '?' . $_SERVER['QUERY_STRING'] : ''));
-        exit;
-    }
-
-    if (isset($_POST['action']) && $_POST['action'] === 'clear_all_logs') {
-        $del = mysqli_query($conn, "TRUNCATE TABLE product_activity_logs");
-        if (isset($_POST['ajax'])) {
+// Handle Delete Activity Log Request (POST, GET, AJAX)
+if (isset($_REQUEST['action']) && $_REQUEST['action'] === 'delete_log') {
+    $log_id = intval($_REQUEST['log_id'] ?? ($_REQUEST['id'] ?? 0));
+    $is_ajax = isset($_REQUEST['ajax']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+    
+    if ($log_id > 0) {
+        $del = mysqli_query($conn, "DELETE FROM product_activity_logs WHERE id = $log_id");
+        if ($is_ajax) {
             header('Content-Type: application/json');
-            echo json_encode(['success' => (bool)$del, 'message' => $del ? 'All logs cleared' : mysqli_error($conn)]);
+            echo json_encode(['success' => (bool)$del, 'message' => $del ? 'Record deleted successfully' : mysqli_error($conn)]);
             exit;
         }
         if ($del) {
-            $_SESSION['flash_success'] = "All activity records have been cleared.";
+            $_SESSION['flash_success'] = "Activity record deleted successfully.";
+        } else {
+            $_SESSION['flash_error'] = "Failed to delete activity record: " . mysqli_error($conn);
         }
-        header("Location: product_summary.php");
+    } else {
+        if ($is_ajax) {
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Invalid Log ID']);
+            exit;
+        }
+    }
+    header("Location: " . basename($_SERVER['PHP_SELF']));
+    exit;
+}
+
+if (isset($_REQUEST['action']) && $_REQUEST['action'] === 'clear_all_logs') {
+    $is_ajax = isset($_REQUEST['ajax']) || (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest');
+    $del = mysqli_query($conn, "TRUNCATE TABLE product_activity_logs");
+    if ($is_ajax) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => (bool)$del, 'message' => $del ? 'All logs cleared' : mysqli_error($conn)]);
         exit;
     }
+    if ($del) {
+        $_SESSION['flash_success'] = "All activity records have been cleared.";
+    }
+    header("Location: " . basename($_SERVER['PHP_SELF']));
+    exit;
 }
 
 // Auto-sync missing logs from previous invoices and product entries
@@ -997,6 +1004,10 @@ function time_elapsed_string($datetime, $full = false) {
             if (btn) {
                 btn.disabled = true;
                 btn.innerHTML = '<i class="fas fa-spinner fa-spin text-[10px]"></i>';
+                btn.style.opacity = '0.7';
+            }
+            if (row) {
+                row.style.opacity = '0.5';
             }
 
             try {
@@ -1005,12 +1016,23 @@ function time_elapsed_string($datetime, $full = false) {
                 formData.append('log_id', logId);
                 formData.append('ajax', '1');
 
-                const response = await fetch('product_summary.php', {
+                const endpoint = window.location.pathname;
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     body: formData,
                     headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 });
-                const data = await response.json();
+                
+                let data = null;
+                try {
+                    data = await response.json();
+                } catch(e) {
+                    // Non-JSON response, fallback to reload
+                    if (response.ok) {
+                        window.location.reload();
+                        return;
+                    }
+                }
 
                 if (data && data.success) {
                     if (row) {
@@ -1025,21 +1047,13 @@ function time_elapsed_string($datetime, $full = false) {
                     }
                     showToast('Activity record removed successfully', 'success');
                 } else {
-                    alert('Error deleting log: ' + (data.message || 'Unknown error'));
-                    if (btn) {
-                        btn.disabled = false;
-                        btn.innerHTML = '<i class="fas fa-trash-alt text-[10px]"></i> <span>Delete</span>';
-                    }
+                    // Fallback to direct GET navigation if JSON failed
+                    window.location.href = window.location.pathname + '?action=delete_log&id=' + logId;
                 }
             } catch (err) {
                 console.error(err);
-                // Fallback to standard form submit
-                const f = document.createElement('form');
-                f.method = 'POST';
-                f.action = 'product_summary.php';
-                f.innerHTML = '<input type="hidden" name="action" value="delete_log"><input type="hidden" name="log_id" value="' + logId + '">';
-                document.body.appendChild(f);
-                f.submit();
+                // Fallback to direct GET navigation
+                window.location.href = window.location.pathname + '?action=delete_log&id=' + logId;
             }
         }
 
@@ -1048,12 +1062,7 @@ function time_elapsed_string($datetime, $full = false) {
             if (!confirm('⚠️ Are you sure you want to CLEAR ALL product activity logs?\nThis will permanently delete the entire audit history.')) {
                 return;
             }
-            const f = document.createElement('form');
-            f.method = 'POST';
-            f.action = 'product_summary.php';
-            f.innerHTML = '<input type="hidden" name="action" value="clear_all_logs">';
-            document.body.appendChild(f);
-            f.submit();
+            window.location.href = window.location.pathname + '?action=clear_all_logs';
         }
 
         // Toast notification helper
