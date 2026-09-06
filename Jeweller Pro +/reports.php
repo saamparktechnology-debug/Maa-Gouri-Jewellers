@@ -219,6 +219,71 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_delete_invoice'
     }
 }
 
+// Handle advance delete action
+if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_delete_advance'])) {
+    $receipt_no = mysqli_real_escape_string($conn, trim($_POST['receipt_no'] ?? ''));
+    if (empty($receipt_no)) {
+        $reset_error = "Error: Receipt number is missing.";
+    } else {
+        mysqli_query($conn, "SET FOREIGN_KEY_CHECKS = 0");
+        $chk = mysqli_query($conn, "SELECT * FROM customer_advances WHERE receipt_no = '$receipt_no' LIMIT 1");
+        if ($chk && mysqli_num_rows($chk) > 0) {
+            $adv = mysqli_fetch_assoc($chk);
+            $adv_id = intval($adv['id']);
+            $adv_amount = floatval($adv['advance_amount']);
+            $cust_name = $adv['customer_name'];
+            $cust_mobile = $adv['customer_mobile'];
+            
+            // Delete any adjustments linked to this advance
+            @mysqli_query($conn, "DELETE FROM advance_adjustments WHERE advance_id = $adv_id");
+            
+            // Delete advance record
+            $del = mysqli_query($conn, "DELETE FROM customer_advances WHERE id = $adv_id");
+            if ($del) {
+                if (function_exists('log_product_activity')) {
+                    log_product_activity($conn, [
+                        'activity_type' => 'advance_deleted',
+                        'product_id' => null,
+                        'product_name' => 'Advance Credit Deleted',
+                        'category' => 'Advance',
+                        'serial_no' => '',
+                        'huid_code' => '',
+                        'quantity' => 1,
+                        'unit' => 'receipt',
+                        'weight' => 0,
+                        'rate' => $adv_amount,
+                        'total_amount' => $adv_amount,
+                        'invoice_no' => $receipt_no,
+                        'customer_name' => $cust_name,
+                        'customer_mobile' => $cust_mobile,
+                        'details' => "Deleted Advance Receipt #$receipt_no (₹" . number_format($adv_amount, 2) . ") for $cust_name",
+                        'performed_by' => $_SESSION['user_name'] ?? 'Admin'
+                    ]);
+                }
+                $reset_success = "Advance Credit Receipt #$receipt_no for $cust_name (₹" . number_format($adv_amount, 2) . ") has been successfully deleted.";
+                
+                $redirect_url = 'reports.php?reset_msg=' . urlencode($reset_success);
+                if (!headers_sent()) {
+                    header("Location: " . $redirect_url);
+                    exit();
+                }
+                echo '<!DOCTYPE html><html><head>';
+                echo '<meta http-equiv="refresh" content="0;url=' . htmlspecialchars($redirect_url) . '">';
+                echo '<script>window.location.replace(' . json_encode($redirect_url) . ');</script>';
+                echo '<link rel="stylesheet" href="mobile.css"></head><body style="background:#fffbf4;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">';
+                echo '<p style="color:#7a4e0a;font-weight:600;"> Done! Redirecting...</p>';
+                echo '</body></html>';
+                exit();
+            } else {
+                $reset_error = "Error deleting advance receipt: " . mysqli_error($conn);
+            }
+        } else {
+            $reset_error = "Error: Advance receipt #$receipt_no not found.";
+        }
+        mysqli_query($conn, "SET FOREIGN_KEY_CHECKS = 1");
+    }
+}
+
 if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_reset_report'])) {
     $target = $_POST['reset_target'] ?? '';
     $confirm_text = strtoupper(trim($_POST['confirm_delete_text'] ?? ''));
@@ -1121,9 +1186,14 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                                     <?php endif; ?>
                                 </td>
                                 <td class="text-center">
-                                    <a href="view_pdf.php?advance_no=<?php echo urlencode($r['receipt_no']); ?>" target="_blank" class="btn-jewel" style="padding:4px 10px;font-size:11px;border-radius:14px;text-decoration:none;">
-                                        🖨️ Receipt
-                                    </a>
+                                    <div class="flex items-center justify-center gap-1.5">
+                                        <a href="view_pdf.php?advance_no=<?php echo urlencode($r['receipt_no']); ?>" target="_blank" class="btn-jewel" style="padding:4px 10px;font-size:11px;border-radius:14px;text-decoration:none;white-space:nowrap;">
+                                            🖨️ Receipt
+                                        </a>
+                                        <button type="button" onclick="confirmDeleteAdvance('<?php echo htmlspecialchars($r['receipt_no'], ENT_QUOTES); ?>', '<?php echo htmlspecialchars(addslashes($r['customer_name']), ENT_QUOTES); ?>', '<?php echo number_format($r['advance_amount'], 2); ?>', '<?php echo number_format($r['available_amount'], 2); ?>', '<?php echo number_format($r['used_amount'], 2); ?>')" class="btn-jewel" style="background:linear-gradient(135deg,#7f1d1d,#ef4444);padding:4px 10px;font-size:11px;border-radius:14px;white-space:nowrap;cursor:pointer;">
+                                            <i class="fas fa-trash-alt mr-1"></i> Delete
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -1777,7 +1847,118 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
         document.body.appendChild(form);
         form.submit();
     }
+
+    let currentDeleteAdvanceNo = '';
+
+    function confirmDeleteAdvance(receiptNo, customerName, totalAmount, availAmount, usedAmount) {
+        currentDeleteAdvanceNo = receiptNo;
+        document.getElementById('deleteAdvReceiptNoText').textContent = receiptNo;
+        document.getElementById('deleteAdvCustNameText').textContent = customerName;
+        document.getElementById('deleteAdvAmountText').textContent = '₹' + totalAmount;
+        document.getElementById('deleteAdvAvailText').textContent = '₹' + availAmount;
+        
+        const usedWarning = document.getElementById('deleteAdvUsedWarning');
+        const usedFloat = parseFloat(usedAmount.replace(/,/g, '')) || 0;
+        if (usedFloat > 0) {
+            usedWarning.innerHTML = `⚠️ <strong>Note:</strong> ₹${usedAmount} of this advance has already been adjusted into bills. Deleting will permanently remove this record and its adjustment history.`;
+            usedWarning.classList.remove('hidden');
+        } else {
+            usedWarning.classList.add('hidden');
+        }
+
+        const modal = document.getElementById('deleteAdvanceModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function closeDeleteAdvanceModal() {
+        const modal = document.getElementById('deleteAdvanceModal');
+        modal.classList.remove('flex');
+        modal.classList.add('hidden');
+    }
+
+    function submitDeleteAdvanceAction() {
+        if (!currentDeleteAdvanceNo) return;
+        
+        const btn = document.getElementById('btnConfirmDeleteAdvSubmit');
+        if (btn) {
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Deleting...';
+            btn.style.pointerEvents = 'none';
+            btn.style.opacity = '0.75';
+        }
+        
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = 'reports.php';
+        
+        const actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action_delete_advance';
+        actionInput.value = '1';
+        form.appendChild(actionInput);
+        
+        const receiptInput = document.createElement('input');
+        receiptInput.type = 'hidden';
+        receiptInput.name = 'receipt_no';
+        receiptInput.value = currentDeleteAdvanceNo;
+        form.appendChild(receiptInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
 </script>
+
+<!-- Custom Delete Advance Modal -->
+<div id="deleteAdvanceModal" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-black bg-opacity-60 backdrop-filter backdrop-blur-sm p-4">
+    <div class="bg-white rounded-2xl border border-yellow-200 shadow-2xl w-full max-w-md overflow-hidden flex flex-col transform transition-transform duration-300">
+        <!-- Modal Header -->
+        <div class="px-5 py-4 bg-gradient-to-r from-red-800 to-red-600 flex justify-between items-center text-white">
+            <h3 class="text-sm font-bold flex items-center gap-2">
+                <i class="fas fa-trash-alt"></i> Delete Advance Receipt #<span id="deleteAdvReceiptNoText"></span>
+            </h3>
+            <button onclick="closeDeleteAdvanceModal()" class="text-white hover:text-gray-200 text-xl font-bold">&times;</button>
+        </div>
+        
+        <!-- Modal Body -->
+        <div class="p-5 space-y-4">
+            <p class="text-xs text-gray-700 font-medium">
+                Are you sure you want to permanently delete this advance credit deposit?
+            </p>
+            
+            <div class="p-3.5 bg-amber-50 rounded-xl border border-amber-200 text-xs space-y-1.5">
+                <div class="flex justify-between">
+                    <span class="text-gray-600 font-semibold">Customer:</span>
+                    <strong class="text-gray-900" id="deleteAdvCustNameText"></strong>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600 font-semibold">Total Deposit:</span>
+                    <strong class="text-amber-900" id="deleteAdvAmountText"></strong>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600 font-semibold">Remaining Available:</span>
+                    <strong class="text-emerald-700" id="deleteAdvAvailText"></strong>
+                </div>
+            </div>
+
+            <div id="deleteAdvUsedWarning" class="hidden p-3 bg-red-50 border border-red-200 text-red-800 rounded-xl text-xs">
+            </div>
+
+            <p class="text-[11px] text-red-600 font-semibold">
+                ⚠️ This action cannot be undone.
+            </p>
+        </div>
+        
+        <!-- Modal Footer -->
+        <div class="px-5 py-3 bg-gray-50 flex justify-end gap-2.5 border-t border-gray-100">
+            <button type="button" onclick="closeDeleteAdvanceModal()" class="px-4 py-2 bg-gray-300 hover:bg-gray-400 text-gray-700 text-xs font-semibold rounded-lg transition cursor-pointer">
+                Cancel
+            </button>
+            <button type="button" id="btnConfirmDeleteAdvSubmit" onclick="submitDeleteAdvanceAction()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-lg transition cursor-pointer">
+                Confirm Delete
+            </button>
+        </div>
+    </div>
+</div>
 
 <!-- Custom Delete Invoice Modal -->
 <div id="deleteInvoiceModal" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-black bg-opacity-60 backdrop-filter backdrop-blur-sm p-4">
