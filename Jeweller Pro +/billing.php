@@ -1006,6 +1006,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && (isset($_POST['create_invoice']) || i
                         'invoice_no' => $invoice_no,
                         'customer_name' => $customer_name,
                         'customer_mobile' => $customer_mobile,
+                        'is_nongst' => (!$is_gst_invoice ? 1 : 0),
                         'details' => "Billed in Invoice/CashMemo #$invoice_no to " . ($customer_name ?: 'Customer'),
                         'performed_by' => $_SESSION['user_name'] ?? 'Admin'
                     ]);
@@ -1067,6 +1068,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && (isset($_POST['create_invoice']) || i
                     'invoice_no' => $invoice_no,
                     'customer_name' => $customer_name,
                     'customer_mobile' => $customer_mobile,
+                    'is_nongst' => (!$is_gst_invoice ? 1 : 0),
                     'details' => "Sold in Invoice/CashMemo #$invoice_no to " . ($customer_name ?: 'Customer') . " (Stock reduced by " . ($w_deduct > 0 ? "{$w_deduct}g" : "{$pcs_deduct} {$item_unit}") . ")",
                     'performed_by' => $_SESSION['user_name'] ?? 'Admin'
                 ]);

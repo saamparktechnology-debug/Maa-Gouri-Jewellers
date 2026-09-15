@@ -8,13 +8,13 @@ if(!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// AJAX: Get customer order history
+// AJAX: Get customer order history (GST Invoices Only)
 if(isset($_GET['action']) && $_GET['action'] === 'get_orders') {
     header('Content-Type: application/json');
     $mobile = mysqli_real_escape_string($conn, trim($_GET['mobile'] ?? ''));
     if(empty($mobile)) { echo json_encode(['success'=>false]); exit(); }
 
-    $inv_res = mysqli_query($conn, "SELECT invoice_no, total_amount, paid_amount, balance_amount, payment_status, payment_method, gst_type, created_at FROM invoices WHERE customer_mobile='$mobile' ORDER BY created_at DESC");
+    $inv_res = mysqli_query($conn, "SELECT invoice_no, total_amount, paid_amount, balance_amount, payment_status, payment_method, gst_type, created_at FROM invoices WHERE customer_mobile='$mobile' AND (gst_type LIKE 'gst%' OR gst_amount > 0) ORDER BY created_at DESC");
     $orders = [];
     if($inv_res) {
         while($inv = mysqli_fetch_assoc($inv_res)) {
@@ -113,7 +113,11 @@ $filter      = isset($_GET['filter'])      ? $_GET['filter']      : 'all';
 $search      = isset($_GET['search'])      ? mysqli_real_escape_string($conn, $_GET['search']) : '';
 $date_filter = isset($_GET['date_filter']) ? $_GET['date_filter'] : '';
 
-$query = "SELECT c.* FROM customers c WHERE 1=1";
+$query = "SELECT c.* FROM customers c WHERE 1=1
+    AND NOT (
+        EXISTS (SELECT 1 FROM invoices i_ng WHERE i_ng.customer_mobile = c.mobile AND (i_ng.gst_type NOT LIKE 'gst%' AND (i_ng.gst_amount IS NULL OR i_ng.gst_amount = 0)))
+        AND NOT EXISTS (SELECT 1 FROM invoices i_g WHERE i_g.customer_mobile = c.mobile AND (i_g.gst_type LIKE 'gst%' OR i_g.gst_amount > 0))
+    )";
 if($filter == 'last_month')    $query .= " AND c.created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)";
 elseif($filter == 'this_month') $query .= " AND MONTH(c.created_at)=MONTH(CURRENT_DATE()) AND YEAR(c.created_at)=YEAR(CURRENT_DATE())";
 elseif($filter == 'this_year')  $query .= " AND YEAR(c.created_at)=YEAR(CURRENT_DATE())";

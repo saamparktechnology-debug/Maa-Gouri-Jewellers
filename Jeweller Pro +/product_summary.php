@@ -63,7 +63,11 @@ $from_date   = isset($_GET['from_date']) ? mysqli_real_escape_string($conn, trim
 $to_date     = isset($_GET['to_date']) ? mysqli_real_escape_string($conn, trim($_GET['to_date'])) : '';
 $search      = isset($_GET['search']) ? mysqli_real_escape_string($conn, trim($_GET['search'])) : '';
 
-$where_clauses = ["1=1"];
+// Ensure table and is_nongst column exists
+init_activity_log_table($conn);
+@mysqli_query($conn, "UPDATE product_activity_logs SET is_nongst = 1 WHERE invoice_no LIKE 'CM-%' OR invoice_no IN (SELECT invoice_no FROM invoices WHERE (gst_type NOT LIKE 'gst%' AND (gst_amount IS NULL OR gst_amount = 0)))");
+
+$where_clauses = ["(is_nongst = 0 OR is_nongst IS NULL)"];
 
 if ($filter_type !== 'all' && !empty($filter_type)) {
     $where_clauses[] = "activity_type = '$filter_type'";
@@ -98,16 +102,16 @@ if (!empty($search)) {
 
 $where_sql = implode(' AND ', $where_clauses);
 
-// --- KPI METRICS ---
-$total_added_res = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as cnt, SUM(weight) as total_wt, SUM(quantity) as total_qty FROM product_activity_logs WHERE activity_type='added'"));
-$total_billed_res = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as cnt, SUM(weight) as total_wt, SUM(total_amount) as total_val FROM product_activity_logs WHERE activity_type='billed'"));
-$total_edited_res = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as cnt FROM product_activity_logs WHERE activity_type='edited'"));
-$total_deleted_res = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as cnt FROM product_activity_logs WHERE activity_type='deleted'"));
+// --- KPI METRICS (GST & General Stock Only) ---
+$total_added_res = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as cnt, SUM(weight) as total_wt, SUM(quantity) as total_qty FROM product_activity_logs WHERE activity_type='added' AND (is_nongst = 0 OR is_nongst IS NULL)"));
+$total_billed_res = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as cnt, SUM(weight) as total_wt, SUM(total_amount) as total_val FROM product_activity_logs WHERE activity_type='billed' AND (is_nongst = 0 OR is_nongst IS NULL)"));
+$total_edited_res = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as cnt FROM product_activity_logs WHERE activity_type='edited' AND (is_nongst = 0 OR is_nongst IS NULL)"));
+$total_deleted_res = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as cnt FROM product_activity_logs WHERE activity_type='deleted' AND (is_nongst = 0 OR is_nongst IS NULL)"));
 
 $current_stock_res = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total_items, SUM(CAST(weight AS DECIMAL(10,3))) as total_wt, SUM(quantity) as total_pcs FROM products"));
 
 // Distinct categories for filter
-$cats_res = mysqli_query($conn, "SELECT DISTINCT category FROM product_activity_logs WHERE category IS NOT NULL AND category != '' ORDER BY category ASC");
+$cats_res = mysqli_query($conn, "SELECT DISTINCT category FROM product_activity_logs WHERE (is_nongst = 0 OR is_nongst IS NULL) AND category IS NOT NULL AND category != '' ORDER BY category ASC");
 $categories = [];
 while($c = mysqli_fetch_assoc($cats_res)) { $categories[] = $c['category']; }
 

@@ -263,17 +263,30 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename=geomorphology_sales_reports_' . date('Ymd_His') . '.csv');
     $out = fopen('php://output', 'w');
-    fputcsv($out, ['#', 'Cash Memo No', 'Customer Name', 'Mobile', 'Subtotal', 'Cash Paid', 'UPI Paid', 'Old Gold Value', 'Total Amount', 'Paid Amount', 'Due Balance', 'Status', 'Date']);
+    fputcsv($out, ['#', 'Cash Memo No', 'Customer Name', 'Mobile', 'Products / Items', 'Total Weight (g)', 'Subtotal', 'Cash Paid', 'UPI Paid', 'Old Gold Value', 'Total Amount', 'Paid Amount', 'Due Balance', 'Status', 'Date']);
     
     $export_res = mysqli_query($conn, "SELECT * FROM invoices $where_sql ORDER BY created_at DESC");
     if ($export_res) {
         $idx = 1;
         while ($row = mysqli_fetch_assoc($export_res)) {
+            $inv_id = intval($row['id']);
+            $items_q = mysqli_query($conn, "SELECT product_name, gross_wt, net_wt, pcs, quantity, unit FROM invoice_items WHERE invoice_id = $inv_id");
+            $p_names = [];
+            $row_weight = 0.0;
+            if ($items_q) {
+                while ($it = mysqli_fetch_assoc($items_q)) {
+                    $p_names[] = $it['product_name'] ?: 'Jewellery Item';
+                    $wt = floatval($it['gross_wt'] > 0 ? $it['gross_wt'] : ($it['net_wt'] > 0 ? $it['net_wt'] : ($it['unit'] === 'g' ? $it['quantity'] : 0)));
+                    $row_weight += $wt;
+                }
+            }
             fputcsv($out, [
                 $idx++,
                 $row['invoice_no'],
                 $row['customer_name'],
                 $row['customer_mobile'],
+                implode(', ', $p_names),
+                $row_weight > 0 ? number_format($row_weight, 3) : '0.000',
                 $row['subtotal'],
                 $row['cash_paid'] ?? 0,
                 $row['upi_paid'] ?? 0,
@@ -423,6 +436,8 @@ if ($inv_res) {
             <div class="sidebar-section-label">Geomorphology Menu</div>
             <a href="index.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
             <a href="reports.php" class="active"><i class="fas fa-chart-bar"></i> Sales Reports</a>
+            <a href="customers.php"><i class="fas fa-users"></i> Customers</a>
+            <a href="product_summary.php"><i class="fas fa-boxes"></i> Product Summary</a>
             <a href="accounts.php"><i class="fas fa-wallet"></i> Accounts Ledger</a>
             <a href="due_list.php"><i class="fas fa-file-invoice-dollar"></i> Due Management</a>
             <a href="income_expenses.php"><i class="fas fa-exchange-alt"></i> Income &amp; Expenses</a>

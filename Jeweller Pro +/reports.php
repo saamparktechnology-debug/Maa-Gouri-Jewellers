@@ -594,9 +594,48 @@ else $where_clauses[] = "(gst_type LIKE 'gst%' OR gst_amount > 0)";
 $where_sql = $where_clauses ? 'WHERE ' . implode(' AND ', $where_clauses) : '';
 
 // customer_gstin column exists directly in invoices table
-$bills_result = mysqli_query($conn, "SELECT invoice_no, customer_name, customer_mobile, customer_address, customer_gstin, total_amount, paid_amount, balance_amount, payment_status, gst_type, gst_amount, subtotal, created_at FROM invoices $where_sql ORDER BY created_at DESC LIMIT 500");
+$bills_result = mysqli_query($conn, "SELECT id, invoice_no, customer_name, customer_mobile, customer_address, customer_gstin, total_amount, paid_amount, balance_amount, payment_status, gst_type, gst_amount, subtotal, created_at FROM invoices $where_sql ORDER BY created_at DESC LIMIT 500");
 $bills_rows = [];
-while($r = mysqli_fetch_assoc($bills_result)) $bills_rows[] = $r;
+$invoice_ids = [];
+if($bills_result) {
+    while($r = mysqli_fetch_assoc($bills_result)) {
+        $r['product_names'] = '';
+        $r['total_weight'] = 0.0;
+        $bills_rows[$r['invoice_no']] = $r;
+        if (!empty($r['id'])) {
+            $invoice_ids[] = intval($r['id']);
+        }
+    }
+}
+
+if (!empty($invoice_ids)) {
+    $ids_str = implode(',', $invoice_ids);
+    $items_res = mysqli_query($conn, "
+        SELECT ii.invoice_id, ii.product_name, ii.gross_wt, ii.net_wt, ii.pcs, ii.quantity, ii.unit, i.invoice_no
+        FROM invoice_items ii
+        JOIN invoices i ON ii.invoice_id = i.id
+        WHERE ii.invoice_id IN ($ids_str)
+    ");
+    if ($items_res) {
+        $inv_items_map = [];
+        $inv_weights_map = [];
+        while ($it = mysqli_fetch_assoc($items_res)) {
+            $inv_no = $it['invoice_no'];
+            $pname = trim($it['product_name'] ?: 'Jewellery Item');
+            $wt = floatval($it['gross_wt'] > 0 ? $it['gross_wt'] : ($it['net_wt'] > 0 ? $it['net_wt'] : ($it['unit'] === 'g' ? $it['quantity'] : 0)));
+            $inv_items_map[$inv_no][] = $pname . ($wt > 0 ? " (" . number_format($wt, 3) . "g)" : "");
+            if (!isset($inv_weights_map[$inv_no])) $inv_weights_map[$inv_no] = 0.0;
+            $inv_weights_map[$inv_no] += $wt;
+        }
+        foreach ($inv_items_map as $inv_no => $names) {
+            if (isset($bills_rows[$inv_no])) {
+                $bills_rows[$inv_no]['product_names'] = implode(', ', $names);
+                $bills_rows[$inv_no]['total_weight'] = round($inv_weights_map[$inv_no] ?? 0, 3);
+            }
+        }
+    }
+}
+$bills_rows = array_values($bills_rows);
 
 $total_bills_amount = array_sum(array_column($bills_rows, 'total_amount'));
 $total_bills_count  = count($bills_rows);
@@ -1591,6 +1630,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
         const totalPaid    = billsData.reduce((s,b) => s + parseFloat(b.paid_amount||0), 0);
         const totalBalance = billsData.reduce((s,b) => s + parseFloat(b.balance_amount||0), 0);
         const totalGST     = billsData.reduce((s,b) => s + parseFloat(b.gst_amount||0), 0);
+        const totalWeightSum = billsData.reduce((s,b) => s + parseFloat(b.total_weight||0), 0);
         const isGstBill    = b => (b.gst_type && (b.gst_type.startsWith('gst') || b.gst_type === 'gst')) || parseFloat(b.gst_amount||0) > 0;
         const getGstTypeLabel = b => {
             if (!isGstBill(b)) return 'Non-GST';
@@ -1612,22 +1652,24 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
 
         // Sheet 1 - All Bills
         const aoa1 = [];
-        aoa1.push([' MAA GOURI JEWELLERS', '', '', '', '', '', '', '', '', '', '', '']);
-        aoa1.push(['All Bills Report - Generated: ' + today, '', '', '', '', '', '', '', '', '', '', '']);
+        aoa1.push([' MAA GOURI JEWELLERS', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+        aoa1.push(['All Bills Report - Generated: ' + today, '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
         aoa1.push([]);
-        aoa1.push(['Total Bills', billsData.length, '', 'Total Amount', inrFmt(totalAmt), '', 'Total GST Collected', inrFmt(totalGST), '', 'Balance Due', inrFmt(totalBalance), '']);
+        aoa1.push(['Total Bills', billsData.length, '', 'Total Amount', inrFmt(totalAmt), '', 'Total Weight', totalWeightSum.toFixed(3) + 'g', '', 'Total GST Collected', inrFmt(totalGST), '', 'Balance Due', inrFmt(totalBalance), '']);
         aoa1.push(['Full Paid', paidBills, '', 'Part Payment', partBills, '', 'Unpaid', unpaidBills, '', 'GST Bills', gstBills, '']);
         aoa1.push([]);
-        //  UPDATED: Added GSTIN column header
-        aoa1.push(['#', 'Invoice No', 'Customer Name', 'GSTIN', 'Mobile', 'Address', 'Total Amount (₹)', 'Paid Amount (₹)', 'Balance Due (₹)', 'GST Type', 'GST Amount (₹)', 'Payment Status', 'Date']);
+        //  UPDATED: Added Products / Items and Weight (g) columns
+        aoa1.push(['#', 'Invoice No', 'Customer Name', 'GSTIN', 'Mobile', 'Address', 'Products / Items', 'Weight (g)', 'Total Amount (₹)', 'Paid Amount (₹)', 'Balance Due (₹)', 'GST Type', 'GST Amount (₹)', 'Payment Status', 'Date']);
         billsData.forEach((b, i) => {
             aoa1.push([
                 i + 1,
                 b.invoice_no,
                 b.customer_name,
-                b.customer_gstin || '',   //  GSTIN column
+                b.customer_gstin || '',
                 b.customer_mobile,
                 b.customer_address || '',
+                b.product_names || '',
+                parseFloat(b.total_weight||0),
                 parseFloat(b.total_amount||0),
                 parseFloat(b.paid_amount||0),
                 parseFloat(b.balance_amount||0),
@@ -1637,11 +1679,11 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 fmtDate(b.created_at)
             ]);
         });
-        aoa1.push(['', 'TOTAL', '', '', '', '', billsData.reduce((s,b)=>s+parseFloat(b.total_amount||0),0), billsData.reduce((s,b)=>s+parseFloat(b.paid_amount||0),0), totalBalance, '', totalGST, '', '']);
+        aoa1.push(['', 'TOTAL', '', '', '', '', '', totalWeightSum, billsData.reduce((s,b)=>s+parseFloat(b.total_amount||0),0), billsData.reduce((s,b)=>s+parseFloat(b.paid_amount||0),0), totalBalance, '', totalGST, '', '']);
 
         const ws1 = XLSX.utils.aoa_to_sheet(aoa1);
-        ws1['!cols'] = [{wch:5},{wch:20},{wch:22},{wch:20},{wch:14},{wch:28},{wch:18},{wch:18},{wch:18},{wch:12},{wch:16},{wch:14},{wch:14}];
-        ws1['!merges'] = [{s:{r:0,c:0},e:{r:0,c:12}},{s:{r:1,c:0},e:{r:1,c:12}}];
+        ws1['!cols'] = [{wch:5},{wch:20},{wch:22},{wch:20},{wch:14},{wch:28},{wch:35},{wch:14},{wch:18},{wch:18},{wch:18},{wch:12},{wch:16},{wch:14},{wch:14}];
+        ws1['!merges'] = [{s:{r:0,c:0},e:{r:0,c:14}},{s:{r:1,c:0},e:{r:1,c:14}}];
         XLSX.utils.book_append_sheet(wb, ws1, 'All Bills');
 
         // Sheet 2 - Payment Summary
@@ -1655,6 +1697,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
         aoa2.push(['Unpaid (Credit)', unpaidBills, billsData.filter(b=>b.payment_status==='unpaid').reduce((s,b)=>s+parseFloat(b.total_amount||0),0)]);
         aoa2.push(['TOTAL', billsData.length, totalAmt]);
         aoa2.push([]);
+        aoa2.push(['Total Items Weight', '', totalWeightSum.toFixed(3) + 'g']);
         aoa2.push(['Balance Due', '', totalBalance]);
         aoa2.push(['Total GST Collected', '', totalGST]);
         aoa2.push(['CGST (1.5%)', '', totalGST/2]);
@@ -1665,16 +1708,16 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
 
         // Sheet 3 - Pending
         const pendingData = billsData.filter(b => b.payment_status !== 'paid' && parseFloat(b.balance_amount||0) > 0);
-        //  UPDATED: Added GSTIN column in pending sheet too
-        const aoa3 = [['#','Invoice No','Customer','GSTIN','Mobile','Bill Total (₹)','Paid (₹)','Balance Due (₹)','Status','Date']];
+        const aoa3 = [['#','Invoice No','Customer','GSTIN','Mobile','Products / Items','Weight (g)','Bill Total (₹)','Paid (₹)','Balance Due (₹)','Status','Date']];
         pendingData.forEach((b,i) => aoa3.push([
             i+1, b.invoice_no, b.customer_name, b.customer_gstin||'', b.customer_mobile,
+            b.product_names || '', parseFloat(b.total_weight || 0),
             parseFloat(b.total_amount||0), parseFloat(b.paid_amount||0), parseFloat(b.balance_amount||0),
             b.payment_status==='part'?'Part Payment':'Unpaid', fmtDate(b.created_at)
         ]));
-        if(!pendingData.length) aoa3.push(['','No pending payments! ','','','','','','','','']);
+        if(!pendingData.length) aoa3.push(['','No pending payments! ','','','','','','','','','','']);
         const ws3 = XLSX.utils.aoa_to_sheet(aoa3);
-        ws3['!cols'] = [{wch:5},{wch:20},{wch:22},{wch:20},{wch:14},{wch:18},{wch:16},{wch:18},{wch:14},{wch:14}];
+        ws3['!cols'] = [{wch:5},{wch:20},{wch:22},{wch:20},{wch:14},{wch:35},{wch:14},{wch:18},{wch:16},{wch:18},{wch:14},{wch:14}];
         XLSX.utils.book_append_sheet(wb, ws3, 'Pending Payments');
 
         XLSX.writeFile(wb, `MAA GOURIJewellers_Report_${todayFile}.xlsx`);

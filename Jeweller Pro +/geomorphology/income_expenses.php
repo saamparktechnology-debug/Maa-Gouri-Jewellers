@@ -207,6 +207,8 @@ foreach($expense_records as $r) {
             <div class="sidebar-section-label">Geomorphology Menu</div>
             <a href="index.php"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
             <a href="reports.php"><i class="fas fa-chart-bar"></i> Sales Reports</a>
+            <a href="customers.php"><i class="fas fa-users"></i> Customers</a>
+            <a href="product_summary.php"><i class="fas fa-boxes"></i> Product Summary</a>
             <a href="accounts.php"><i class="fas fa-wallet"></i> Accounts Ledger</a>
             <a href="due_list.php"><i class="fas fa-file-invoice-dollar"></i> Due Management</a>
             <a href="income_expenses.php" class="active"><i class="fas fa-exchange-alt"></i> Income &amp; Expenses</a>

@@ -24,13 +24,22 @@ if (!function_exists('init_activity_log_table')) {
             customer_mobile VARCHAR(20) NULL,
             details TEXT NULL,
             performed_by VARCHAR(100) DEFAULT 'Admin',
+            is_nongst TINYINT(1) DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_type (activity_type),
             INDEX idx_created (created_at),
             INDEX idx_pid (product_id),
-            INDEX idx_inv (invoice_no)
+            INDEX idx_inv (invoice_no),
+            INDEX idx_nongst (is_nongst)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
         @mysqli_query($conn, $sql);
+
+        $chk_col = @mysqli_query($conn, "SHOW COLUMNS FROM product_activity_logs LIKE 'is_nongst'");
+        if ($chk_col && mysqli_num_rows($chk_col) == 0) {
+            @mysqli_query($conn, "ALTER TABLE product_activity_logs ADD COLUMN is_nongst TINYINT(1) DEFAULT 0, ADD INDEX idx_nongst (is_nongst)");
+            // Backfill existing Cash Memo logs
+            @mysqli_query($conn, "UPDATE product_activity_logs SET is_nongst = 1 WHERE invoice_no LIKE 'CM-%'");
+        }
     }
 }
 
@@ -49,11 +58,29 @@ if (!function_exists('log_product_activity')) {
         $weight = floatval($data['weight'] ?? 0);
         $rate = floatval($data['rate'] ?? 0);
         $total_amount = floatval($data['total_amount'] ?? 0);
-        $invoice_no = !empty($data['invoice_no']) ? "'" . mysqli_real_escape_string($conn, trim($data['invoice_no'])) . "'" : "NULL";
+        $raw_inv = trim($data['invoice_no'] ?? '');
+        $invoice_no = !empty($raw_inv) ? "'" . mysqli_real_escape_string($conn, $raw_inv) . "'" : "NULL";
         $customer_name = !empty($data['customer_name']) ? "'" . mysqli_real_escape_string($conn, trim($data['customer_name'])) . "'" : "NULL";
         $customer_mobile = !empty($data['customer_mobile']) ? "'" . mysqli_real_escape_string($conn, trim($data['customer_mobile'])) . "'" : "NULL";
         $details = mysqli_real_escape_string($conn, trim($data['details'] ?? ''));
         
+        // Auto-detect is_nongst if not explicitly specified
+        $is_nongst = 0;
+        if (isset($data['is_nongst'])) {
+            $is_nongst = $data['is_nongst'] ? 1 : 0;
+        } elseif (!empty($raw_inv)) {
+            if (stripos($raw_inv, 'CM-') === 0) {
+                $is_nongst = 1;
+            } else {
+                $inv_chk = @mysqli_query($conn, "SELECT gst_type, gst_amount FROM invoices WHERE invoice_no = '" . mysqli_real_escape_string($conn, $raw_inv) . "' LIMIT 1");
+                if ($inv_chk && $ir = mysqli_fetch_assoc($inv_chk)) {
+                    if (strpos($ir['gst_type'] ?? '', 'gst') !== 0 && (empty($ir['gst_amount']) || floatval($ir['gst_amount']) == 0)) {
+                        $is_nongst = 1;
+                    }
+                }
+            }
+        }
+
         $user_session = $_SESSION['user_name'] ?? 'Admin';
         $performed_by = mysqli_real_escape_string($conn, trim($data['performed_by'] ?? $user_session));
         $created_at = !empty($data['created_at']) ? "'" . mysqli_real_escape_string($conn, $data['created_at']) . "'" : "NOW()";
@@ -61,11 +88,11 @@ if (!function_exists('log_product_activity')) {
         $query = "INSERT INTO product_activity_logs (
             activity_type, product_id, product_name, category, serial_no, huid_code,
             quantity, unit, weight, rate, total_amount, invoice_no, customer_name, customer_mobile,
-            details, performed_by, created_at
+            details, performed_by, is_nongst, created_at
         ) VALUES (
             '$activity_type', $product_id, '$product_name', '$category', '$serial_no', '$huid_code',
             $quantity, '$unit', $weight, $rate, $total_amount, $invoice_no, $customer_name, $customer_mobile,
-            '$details', '$performed_by', $created_at
+            '$details', '$performed_by', $is_nongst, $created_at
         )";
         return mysqli_query($conn, $query);
     }
