@@ -1065,27 +1065,35 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                         ?>
                         <?php
                             $hm_type = trim($it['hallmark_type'] ?? '');
-                            if (empty($hm_type) || strcasecmp($hm_type, 'none') === 0 || strcasecmp($hm_type, 'na') === 0) {
-                                if (preg_match('/\b(24k|22k|18k|14k|12k|9k)\b/i', $name, $hm_m_name)) {
-                                    $hm_type = strtoupper($hm_m_name[1]);
-                                } else if (!empty($cat_disp) && preg_match('/\b(24k|22k|18k|14k|12k|9k|silver|platinum)\b/i', $cat_disp, $hm_m)) {
-                                    $hm_type = strtoupper($hm_m[1]);
-                                } else if (preg_match('/\b(stone|mala|pearl|gemstone|mukut|gift\s*box|packaging|other)\b/i', ($cat_disp . ' ' . $name)) && !preg_match('/\b(ring|chain|necklace|earring|bala|bangle|pendant|tikli|chur|payal)\b/i', $name)) {
-                                    $hm_type = '';
-                                } else if (strcasecmp($hm_type, 'none') === 0 || strcasecmp($hm_type, 'na') === 0) {
-                                    $hm_type = '';
-                                } else {
-                                    $hm_type = '22K';
-                                }
-                            }
-                            $show_hm = (!empty($hm_type) && strcasecmp($hm_type, 'none') !== 0 && strcasecmp($hm_type, 'na') !== 0);
-                            $hm_badge_text = $show_hm ? ((stripos($hm_type, 'hallmark') !== false) ? $hm_type : 'Hallmark: ' . $hm_type) : '';
+                            $karat_found = '';
 
-                            // Keep product description with purity (e.g. Box Ring (18K)) prominently displayed beside product name
-                            $display_title = $clean_name;
-                            $display_title = preg_replace('/([a-zA-Z0-9])\s*\(([0-9]+[kK])\)/i', '$1 ($2)', $display_title);
-                            $display_title = preg_replace_callback('/\b([0-9]+)k\b/i', function($m) { return $m[1] . 'K'; }, $display_title);
-                            $display_title = trim($display_title);
+                            // 1. Detect Karat from product name, hallmark_type or category
+                            if (preg_match('/\b(24k|22k|18k|14k|12k|9k)\b/i', $name, $hm_m_name)) {
+                                $karat_found = strtoupper($hm_m_name[1]);
+                            } else if (!empty($hm_type) && strcasecmp($hm_type, 'none') !== 0 && strcasecmp($hm_type, 'na') !== 0) {
+                                if (preg_match('/\b(24k|22k|18k|14k|12k|9k)\b/i', $hm_type, $hm_m_type)) {
+                                    $karat_found = strtoupper($hm_m_type[1]);
+                                } else if (preg_match('/\b916\b/', $hm_type)) {
+                                    $karat_found = '22K';
+                                } else if (preg_match('/\b750\b/', $hm_type)) {
+                                    $karat_found = '18K';
+                                } else if (preg_match('/\b585\b/', $hm_type)) {
+                                    $karat_found = '14K';
+                                } else if (preg_match('/\b375\b/', $hm_type)) {
+                                    $karat_found = '9K';
+                                }
+                            } else if (!empty($cat_disp) && preg_match('/\b(24k|22k|18k|14k|12k|9k)\b/i', $cat_disp, $hm_m_cat)) {
+                                $karat_found = strtoupper($hm_m_cat[1]);
+                            }
+
+                            // 2. Strip any existing karat from base title so it is never duplicated
+                            $base_title = $clean_name;
+                            $base_title = preg_replace('/\s*\(\s*(?:Gold\s*)?(?:24K|22K|18K|14K|12K|9K)\s*\)/i', '', $base_title);
+                            $base_title = preg_replace('/\b(?:Gold\s+)?(?:24K|22K|18K|14K|12K|9K)\b/i', '', $base_title);
+                            $base_title = trim(preg_replace('/\s+/', ' ', $base_title));
+
+                            // 3. Attach karat beside the product name (strictly single mention, no hallmark word)
+                            $display_title = !empty($karat_found) ? $base_title . ' (' . $karat_found . ')' : $base_title;
 
                             $show_cat = false;
                             if (!empty($cat_disp) && !preg_match('/^(?:Gold\s*)?(?:24K|22K|18K|14K|12K|9K|Gold|Silver|Platinum)$/i', trim($cat_disp))) {
@@ -1102,9 +1110,6 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                                     <?php endif; ?>
                                 </div>
                                 <div class="item-sub" style="font-size:8px; color:#475569; margin-top:2.5px; line-height:1.4;">
-                                    <?php if($show_hm): ?>
-                                    <span style="background:#fef3c7;color:#92400e;border:1px solid #fde68a;padding:1px 5px;border-radius:3px;font-weight:700;font-size:8px;"><?php echo htmlspecialchars($hm_badge_text); ?></span>
-                                    <?php endif; ?>
                                     <?php if(!empty($huid)): ?>
                                     <span style="background:#eff6ff;color:#1e40af;border:1px solid #bfdbfe;padding:1px 4.5px;border-radius:3px;font-weight:600;font-family:monospace;font-size:8px;">HUID: <?php echo htmlspecialchars($huid); ?></span>
                                     <?php endif; ?>
@@ -1205,9 +1210,28 @@ body { background:#cbd5e1; padding:15px 0; color:#1e293b; }
                         <?php 
                         if (is_array($items)):
                         foreach($items as $idx => $it): 
-                            $it_name = htmlspecialchars($it['product_name'] ?? 'Item');
-                            $it_name = preg_replace('/([a-zA-Z0-9])\s*\(([0-9]+[kK])\)/i', '$1 ($2)', $it_name);
-                            $it_name = preg_replace_callback('/\b([0-9]+)k\b/i', function($m) { return $m[1] . 'K'; }, $it_name);
+                            $raw_name = htmlspecialchars($it['product_name'] ?? 'Item');
+                            $it_hm = trim($it['hallmark_type'] ?? '');
+                            $it_karat = '';
+                            if (preg_match('/\b(24k|22k|18k|14k|12k|9k)\b/i', $raw_name, $m_k)) {
+                                $it_karat = strtoupper($m_k[1]);
+                            } else if (!empty($it_hm) && strcasecmp($it_hm, 'none') !== 0 && strcasecmp($it_hm, 'na') !== 0) {
+                                if (preg_match('/\b(24k|22k|18k|14k|12k|9k)\b/i', $it_hm, $m_k2)) {
+                                    $it_karat = strtoupper($m_k2[1]);
+                                } else if (preg_match('/\b916\b/', $it_hm)) {
+                                    $it_karat = '22K';
+                                } else if (preg_match('/\b750\b/', $it_hm)) {
+                                    $it_karat = '18K';
+                                } else if (preg_match('/\b585\b/', $it_hm)) {
+                                    $it_karat = '14K';
+                                } else if (preg_match('/\b375\b/', $it_hm)) {
+                                    $it_karat = '9K';
+                                }
+                            }
+                            $it_base = preg_replace('/\s*\(\s*(?:Gold\s*)?(?:24K|22K|18K|14K|12K|9K)\s*\)/i', '', $raw_name);
+                            $it_base = preg_replace('/\b(?:Gold\s+)?(?:24K|22K|18K|14K|12K|9K)\b/i', '', $it_base);
+                            $it_base = trim(preg_replace('/\s+/', ' ', $it_base));
+                            $it_name = !empty($it_karat) ? $it_base . ' (' . $it_karat . ')' : $it_base;
                             $it_amt = floatval($it['total']);
                             $it_gst_type = trim($it['gst_type'] ?? '');
                             if ($it_gst_type === 'gst_18') $it_tax_amt = round($it_amt * 0.18, 2);

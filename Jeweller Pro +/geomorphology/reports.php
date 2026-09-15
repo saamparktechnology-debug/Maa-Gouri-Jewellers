@@ -270,13 +270,31 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
         $idx = 1;
         while ($row = mysqli_fetch_assoc($export_res)) {
             $inv_id = intval($row['id']);
-            $items_q = mysqli_query($conn, "SELECT product_name, gross_wt, net_wt, pcs, quantity, unit FROM invoice_items WHERE invoice_id = $inv_id");
+            $items_q = mysqli_query($conn, "SELECT product_name, gross_wt, net_wt, pcs, quantity, unit, hallmark_type FROM invoice_items WHERE invoice_id = $inv_id ORDER BY id ASC");
             $p_names = [];
+            $p_weights = [];
             $row_weight = 0.0;
             if ($items_q) {
                 while ($it = mysqli_fetch_assoc($items_q)) {
-                    $p_names[] = $it['product_name'] ?: 'Jewellery Item';
+                    $pname = trim($it['product_name'] ?: 'Jewellery Item');
+                    $hm_t = trim($it['hallmark_type'] ?? '');
+                    $kt = '';
+                    if (preg_match('/\b(24k|22k|18k|14k|12k|9k)\b/i', $pname, $m_kt)) {
+                        $kt = strtoupper($m_kt[1]);
+                    } else if (!empty($hm_t) && preg_match('/\b(24k|22k|18k|14k|12k|9k)\b/i', $hm_t, $m_kt2)) {
+                        $kt = strtoupper($m_kt2[1]);
+                    } else if (preg_match('/\b916\b/', $hm_t)) {
+                        $kt = '22K';
+                    } else if (preg_match('/\b750\b/', $hm_t)) {
+                        $kt = '18K';
+                    }
+                    $clean_p = preg_replace('/\s*\(\s*(?:Gold\s*)?(?:24K|22K|18K|14K|12K|9K)\s*\)/i', '', $pname);
+                    $clean_p = preg_replace('/\b(?:Gold\s+)?(?:24K|22K|18K|14K|12K|9K)\b/i', '', $clean_p);
+                    $clean_p = trim(preg_replace('/\s+/', ' ', $clean_p));
+                    $p_names[] = !empty($kt) ? $clean_p . ' (' . $kt . ')' : $clean_p;
+
                     $wt = floatval($it['gross_wt'] > 0 ? $it['gross_wt'] : ($it['net_wt'] > 0 ? $it['net_wt'] : ($it['unit'] === 'g' ? $it['quantity'] : 0)));
+                    $p_weights[] = $wt > 0 ? number_format($wt, 3) . 'g' : '0g';
                     $row_weight += $wt;
                 }
             }
@@ -286,7 +304,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
                 $row['customer_name'],
                 $row['customer_mobile'],
                 implode(', ', $p_names),
-                $row_weight > 0 ? number_format($row_weight, 3) : '0.000',
+                !empty($p_weights) ? implode(', ', $p_weights) : ($row_weight > 0 ? number_format($row_weight, 3) . 'g' : '0g'),
                 $row['subtotal'],
                 $row['cash_paid'] ?? 0,
                 $row['upi_paid'] ?? 0,

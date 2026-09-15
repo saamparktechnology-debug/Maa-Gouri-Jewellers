@@ -600,6 +600,7 @@ $invoice_ids = [];
 if($bills_result) {
     while($r = mysqli_fetch_assoc($bills_result)) {
         $r['product_names'] = '';
+        $r['item_weights'] = '';
         $r['total_weight'] = 0.0;
         $bills_rows[$r['invoice_no']] = $r;
         if (!empty($r['id'])) {
@@ -611,25 +612,47 @@ if($bills_result) {
 if (!empty($invoice_ids)) {
     $ids_str = implode(',', $invoice_ids);
     $items_res = mysqli_query($conn, "
-        SELECT ii.invoice_id, ii.product_name, ii.gross_wt, ii.net_wt, ii.pcs, ii.quantity, ii.unit, i.invoice_no
+        SELECT ii.invoice_id, ii.product_name, ii.gross_wt, ii.net_wt, ii.pcs, ii.quantity, ii.unit, ii.hallmark_type, i.invoice_no
         FROM invoice_items ii
         JOIN invoices i ON ii.invoice_id = i.id
         WHERE ii.invoice_id IN ($ids_str)
+        ORDER BY ii.id ASC
     ");
     if ($items_res) {
         $inv_items_map = [];
+        $inv_weights_list = [];
         $inv_weights_map = [];
         while ($it = mysqli_fetch_assoc($items_res)) {
             $inv_no = $it['invoice_no'];
             $pname = trim($it['product_name'] ?: 'Jewellery Item');
+            
+            $hm_t = trim($it['hallmark_type'] ?? '');
+            $kt = '';
+            if (preg_match('/\b(24k|22k|18k|14k|12k|9k)\b/i', $pname, $m_kt)) {
+                $kt = strtoupper($m_kt[1]);
+            } else if (!empty($hm_t) && preg_match('/\b(24k|22k|18k|14k|12k|9k)\b/i', $hm_t, $m_kt2)) {
+                $kt = strtoupper($m_kt2[1]);
+            } else if (preg_match('/\b916\b/', $hm_t)) {
+                $kt = '22K';
+            } else if (preg_match('/\b750\b/', $hm_t)) {
+                $kt = '18K';
+            }
+            $clean_pname = preg_replace('/\s*\(\s*(?:Gold\s*)?(?:24K|22K|18K|14K|12K|9K)\s*\)/i', '', $pname);
+            $clean_pname = preg_replace('/\b(?:Gold\s+)?(?:24K|22K|18K|14K|12K|9K)\b/i', '', $clean_pname);
+            $clean_pname = trim(preg_replace('/\s+/', ' ', $clean_pname));
+            $final_pname = !empty($kt) ? $clean_pname . ' (' . $kt . ')' : $clean_pname;
+
             $wt = floatval($it['gross_wt'] > 0 ? $it['gross_wt'] : ($it['net_wt'] > 0 ? $it['net_wt'] : ($it['unit'] === 'g' ? $it['quantity'] : 0)));
-            $inv_items_map[$inv_no][] = $pname . ($wt > 0 ? " (" . number_format($wt, 3) . "g)" : "");
+
+            $inv_items_map[$inv_no][] = $final_pname;
+            $inv_weights_list[$inv_no][] = $wt > 0 ? number_format($wt, 3) . "g" : "0g";
             if (!isset($inv_weights_map[$inv_no])) $inv_weights_map[$inv_no] = 0.0;
             $inv_weights_map[$inv_no] += $wt;
         }
         foreach ($inv_items_map as $inv_no => $names) {
             if (isset($bills_rows[$inv_no])) {
                 $bills_rows[$inv_no]['product_names'] = implode(', ', $names);
+                $bills_rows[$inv_no]['item_weights'] = implode(', ', $inv_weights_list[$inv_no] ?? []);
                 $bills_rows[$inv_no]['total_weight'] = round($inv_weights_map[$inv_no] ?? 0, 3);
             }
         }
@@ -1669,7 +1692,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 b.customer_mobile,
                 b.customer_address || '',
                 b.product_names || '',
-                parseFloat(b.total_weight||0),
+                b.item_weights || (parseFloat(b.total_weight||0) > 0 ? parseFloat(b.total_weight).toFixed(3) + 'g' : '0.000g'),
                 parseFloat(b.total_amount||0),
                 parseFloat(b.paid_amount||0),
                 parseFloat(b.balance_amount||0),
@@ -1682,7 +1705,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
         aoa1.push(['', 'TOTAL', '', '', '', '', '', totalWeightSum, billsData.reduce((s,b)=>s+parseFloat(b.total_amount||0),0), billsData.reduce((s,b)=>s+parseFloat(b.paid_amount||0),0), totalBalance, '', totalGST, '', '']);
 
         const ws1 = XLSX.utils.aoa_to_sheet(aoa1);
-        ws1['!cols'] = [{wch:5},{wch:20},{wch:22},{wch:20},{wch:14},{wch:28},{wch:35},{wch:14},{wch:18},{wch:18},{wch:18},{wch:12},{wch:16},{wch:14},{wch:14}];
+        ws1['!cols'] = [{wch:5},{wch:20},{wch:22},{wch:20},{wch:14},{wch:28},{wch:35},{wch:20},{wch:18},{wch:18},{wch:18},{wch:12},{wch:16},{wch:14},{wch:14}];
         ws1['!merges'] = [{s:{r:0,c:0},e:{r:0,c:14}},{s:{r:1,c:0},e:{r:1,c:14}}];
         XLSX.utils.book_append_sheet(wb, ws1, 'All Bills');
 
@@ -1711,7 +1734,8 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
         const aoa3 = [['#','Invoice No','Customer','GSTIN','Mobile','Products / Items','Weight (g)','Bill Total (₹)','Paid (₹)','Balance Due (₹)','Status','Date']];
         pendingData.forEach((b,i) => aoa3.push([
             i+1, b.invoice_no, b.customer_name, b.customer_gstin||'', b.customer_mobile,
-            b.product_names || '', parseFloat(b.total_weight || 0),
+            b.product_names || '',
+            b.item_weights || (parseFloat(b.total_weight || 0) > 0 ? parseFloat(b.total_weight).toFixed(3) + 'g' : '0.000g'),
             parseFloat(b.total_amount||0), parseFloat(b.paid_amount||0), parseFloat(b.balance_amount||0),
             b.payment_status==='part'?'Part Payment':'Unpaid', fmtDate(b.created_at)
         ]));
