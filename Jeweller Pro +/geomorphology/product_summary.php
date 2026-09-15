@@ -23,7 +23,23 @@ foreach ($logo_paths as $lp) {
 }
 
 init_activity_log_table($conn);
-@mysqli_query($conn, "UPDATE product_activity_logs SET is_nongst = 1 WHERE invoice_no LIKE 'CM-%' OR invoice_no IN (SELECT invoice_no FROM invoices WHERE (gst_type NOT LIKE 'gst%' AND (gst_amount IS NULL OR gst_amount = 0)))");
+
+// Check if is_nongst column exists
+$has_nongst_col = false;
+$chk_col = @mysqli_query($conn, "SHOW COLUMNS FROM product_activity_logs LIKE 'is_nongst'");
+if ($chk_col && mysqli_num_rows($chk_col) > 0) {
+    $has_nongst_col = true;
+} else {
+    @mysqli_query($conn, "ALTER TABLE product_activity_logs ADD COLUMN is_nongst TINYINT(1) DEFAULT 0, ADD INDEX idx_nongst (is_nongst)");
+    $chk_col2 = @mysqli_query($conn, "SHOW COLUMNS FROM product_activity_logs LIKE 'is_nongst'");
+    if ($chk_col2 && mysqli_num_rows($chk_col2) > 0) {
+        $has_nongst_col = true;
+    }
+}
+
+$nongst_log_cond = $has_nongst_col 
+    ? "(is_nongst = 1 OR invoice_no LIKE 'CM-%')" 
+    : "(invoice_no LIKE 'CM-%')";
 
 // Handle Delete Activity Log Request
 if (isset($_REQUEST['action']) && $_REQUEST['action'] === 'delete_log') {
@@ -61,7 +77,7 @@ $from_date   = isset($_GET['from_date']) ? mysqli_real_escape_string($conn, trim
 $to_date     = isset($_GET['to_date']) ? mysqli_real_escape_string($conn, trim($_GET['to_date'])) : '';
 $search      = isset($_GET['search']) ? mysqli_real_escape_string($conn, trim($_GET['search'])) : '';
 
-$where_clauses = ["(is_nongst = 1 OR invoice_no LIKE 'CM-%')"];
+$where_clauses = [$nongst_log_cond];
 
 if ($filter_type !== 'all' && !empty($filter_type)) {
     $where_clauses[] = "activity_type = '$filter_type'";
@@ -97,20 +113,26 @@ if (!empty($search)) {
 $where_sql = implode(' AND ', $where_clauses);
 
 // --- KPI METRICS (NON-GST ONLY) ---
-$total_billed_res = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as cnt, SUM(weight) as total_wt, SUM(total_amount) as total_val FROM product_activity_logs WHERE (is_nongst = 1 OR invoice_no LIKE 'CM-%') AND activity_type='billed'"));
-$total_memos_res  = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(DISTINCT invoice_no) as memo_cnt FROM product_activity_logs WHERE (is_nongst = 1 OR invoice_no LIKE 'CM-%') AND invoice_no IS NOT NULL"));
+$q_billed = @mysqli_query($conn, "SELECT COUNT(*) as cnt, SUM(weight) as total_wt, SUM(total_amount) as total_val FROM product_activity_logs WHERE $nongst_log_cond AND activity_type='billed'");
+$total_billed_res = $q_billed ? mysqli_fetch_assoc($q_billed) : ['cnt'=>0,'total_wt'=>0,'total_val'=>0];
+
+$q_memos = @mysqli_query($conn, "SELECT COUNT(DISTINCT invoice_no) as memo_cnt FROM product_activity_logs WHERE $nongst_log_cond AND invoice_no IS NOT NULL");
+$total_memos_res = $q_memos ? mysqli_fetch_assoc($q_memos) : ['memo_cnt'=>0];
+
 $total_wt_billed  = floatval($total_billed_res['total_wt'] ?? 0);
 $total_val_billed = floatval($total_billed_res['total_val'] ?? 0);
 $total_cnt_billed = intval($total_billed_res['cnt'] ?? 0);
 $total_memos_cnt  = intval($total_memos_res['memo_cnt'] ?? 0);
 
 // Distinct categories
-$cats_res = mysqli_query($conn, "SELECT DISTINCT category FROM product_activity_logs WHERE (is_nongst = 1 OR invoice_no LIKE 'CM-%') AND category IS NOT NULL AND category != '' ORDER BY category ASC");
+$cats_res = @mysqli_query($conn, "SELECT DISTINCT category FROM product_activity_logs WHERE $nongst_log_cond AND category IS NOT NULL AND category != '' ORDER BY category ASC");
 $categories = [];
-while($c = mysqli_fetch_assoc($cats_res)) { $categories[] = $c['category']; }
+if ($cats_res) {
+    while($c = mysqli_fetch_assoc($cats_res)) { $categories[] = $c['category']; }
+}
 
 // Fetch Activity Logs
-$logs_res = mysqli_query($conn, "SELECT * FROM product_activity_logs WHERE $where_sql ORDER BY created_at DESC, id DESC LIMIT 500");
+$logs_res = @mysqli_query($conn, "SELECT * FROM product_activity_logs WHERE $where_sql ORDER BY created_at DESC, id DESC LIMIT 500");
 
 // Helper for relative time
 function time_elapsed_string($datetime, $full = false) {

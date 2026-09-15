@@ -85,15 +85,39 @@ if (!function_exists('log_product_activity')) {
         $performed_by = mysqli_real_escape_string($conn, trim($data['performed_by'] ?? $user_session));
         $created_at = !empty($data['created_at']) ? "'" . mysqli_real_escape_string($conn, $data['created_at']) . "'" : "NOW()";
 
-        $query = "INSERT INTO product_activity_logs (
-            activity_type, product_id, product_name, category, serial_no, huid_code,
-            quantity, unit, weight, rate, total_amount, invoice_no, customer_name, customer_mobile,
-            details, performed_by, is_nongst, created_at
-        ) VALUES (
-            '$activity_type', $product_id, '$product_name', '$category', '$serial_no', '$huid_code',
-            $quantity, '$unit', $weight, $rate, $total_amount, $invoice_no, $customer_name, $customer_mobile,
-            '$details', '$performed_by', $is_nongst, $created_at
-        )";
+        // Check if is_nongst column exists in table
+        static $has_nongst_field = null;
+        if ($has_nongst_field === null) {
+            $col_chk = @mysqli_query($conn, "SHOW COLUMNS FROM product_activity_logs LIKE 'is_nongst'");
+            $has_nongst_field = ($col_chk && mysqli_num_rows($col_chk) > 0);
+            if (!$has_nongst_field) {
+                @mysqli_query($conn, "ALTER TABLE product_activity_logs ADD COLUMN is_nongst TINYINT(1) DEFAULT 0, ADD INDEX idx_nongst (is_nongst)");
+                $col_chk2 = @mysqli_query($conn, "SHOW COLUMNS FROM product_activity_logs LIKE 'is_nongst'");
+                $has_nongst_field = ($col_chk2 && mysqli_num_rows($col_chk2) > 0);
+            }
+        }
+
+        if ($has_nongst_field) {
+            $query = "INSERT INTO product_activity_logs (
+                activity_type, product_id, product_name, category, serial_no, huid_code,
+                quantity, unit, weight, rate, total_amount, invoice_no, customer_name, customer_mobile,
+                details, performed_by, is_nongst, created_at
+            ) VALUES (
+                '$activity_type', $product_id, '$product_name', '$category', '$serial_no', '$huid_code',
+                $quantity, '$unit', $weight, $rate, $total_amount, $invoice_no, $customer_name, $customer_mobile,
+                '$details', '$performed_by', $is_nongst, $created_at
+            )";
+        } else {
+            $query = "INSERT INTO product_activity_logs (
+                activity_type, product_id, product_name, category, serial_no, huid_code,
+                quantity, unit, weight, rate, total_amount, invoice_no, customer_name, customer_mobile,
+                details, performed_by, created_at
+            ) VALUES (
+                '$activity_type', $product_id, '$product_name', '$category', '$serial_no', '$huid_code',
+                $quantity, '$unit', $weight, $rate, $total_amount, $invoice_no, $customer_name, $customer_mobile,
+                '$details', '$performed_by', $created_at
+            )";
+        }
         return mysqli_query($conn, $query);
     }
 }

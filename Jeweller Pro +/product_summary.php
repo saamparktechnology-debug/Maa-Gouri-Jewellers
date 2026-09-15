@@ -63,11 +63,29 @@ $from_date   = isset($_GET['from_date']) ? mysqli_real_escape_string($conn, trim
 $to_date     = isset($_GET['to_date']) ? mysqli_real_escape_string($conn, trim($_GET['to_date'])) : '';
 $search      = isset($_GET['search']) ? mysqli_real_escape_string($conn, trim($_GET['search'])) : '';
 
-// Ensure table and is_nongst column exists
+// Ensure table exists
 init_activity_log_table($conn);
-@mysqli_query($conn, "UPDATE product_activity_logs SET is_nongst = 1 WHERE invoice_no LIKE 'CM-%' OR invoice_no IN (SELECT invoice_no FROM invoices WHERE (gst_type NOT LIKE 'gst%' AND (gst_amount IS NULL OR gst_amount = 0)))");
 
-$where_clauses = ["(is_nongst = 0 OR is_nongst IS NULL)"];
+// Check if is_nongst column exists in product_activity_logs
+$has_nongst_col = false;
+$chk_col = @mysqli_query($conn, "SHOW COLUMNS FROM product_activity_logs LIKE 'is_nongst'");
+if ($chk_col && mysqli_num_rows($chk_col) > 0) {
+    $has_nongst_col = true;
+} else {
+    // Try adding the column silently if permitted
+    @mysqli_query($conn, "ALTER TABLE product_activity_logs ADD COLUMN is_nongst TINYINT(1) DEFAULT 0, ADD INDEX idx_nongst (is_nongst)");
+    $chk_col2 = @mysqli_query($conn, "SHOW COLUMNS FROM product_activity_logs LIKE 'is_nongst'");
+    if ($chk_col2 && mysqli_num_rows($chk_col2) > 0) {
+        $has_nongst_col = true;
+    }
+}
+
+// Build safe GST-only condition that works regardless of DB schema state
+$gst_log_cond = $has_nongst_col 
+    ? "((is_nongst = 0 OR is_nongst IS NULL) AND (invoice_no IS NULL OR invoice_no NOT LIKE 'CM-%'))"
+    : "(invoice_no IS NULL OR invoice_no NOT LIKE 'CM-%')";
+
+$where_clauses = [$gst_log_cond];
 
 if ($filter_type !== 'all' && !empty($filter_type)) {
     $where_clauses[] = "activity_type = '$filter_type'";
@@ -103,20 +121,30 @@ if (!empty($search)) {
 $where_sql = implode(' AND ', $where_clauses);
 
 // --- KPI METRICS (GST & General Stock Only) ---
-$total_added_res = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as cnt, SUM(weight) as total_wt, SUM(quantity) as total_qty FROM product_activity_logs WHERE activity_type='added' AND (is_nongst = 0 OR is_nongst IS NULL)"));
-$total_billed_res = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as cnt, SUM(weight) as total_wt, SUM(total_amount) as total_val FROM product_activity_logs WHERE activity_type='billed' AND (is_nongst = 0 OR is_nongst IS NULL)"));
-$total_edited_res = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as cnt FROM product_activity_logs WHERE activity_type='edited' AND (is_nongst = 0 OR is_nongst IS NULL)"));
-$total_deleted_res = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as cnt FROM product_activity_logs WHERE activity_type='deleted' AND (is_nongst = 0 OR is_nongst IS NULL)"));
+$q_added = @mysqli_query($conn, "SELECT COUNT(*) as cnt, SUM(weight) as total_wt, SUM(quantity) as total_qty FROM product_activity_logs WHERE activity_type='added' AND $gst_log_cond");
+$total_added_res = $q_added ? mysqli_fetch_assoc($q_added) : ['cnt'=>0,'total_wt'=>0,'total_qty'=>0];
 
-$current_stock_res = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total_items, SUM(CAST(weight AS DECIMAL(10,3))) as total_wt, SUM(quantity) as total_pcs FROM products"));
+$q_billed = @mysqli_query($conn, "SELECT COUNT(*) as cnt, SUM(weight) as total_wt, SUM(total_amount) as total_val FROM product_activity_logs WHERE activity_type='billed' AND $gst_log_cond");
+$total_billed_res = $q_billed ? mysqli_fetch_assoc($q_billed) : ['cnt'=>0,'total_wt'=>0,'total_val'=>0];
+
+$q_edited = @mysqli_query($conn, "SELECT COUNT(*) as cnt FROM product_activity_logs WHERE activity_type='edited' AND $gst_log_cond");
+$total_edited_res = $q_edited ? mysqli_fetch_assoc($q_edited) : ['cnt'=>0];
+
+$q_deleted = @mysqli_query($conn, "SELECT COUNT(*) as cnt FROM product_activity_logs WHERE activity_type='deleted' AND $gst_log_cond");
+$total_deleted_res = $q_deleted ? mysqli_fetch_assoc($q_deleted) : ['cnt'=>0];
+
+$q_stock = @mysqli_query($conn, "SELECT COUNT(*) as total_items, SUM(CAST(weight AS DECIMAL(10,3))) as total_wt, SUM(quantity) as total_pcs FROM products");
+$current_stock_res = $q_stock ? mysqli_fetch_assoc($q_stock) : ['total_items'=>0,'total_wt'=>0,'total_pcs'=>0];
 
 // Distinct categories for filter
-$cats_res = mysqli_query($conn, "SELECT DISTINCT category FROM product_activity_logs WHERE (is_nongst = 0 OR is_nongst IS NULL) AND category IS NOT NULL AND category != '' ORDER BY category ASC");
+$cats_res = @mysqli_query($conn, "SELECT DISTINCT category FROM product_activity_logs WHERE $gst_log_cond AND category IS NOT NULL AND category != '' ORDER BY category ASC");
 $categories = [];
-while($c = mysqli_fetch_assoc($cats_res)) { $categories[] = $c['category']; }
+if ($cats_res) {
+    while($c = mysqli_fetch_assoc($cats_res)) { $categories[] = $c['category']; }
+}
 
 // Fetch Activity Logs
-$logs_res = mysqli_query($conn, "SELECT * FROM product_activity_logs WHERE $where_sql ORDER BY created_at DESC, id DESC LIMIT 500");
+$logs_res = @mysqli_query($conn, "SELECT * FROM product_activity_logs WHERE $where_sql ORDER BY created_at DESC, id DESC LIMIT 500");
 
 // Helper for relative time
 function time_elapsed_string($datetime, $full = false) {
@@ -612,7 +640,7 @@ function time_elapsed_string($datetime, $full = false) {
             <div class="p-4 border-b border-stone-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div class="flex items-center gap-2">
                     <h3 class="font-bold text-stone-900 text-sm md:text-base">Detailed Activity History</h3>
-                    <span id="recordCountBadge" class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-xs font-bold"><?php echo mysqli_num_rows($logs_res); ?> records</span>
+                    <span id="recordCountBadge" class="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-xs font-bold"><?php echo ($logs_res && $logs_res !== false) ? mysqli_num_rows($logs_res) : 0; ?> records</span>
                 </div>
                 <div class="flex items-center gap-2.5 no-print">
                     <button type="button" onclick="confirmClearAllLogs()" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-600 text-rose-700 hover:text-white border border-rose-200 hover:border-rose-600 rounded-lg text-xs font-bold transition flex items-center gap-1 shadow-sm" title="Clear all activity history">
@@ -640,7 +668,7 @@ function time_elapsed_string($datetime, $full = false) {
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-stone-100 text-xs text-stone-700" id="activityTableBody">
-                        <?php if (mysqli_num_rows($logs_res) == 0): ?>
+                        <?php if (!$logs_res || mysqli_num_rows($logs_res) == 0): ?>
                         <tr id="emptyDbRow">
                             <td colspan="9" class="py-12 text-center text-stone-400">
                                 <i class="fas fa-boxes text-3xl mb-2 text-stone-300"></i>
