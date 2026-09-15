@@ -314,6 +314,19 @@ function time_elapsed_string($datetime, $full = false) {
             box-shadow: 0 6px 20px rgba(214,139,22,0.12);
         }
 
+        /* Activity Table Header Styling */
+        #activityTable thead tr {
+            background-color: #fbf5eb !important;
+            border-bottom: 2px solid #ecd8b1 !important;
+        }
+        #activityTable thead th {
+            color: #451a03 !important;
+            font-size: 11px !important;
+            font-weight: 700 !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.5px !important;
+        }
+
         /* Print formatting */
         @media print {
             .sidebar, .filter-box, .no-print, .action-btn-group { display: none !important; }
@@ -610,16 +623,16 @@ function time_elapsed_string($datetime, $full = false) {
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse inv-table" id="activityTable">
                     <thead>
-                        <tr class="bg-gradient-to-r from-amber-900 to-yellow-800 text-white text-[11px] uppercase tracking-wider font-bold">
-                            <th class="py-3 px-3.5 text-center">#</th>
-                            <th class="py-3 px-3.5">Activity</th>
-                            <th class="py-3 px-3.5">Date &amp; Time</th>
-                            <th class="py-3 px-3.5">Product Name &amp; HUID</th>
-                            <th class="py-3 px-3.5">Category</th>
-                            <th class="py-3 px-3.5 text-right">Quantity / Weight</th>
-                            <th class="py-3 px-3.5">Activity Remarks / Details</th>
-                            <th class="py-3 px-3.5 text-center">Logged By</th>
-                            <th class="py-3 px-3.5 text-center no-print">Action</th>
+                        <tr class="text-xs uppercase tracking-wider font-bold" style="background-color: #fbf5eb; border-bottom: 2px solid #ecd8b1; color: #451a03;">
+                            <th class="py-3 px-3.5 text-center" style="color: #451a03;">#</th>
+                            <th class="py-3 px-3.5" style="color: #451a03;">Activity</th>
+                            <th class="py-3 px-3.5" style="color: #451a03;">Date &amp; Time</th>
+                            <th class="py-3 px-3.5" style="color: #451a03;">Product Name &amp; HUID</th>
+                            <th class="py-3 px-3.5" style="color: #451a03;">Category</th>
+                            <th class="py-3 px-3.5 text-right" style="color: #451a03;">Quantity / Weight</th>
+                            <th class="py-3 px-3.5" style="color: #451a03;">Activity Remarks / Details</th>
+                            <th class="py-3 px-3.5 text-center" style="color: #451a03;">Logged By</th>
+                            <th class="py-3 px-3.5 text-center no-print" style="color: #451a03;">Action</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-stone-100 text-xs text-stone-700" id="activityTableBody">
