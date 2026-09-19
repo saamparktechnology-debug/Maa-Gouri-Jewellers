@@ -468,19 +468,21 @@ if ($is_gst && $gst_total > 0 && abs($tot_calc - $gst_total) <= 0.10) {
 
 $subtotal = floatval($inv['subtotal'] ?? 0);
 $discount = floatval($inv['discount'] ?? 0);
+$advance_adjusted = floatval($inv['advance_adjusted'] ?? 0);
 $old_gold = floatval($inv['old_gold_amount'] ?? 0);
 $old_gold_type = !empty($inv['old_gold_type']) ? $inv['old_gold_type'] : 'Old Gold';
 $raw_total= floatval($inv['total_amount']);
 
 // Calculate Refund / Return Amount to Customer if Old Gold exceeds Total Bill
 $subtotal_with_gst = $subtotal + ($is_gst ? $gst_total : 0);
+$net_payable_before_old_gold = max(0, $subtotal_with_gst - $discount - $advance_adjusted);
 $refund_amount = 0;
-if ($old_gold > $subtotal_with_gst) {
-    $refund_amount = round($old_gold - $subtotal_with_gst, 2);
+if ($old_gold > $net_payable_before_old_gold) {
+    $refund_amount = round($old_gold - $net_payable_before_old_gold, 2);
 }
 
 // Ensure net total deducts old_gold_amount if DB stored pre-deduction total
-$calc_total = max(0, $subtotal_with_gst - $old_gold);
+$calc_total = max(0, $net_payable_before_old_gold - $old_gold);
 $total = ($old_gold > 0 && abs($raw_total - $calc_total) > 1) ? $calc_total : $raw_total;
 
 if ($total == 0 && $refund_amount > 0) {
@@ -537,9 +539,6 @@ foreach($items as $it) {
     $total_gross_wt += $gross;
     $total_net_wt   += $net;
 }
-
-$total_words = num2words($total);
-
 
 $logo_file = $COMPANY['logo_path'] ?? 'logo.png';
 

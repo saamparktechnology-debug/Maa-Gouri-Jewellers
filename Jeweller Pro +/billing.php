@@ -580,6 +580,8 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && (isset($_POST['create_invoice']) || i
     
     // Overall discount on total product price, advance credit and old gold deduction
     $subtotal_before_tax = $subtotal + $pola;
+    $net_payable_before_old_gold = max(0, $subtotal_before_tax + $gst_amount - $discount - $advance_adjusted);
+    $refund_amount = ($old_gold_amount > $net_payable_before_old_gold) ? round($old_gold_amount - $net_payable_before_old_gold, 2) : 0;
     $total_before_round  = $subtotal_before_tax + $gst_amount - $discount - $old_gold_amount - $advance_adjusted;
     $total_amount  = max(0, round($total_before_round, 2));
     $round_off     = 0;
@@ -834,6 +836,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && (isset($_POST['create_invoice']) || i
         'advance_id'         => ($adv_id_val !== null ? $adv_id_val : 'NULL'),
         'applied_advance_id' => ($adv_id_val !== null ? $adv_id_val : 'NULL'),
         'discount'           => $discount,
+        'refund_amount'      => $refund_amount,
     ];
 
     $insert_cols = [];
