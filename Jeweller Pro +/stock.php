@@ -9,14 +9,45 @@ if(!isset($_SESSION['user_id'])) {
     exit();
 }
 
-// Drop unique index on serial_no to allow multiple empty entries
-$idx_chk = mysqli_query($conn, "SHOW INDEX FROM products WHERE Key_name = 'serial_no'");
-if ($idx_chk && mysqli_num_rows($idx_chk) > 0) {
-    mysqli_query($conn, "ALTER TABLE products DROP INDEX serial_no");
+// Read and clear flash messages for PRG pattern
+$success = $_SESSION['flash_success'] ?? null;
+$error = $_SESSION['flash_error'] ?? null;
+unset($_SESSION['flash_success'], $_SESSION['flash_error']);
+
+// Ensure helper columns exist in products table
+function ensure_product_columns($conn) {
+    static $checked = false;
+    if ($checked) return;
+    $cols = [
+        'huid_code' => "VARCHAR(100) DEFAULT NULL",
+        'created_at' => "DATETIME DEFAULT NULL",
+        'unit' => "VARCHAR(20) DEFAULT 'pcs'",
+        'diamond_cent' => "VARCHAR(50) DEFAULT ''",
+        'metal_kt' => "VARCHAR(50) DEFAULT ''",
+        'metal_weight' => "VARCHAR(50) DEFAULT ''",
+        'status' => "VARCHAR(30) DEFAULT 'In Stock'"
+    ];
+    foreach ($cols as $col => $def) {
+        $chk = mysqli_query($conn, "SHOW COLUMNS FROM products LIKE '$col'");
+        if ($chk && mysqli_num_rows($chk) == 0) {
+            @mysqli_query($conn, "ALTER TABLE products ADD COLUMN $col $def");
+        }
+    }
+    $checked = true;
 }
 
-// Handle add/edit/delete product
+// Drop unique index on serial_no if exists to allow multiple empty entries
+$idx_chk = mysqli_query($conn, "SHOW INDEX FROM products WHERE Key_name = 'serial_no'");
+if ($idx_chk && mysqli_num_rows($idx_chk) > 0) {
+    @mysqli_query($conn, "ALTER TABLE products DROP INDEX serial_no");
+}
+
+// Handle add/edit/delete/merge product
 if($_SERVER['REQUEST_METHOD'] == 'POST') {
+    ensure_product_columns($conn);
+    $redirect_url = "stock.php" . (!empty($_GET['search']) ? "?search=" . urlencode($_GET['search']) : "");
+
+    // --- Action: Add Product ---
     if(isset($_POST['add_product'])) {
         $serial_no = mysqli_real_escape_string($conn, trim($_POST['serial_no'] ?? ''));
         $name = mysqli_real_escape_string($conn, trim($_POST['name'] ?? ''));
@@ -24,39 +55,13 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         if($item_name_raw === 'Other' && !empty($_POST['item_name_custom'])) {
             $item_name_raw = $_POST['item_name_custom'];
         }
-        $item_name = mysqli_real_escape_string($conn, $item_name_raw);
-        $category = mysqli_real_escape_string($conn, $_POST['category']);
-        $weight = mysqli_real_escape_string($conn, $_POST['weight']);
+        $item_name = mysqli_real_escape_string($conn, trim($item_name_raw));
+        $category = mysqli_real_escape_string($conn, trim($_POST['category'] ?? ''));
+        $weight = mysqli_real_escape_string($conn, trim($_POST['weight'] ?? '0'));
         $huid_code = mysqli_real_escape_string($conn, trim($_POST['huid_code'] ?? ''));
-        $price = $_POST['price'];
-        $quantity = $_POST['quantity'];
-        $unit = mysqli_real_escape_string($conn, $_POST['unit'] ?? 'pcs');
-
-        // Ensure new columns exist
-        $chk1 = mysqli_query($conn, "SHOW COLUMNS FROM products LIKE 'huid_code'");
-        if(mysqli_num_rows($chk1) == 0) {
-            mysqli_query($conn, "ALTER TABLE products ADD COLUMN huid_code VARCHAR(100) DEFAULT NULL");
-        }
-        $chk2 = mysqli_query($conn, "SHOW COLUMNS FROM products LIKE 'created_at'");
-        if(mysqli_num_rows($chk2) == 0) {
-            mysqli_query($conn, "ALTER TABLE products ADD COLUMN created_at DATETIME DEFAULT NULL");
-        }
-        $chk3 = mysqli_query($conn, "SHOW COLUMNS FROM products LIKE 'unit'");
-        if(mysqli_num_rows($chk3) == 0) {
-            mysqli_query($conn, "ALTER TABLE products ADD COLUMN unit VARCHAR(20) DEFAULT 'pcs'");
-        }
-        $chk4 = mysqli_query($conn, "SHOW COLUMNS FROM products LIKE 'diamond_cent'");
-        if(mysqli_num_rows($chk4) == 0) {
-            mysqli_query($conn, "ALTER TABLE products ADD COLUMN diamond_cent VARCHAR(50) DEFAULT ''");
-        }
-        $chk5 = mysqli_query($conn, "SHOW COLUMNS FROM products LIKE 'metal_kt'");
-        if(mysqli_num_rows($chk5) == 0) {
-            mysqli_query($conn, "ALTER TABLE products ADD COLUMN metal_kt VARCHAR(50) DEFAULT ''");
-        }
-        $chk6 = mysqli_query($conn, "SHOW COLUMNS FROM products LIKE 'metal_weight'");
-        if(mysqli_num_rows($chk6) == 0) {
-            mysqli_query($conn, "ALTER TABLE products ADD COLUMN metal_weight VARCHAR(50) DEFAULT ''");
-        }
+        $price = floatval($_POST['price'] ?? 0);
+        $quantity = floatval($_POST['quantity'] ?? 0);
+        $unit = mysqli_real_escape_string($conn, trim($_POST['unit'] ?? 'pcs'));
 
         $diamond_cent = ($category === 'Diamond') ? mysqli_real_escape_string($conn, trim($_POST['diamond_cent'] ?? '')) : '';
         $metal_kt     = ($category === 'Diamond') ? mysqli_real_escape_string($conn, trim($_POST['metal_kt'] ?? '')) : '';
@@ -66,7 +71,83 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
             $weight = $metal_weight;
         }
 
-        $query = "INSERT INTO products (serial_no, name, item_name, category, weight, price, quantity, unit, huid_code, diamond_cent, metal_kt, metal_weight, created_at, updated_at) VALUES ('$serial_no', '$name', '$item_name', '$category', '$weight', '$price', '$quantity', '$unit', '$huid_code', '$diamond_cent', '$metal_kt', '$metal_weight', NOW(), NOW())";
+        // 1. Uniqueness check for Serial Number (if provided)
+        if (!empty($serial_no)) {
+            $chk_s = mysqli_query($conn, "SELECT id, name, item_name FROM products WHERE serial_no = '$serial_no' LIMIT 1");
+            if ($chk_s && $s_row = mysqli_fetch_assoc($chk_s)) {
+                $p_title = htmlspecialchars($s_row['item_name'] ?: ($s_row['name'] ?: 'Item'));
+                $_SESSION['flash_error'] = " Duplicate Serial Number! Product '#{$s_row['id']} - {$p_title}' already exists with Serial No '{$serial_no}'. Each Serial Number must be unique.";
+                header("Location: " . $redirect_url);
+                exit();
+            }
+        }
+
+        // 2. Uniqueness check for HUID Code (if provided)
+        if (!empty($huid_code)) {
+            $chk_h = mysqli_query($conn, "SELECT id, name, item_name FROM products WHERE huid_code = '$huid_code' LIMIT 1");
+            if ($chk_h && $h_row = mysqli_fetch_assoc($chk_h)) {
+                $p_title = htmlspecialchars($h_row['item_name'] ?: ($h_row['name'] ?: 'Item'));
+                $_SESSION['flash_error'] = " Duplicate HUID Code! Product '#{$h_row['id']} - {$p_title}' already exists with HUID '{$huid_code}'. Each HUID must be unique.";
+                header("Location: " . $redirect_url);
+                exit();
+            }
+        }
+
+        // 3. Smart Basket / Pool Stock Auto-Merge:
+        // If neither Serial Number nor HUID is given, this is a bulk/pool item.
+        // Check if an existing basket pool item already exists for this Category and Item Type.
+        if (empty($serial_no) && empty($huid_code) && !empty($category) && !empty($item_name)) {
+            $pool_chk = mysqli_query($conn, "SELECT id, name, item_name, category, quantity, weight, unit, price FROM products WHERE (serial_no IS NULL OR TRIM(serial_no) = '') AND (huid_code IS NULL OR TRIM(huid_code) = '') AND category = '$category' AND item_name = '$item_name' LIMIT 1");
+            if ($pool_chk && $pool_row = mysqli_fetch_assoc($pool_chk)) {
+                $pool_id  = intval($pool_row['id']);
+                $prev_qty = floatval($pool_row['quantity']);
+                $prev_wt  = floatval($pool_row['weight']);
+                $db_unit  = strtolower(trim($pool_row['unit'] ?? 'pcs'));
+                $in_unit  = strtolower(trim($unit));
+
+                // Unit conversion (pair vs pcs)
+                if ($db_unit === $in_unit) {
+                    $added_qty = $quantity;
+                } elseif ($db_unit === 'pcs' && $in_unit === 'pair') {
+                    $added_qty = $quantity * 2;
+                } elseif ($db_unit === 'pair' && $in_unit === 'pcs') {
+                    $added_qty = $quantity / 2;
+                } else {
+                    $added_qty = $quantity;
+                }
+
+                $final_qty = $prev_qty + $added_qty;
+                $final_wt  = round($prev_wt + floatval($weight), 3);
+                $upd_price = ($price > 0) ? ", price = '$price'" : "";
+
+                $upd_sql = "UPDATE products SET quantity = '$final_qty', weight = '$final_wt', status = 'In Stock', updated_at = NOW() $upd_price WHERE id = $pool_id";
+                if (mysqli_query($conn, $upd_sql)) {
+                    log_product_activity($conn, [
+                        'activity_type' => 'restocked',
+                        'product_id' => $pool_id,
+                        'product_name' => $pool_row['item_name'] ?: ($pool_row['name'] ?: $item_name),
+                        'category' => $category,
+                        'serial_no' => '',
+                        'huid_code' => '',
+                        'quantity' => $added_qty,
+                        'unit' => $db_unit,
+                        'weight' => floatval($weight),
+                        'rate' => $price > 0 ? $price : floatval($pool_row['price']),
+                        'total_amount' => round(($price > 0 ? $price : floatval($pool_row['price'])) * ($db_unit === 'g' ? floatval($weight) : $added_qty), 2),
+                        'details' => "Auto-Restocked into existing Basket Stock: +{$quantity} {$unit}" . ($weight > 0 ? " (+{$weight}g)" : "") . " (New Total: {$final_qty} {$db_unit}, {$final_wt}g)",
+                        'performed_by' => $_SESSION['user_name'] ?? 'Admin'
+                    ]);
+                    $_SESSION['flash_success'] = " Auto-Merged with existing basket stock for '{$category} - {$item_name}'! Added: +{$quantity} {$unit}" . ($weight > 0 ? ", +{$weight}g" : "") . ". Total now: {$final_qty} {$db_unit}, {$final_wt}g (Item #{$pool_id}).";
+                } else {
+                    $_SESSION['flash_error'] = "Error updating basket stock: " . mysqli_error($conn);
+                }
+                header("Location: " . $redirect_url);
+                exit();
+            }
+        }
+
+        // 4. Normal Insert for New Products
+        $query = "INSERT INTO products (serial_no, name, item_name, category, weight, price, quantity, unit, huid_code, diamond_cent, metal_kt, metal_weight, status, created_at, updated_at) VALUES ('$serial_no', '$name', '$item_name', '$category', '$weight', '$price', '$quantity', '$unit', '$huid_code', '$diamond_cent', '$metal_kt', '$metal_weight', 'In Stock', NOW(), NOW())";
         if(mysqli_query($conn, $query)) {
             $new_pid = mysqli_insert_id($conn);
             log_product_activity($conn, [
@@ -84,11 +165,14 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
                 'details' => "Product added to stock: " . ($weight > 0 ? "{$weight}g" : "{$quantity} {$unit}"),
                 'performed_by' => $_SESSION['user_name'] ?? 'Admin'
             ]);
-            $success = " Product added successfully! ";
+            $_SESSION['flash_success'] = " Product added successfully! (ID: #$new_pid)";
         } else {
-            $error = "Error adding product: " . mysqli_error($conn);
+            $_SESSION['flash_error'] = "Error adding product: " . mysqli_error($conn);
         }
+        header("Location: " . $redirect_url);
+        exit();
     }
+    // --- Action: Quick Restock Quantity ---
     elseif(isset($_POST['update_quantity'])) {
         $id = intval($_POST['product_id']);
         $quantity = floatval($_POST['quantity'] ?? 0);
@@ -115,7 +199,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
             $final_qty = $db_qty + $added_qty;
             $final_weight = round($db_weight + $weight, 3);
 
-            $sql = "UPDATE products SET quantity = '$final_qty', weight = '$final_weight', updated_at = NOW() WHERE id = $id";
+            $sql = "UPDATE products SET quantity = '$final_qty', weight = '$final_weight', status = 'In Stock', updated_at = NOW() WHERE id = $id";
             if(mysqli_query($conn, $sql)) {
                 log_product_activity($conn, [
                     'activity_type' => 'restocked',
@@ -131,14 +215,17 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
                     'details' => "Stock Updated: +{$quantity} {$input_unit}" . ($weight > 0 ? " (+{$weight}g)" : "") . " (Total Now: {$final_qty} {$db_unit}, {$final_weight}g)",
                     'performed_by' => $_SESSION['user_name'] ?? 'Admin'
                 ]);
-                $success = " Stock updated successfully!";
+                $_SESSION['flash_success'] = " Stock updated successfully! Total now: {$final_qty} {$db_unit}, {$final_weight}g";
             } else {
-                $error = "Error updating stock: " . mysqli_error($conn);
+                $_SESSION['flash_error'] = "Error updating stock: " . mysqli_error($conn);
             }
         } else {
-            $error = "Product not found.";
+            $_SESSION['flash_error'] = "Product not found.";
         }
+        header("Location: " . $redirect_url);
+        exit();
     }
+    // --- Action: Update Product Details / Restock Mode ---
     elseif(isset($_POST['update_product'])) {
         $id = intval($_POST['product_id']);
         $edit_mode = $_POST['edit_mode'] ?? 'add';
@@ -146,8 +233,8 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         $name = mysqli_real_escape_string($conn, trim($_POST['name'] ?? ''));
         $item_name_raw2 = $_POST['item_name'] ?? '';
         if($item_name_raw2 === 'Other' && !empty($_POST['item_name_custom'])) { $item_name_raw2 = $_POST['item_name_custom']; }
-        $item_name = mysqli_real_escape_string($conn, $item_name_raw2);
-        $category = mysqli_real_escape_string($conn, $_POST['category']);
+        $item_name = mysqli_real_escape_string($conn, trim($item_name_raw2));
+        $category = mysqli_real_escape_string($conn, trim($_POST['category']));
         $huid_code = mysqli_real_escape_string($conn, trim($_POST['huid_code'] ?? ''));
         $price = floatval($_POST['price'] ?? 0);
         $unit = mysqli_real_escape_string($conn, $_POST['unit'] ?? 'pcs');
@@ -155,8 +242,28 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         $metal_kt     = ($category === 'Diamond') ? mysqli_real_escape_string($conn, trim($_POST['metal_kt'] ?? '')) : '';
         $metal_weight = ($category === 'Diamond') ? mysqli_real_escape_string($conn, trim($_POST['metal_weight'] ?? '')) : '';
 
+        // Validate unique serial_no if changed
+        if (!empty($serial_no)) {
+            $chk_s = mysqli_query($conn, "SELECT id FROM products WHERE serial_no = '$serial_no' AND id != $id LIMIT 1");
+            if ($chk_s && mysqli_num_rows($chk_s) > 0) {
+                $_SESSION['flash_error'] = " Serial Number '$serial_no' is already used by another product (ID: #" . mysqli_fetch_assoc($chk_s)['id'] . ").";
+                header("Location: " . $redirect_url);
+                exit();
+            }
+        }
+
+        // Validate unique huid_code if changed
+        if (!empty($huid_code)) {
+            $chk_h = mysqli_query($conn, "SELECT id FROM products WHERE huid_code = '$huid_code' AND id != $id LIMIT 1");
+            if ($chk_h && mysqli_num_rows($chk_h) > 0) {
+                $_SESSION['flash_error'] = " HUID Code '$huid_code' is already used by another product (ID: #" . mysqli_fetch_assoc($chk_h)['id'] . ").";
+                header("Location: " . $redirect_url);
+                exit();
+            }
+        }
+
         // Fetch current product state
-        $p_res = mysqli_query($conn, "SELECT weight, quantity, unit, name, item_name, category FROM products WHERE id = $id LIMIT 1");
+        $p_res = mysqli_query($conn, "SELECT weight, quantity, unit, name, item_name, category, metal_weight FROM products WHERE id = $id LIMIT 1");
         $curr_prod = $p_res ? mysqli_fetch_assoc($p_res) : null;
         $prev_w = floatval($curr_prod['weight'] ?? 0);
         $prev_q = floatval($curr_prod['quantity'] ?? 0);
@@ -171,7 +278,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $metal_weight = floatval($curr_prod['metal_weight'] ?? 0) + $add_w;
             }
 
-            $query = "UPDATE products SET serial_no='$serial_no', name='$name', item_name='$item_name', category='$category', weight='$weight', price='$price', quantity='$quantity', unit='$unit', huid_code='$huid_code', diamond_cent='$diamond_cent', metal_kt='$metal_kt', metal_weight='$metal_weight', updated_at = NOW() WHERE id=$id";
+            $query = "UPDATE products SET serial_no='$serial_no', name='$name', item_name='$item_name', category='$category', weight='$weight', price='$price', quantity='$quantity', unit='$unit', huid_code='$huid_code', diamond_cent='$diamond_cent', metal_kt='$metal_kt', metal_weight='$metal_weight', status='In Stock', updated_at = NOW() WHERE id=$id";
             if(mysqli_query($conn, $query)) {
                 log_product_activity($conn, [
                     'activity_type' => 'restocked',
@@ -187,9 +294,9 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
                     'details' => "Restocked stock (+{$add_w}g, +{$add_q} {$unit}) — Previous: {$prev_w}g / {$prev_q}, New Total: {$weight}g / {$quantity} {$unit}",
                     'performed_by' => $_SESSION['user_name'] ?? 'Admin'
                 ]);
-                $success = " Stock added successfully! Added: +{$add_w}g, +{$add_q} {$unit}. New Total: {$weight}g / {$quantity} {$unit}";
+                $_SESSION['flash_success'] = " Stock added successfully! Added: +{$add_w}g, +{$add_q} {$unit}. New Total: {$weight}g / {$quantity} {$unit}";
             } else {
-                $error = "Error updating product: " . mysqli_error($conn);
+                $_SESSION['flash_error'] = "Error updating product: " . mysqli_error($conn);
             }
         } else {
             // Direct correction mode
@@ -200,7 +307,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $weight = $metal_weight;
             }
 
-            $query = "UPDATE products SET serial_no='$serial_no', name='$name', item_name='$item_name', category='$category', weight='$weight', price='$price', quantity='$quantity', unit='$unit', huid_code='$huid_code', diamond_cent='$diamond_cent', metal_kt='$metal_kt', metal_weight='$metal_weight', updated_at = NOW() WHERE id=$id";
+            $query = "UPDATE products SET serial_no='$serial_no', name='$name', item_name='$item_name', category='$category', weight='$weight', price='$price', quantity='$quantity', unit='$unit', huid_code='$huid_code', diamond_cent='$diamond_cent', metal_kt='$metal_kt', metal_weight='$metal_weight', status = IF($quantity > 0, 'In Stock', 'Out of Stock'), updated_at = NOW() WHERE id=$id";
             if(mysqli_query($conn, $query)) {
                 log_product_activity($conn, [
                     'activity_type' => 'edited',
@@ -216,12 +323,15 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
                     'details' => "Corrected product details (Weight: {$weight}g, Qty: {$quantity} {$unit}, Price: ₹{$price})",
                     'performed_by' => $_SESSION['user_name'] ?? 'Admin'
                 ]);
-                $success = " Product details corrected successfully! ";
+                $_SESSION['flash_success'] = " Product details corrected successfully! ";
             } else {
-                $error = "Error updating product: " . mysqli_error($conn);
+                $_SESSION['flash_error'] = "Error updating product: " . mysqli_error($conn);
             }
         }
+        header("Location: " . $redirect_url);
+        exit();
     }
+    // --- Action: Delete Product ---
     elseif(isset($_POST['delete_product'])) {
         $id = intval($_POST['product_id']);
         $del_p = mysqli_fetch_assoc(mysqli_query($conn, "SELECT * FROM products WHERE id = $id"));
@@ -244,11 +354,90 @@ if($_SERVER['REQUEST_METHOD'] == 'POST') {
         // Safe deletion: DO NOT delete invoice_items to preserve customer invoice history
         mysqli_query($conn, "SET FOREIGN_KEY_CHECKS = 0");
         if(mysqli_query($conn, "DELETE FROM products WHERE id = $id")) {
-            $success = " Product deleted successfully from inventory!";
+            $_SESSION['flash_success'] = " Product deleted successfully from inventory!";
         } else {
-            $error = "Error deleting product: " . mysqli_error($conn);
+            $_SESSION['flash_error'] = "Error deleting product: " . mysqli_error($conn);
         }
         mysqli_query($conn, "SET FOREIGN_KEY_CHECKS = 1");
+        header("Location: " . $redirect_url);
+        exit();
+    }
+    // --- Action: Auto-Merge Duplicate Basket Stock ---
+    elseif(isset($_POST['merge_duplicate_baskets'])) {
+        $dup_q = mysqli_query($conn, "SELECT category, item_name, COUNT(*) as c FROM products WHERE (serial_no IS NULL OR TRIM(serial_no) = '') AND (huid_code IS NULL OR TRIM(huid_code) = '') GROUP BY category, item_name HAVING c > 1");
+        $merged_groups = 0;
+        $total_rows_cleaned = 0;
+
+        if ($dup_q) {
+            while ($dg = mysqli_fetch_assoc($dup_q)) {
+                $m_cat = mysqli_real_escape_string($conn, $dg['category']);
+                $m_item = mysqli_real_escape_string($conn, $dg['item_name']);
+
+                // Fetch all duplicate rows for this category + item_name
+                $all_rows_q = mysqli_query($conn, "SELECT id, quantity, weight, unit, price FROM products WHERE (serial_no IS NULL OR TRIM(serial_no) = '') AND (huid_code IS NULL OR TRIM(huid_code) = '') AND category = '$m_cat' AND item_name = '$m_item' ORDER BY id ASC");
+                $primary_row = null;
+                $accum_qty = 0;
+                $accum_weight = 0;
+                $dup_ids = [];
+
+                while ($row = mysqli_fetch_assoc($all_rows_q)) {
+                    if (!$primary_row) {
+                        $primary_row = $row;
+                        $accum_qty += floatval($row['quantity']);
+                        $accum_weight += floatval($row['weight']);
+                    } else {
+                        $dup_ids[] = intval($row['id']);
+                        $accum_qty += floatval($row['quantity']);
+                        $accum_weight += floatval($row['weight']);
+                    }
+                }
+
+                if ($primary_row && !empty($dup_ids)) {
+                    $pid = intval($primary_row['id']);
+                    $accum_weight = round($accum_weight, 3);
+
+                    // Re-link historical invoice_items, stock_transfers, and logs to primary_id
+                    foreach ($dup_ids as $did) {
+                        @mysqli_query($conn, "UPDATE invoice_items SET product_id = $pid WHERE product_id = $did");
+                        @mysqli_query($conn, "UPDATE stock_transfers SET product_id = $pid WHERE product_id = $did");
+                        @mysqli_query($conn, "UPDATE product_activity_logs SET product_id = $pid WHERE product_id = $did");
+                    }
+
+                    // Delete the redundant duplicate product rows
+                    $id_list = implode(',', $dup_ids);
+                    @mysqli_query($conn, "DELETE FROM products WHERE id IN ($id_list)");
+
+                    // Update primary row with total consolidated stock
+                    mysqli_query($conn, "UPDATE products SET quantity = '$accum_qty', weight = '$accum_weight', status = 'In Stock', updated_at = NOW() WHERE id = $pid");
+
+                    log_product_activity($conn, [
+                        'activity_type' => 'restocked',
+                        'product_id' => $pid,
+                        'product_name' => $m_item,
+                        'category' => $m_cat,
+                        'serial_no' => '',
+                        'huid_code' => '',
+                        'quantity' => $accum_qty,
+                        'unit' => $primary_row['unit'] ?? 'pcs',
+                        'weight' => $accum_weight,
+                        'rate' => floatval($primary_row['price'] ?? 0),
+                        'details' => "Consolidated & Merged " . count($dup_ids) . " duplicate basket rows into Primary Record #$pid. Total Stock: {$accum_qty} {$primary_row['unit']}, {$accum_weight}g",
+                        'performed_by' => $_SESSION['user_name'] ?? 'Admin'
+                    ]);
+
+                    $merged_groups++;
+                    $total_rows_cleaned += count($dup_ids);
+                }
+            }
+        }
+
+        if ($merged_groups > 0) {
+            $_SESSION['flash_success'] = " Successfully consolidated {$merged_groups} product groups! Merged and cleaned {$total_rows_cleaned} duplicate stock rows.";
+        } else {
+            $_SESSION['flash_success'] = " No duplicate basket stock records found. Inventory is clean!";
+        }
+        header("Location: " . $redirect_url);
+        exit();
     }
 }
 
@@ -259,6 +448,8 @@ if(!empty($search)) {
     $products = mysqli_query($conn, "SELECT * FROM products ORDER BY id");
 }
 $low_stock = mysqli_query($conn, "SELECT * FROM products WHERE quantity < 5 ORDER BY quantity ASC");
+$dup_chk_res = mysqli_query($conn, "SELECT category, item_name, COUNT(*) as c FROM products WHERE (serial_no IS NULL OR TRIM(serial_no) = '') AND (huid_code IS NULL OR TRIM(huid_code) = '') AND (item_name IS NOT NULL AND TRIM(item_name) != '') GROUP BY category, item_name HAVING c > 1");
+$duplicate_basket_count = $dup_chk_res ? mysqli_num_rows($dup_chk_res) : 0;
 $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-preview.png','moti-removebg-preview.png','radhey shyam logo.png'];
 ?>
 <!DOCTYPE html>
@@ -1137,6 +1328,30 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             </div>
         </div>
         <?php endif; ?>
+ 
+        <!-- Duplicate Basket Alert & Auto-Consolidate Banner -->
+        <?php if(!empty($duplicate_basket_count) && $duplicate_basket_count > 0): ?>
+        <div class="mb-5 p-4 rounded-xl bg-amber-50 border border-amber-300 shadow-sm flex flex-wrap items-center justify-between gap-3" style="background:#fffbeb;border:1px solid #fcd34d;">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-800 text-lg flex-shrink-0" style="background:#fef3c7;color:#92400e;">
+                    <i class="fas fa-layer-group"></i>
+                </div>
+                <div>
+                    <p class="font-bold text-sm text-amber-950" style="color:#78350f;">
+                        <i class="fas fa-info-circle mr-1"></i> Duplicate Basket Stock Detected (<?php echo $duplicate_basket_count; ?> group<?php echo $duplicate_basket_count > 1 ? 's' : ''; ?>)
+                    </p>
+                    <p class="text-xs text-amber-800" style="color:#92400e;">
+                        Some common bulk items (e.g. Silver Ornaments) exist in multiple split rows. You can safely merge them into single consolidated stock items with one click.
+                    </p>
+                </div>
+            </div>
+            <form method="POST" onsubmit="return confirm('Safely merge and consolidate all split basket stocks into single records? Quantities, weights, and sales history will be preserved.');">
+                <button type="submit" name="merge_duplicate_baskets" class="px-4 py-2 rounded-lg text-xs font-bold text-white shadow transition flex items-center gap-2 cursor-pointer" style="background:linear-gradient(135deg,#b45309,#78350f);">
+                    <i class="fas fa-compress-arrows-alt"></i> Merge Duplicate Basket Stocks
+                </button>
+            </form>
+        </div>
+        <?php endif; ?>
 
         <!-- Main Grid -->
         <div class="stock-grid grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
@@ -1147,7 +1362,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                     <h2 class="text-lg font-bold mb-4 gold-font" style="color:#800020;">
                         <i class="fas fa-plus-circle mr-2" style="color:#d68b16;"></i> Add New Product
                     </h2>
-                    <form method="POST">
+                    <form method="POST" onsubmit="return preventDoubleSubmit(this);">
 
                         <div class="mb-3">
                             <label> Product Name</label>
@@ -1562,7 +1777,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             <button type="button" onclick="closeEditModal()" class="text-stone-400 hover:text-stone-700 font-bold text-lg">&times;</button>
         </div>
 
-        <form method="POST">
+        <form method="POST" onsubmit="return preventDoubleSubmit(this);">
             <input type="hidden" name="product_id" id="editProductId">
             <input type="hidden" name="edit_mode" id="editModalModeInput" value="add">
             <input type="hidden" id="editPrevWeightHidden" value="0">
@@ -1724,7 +1939,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 <div id="updateModal" class="modal-overlay">
     <div class="modal-content">
         <h3 class="text-xl font-bold gold-font"><i class="fas fa-plus-circle mr-2" style="color:#d68b16;"></i> Add Stock</h3>
-        <form method="POST">
+        <form method="POST" onsubmit="return preventDoubleSubmit(this);">
             <input type="hidden" name="product_id" id="updateProductId">
             <p class="mb-3 text-sm" style="color:#7a4e0a;">Product: <strong id="updateProductName" style="color:#800020;"></strong></p>
             <div class="mb-3 flex gap-2">
@@ -1759,7 +1974,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         <h3 class="text-xl font-bold gold-font"> Delete Product</h3>
         <p class="my-3 text-sm" style="color:#4b5563;">Are you sure you want to delete <strong id="deleteProductName" style="color:#800020;"></strong>?</p>
         <p class="mb-4 text-xs" style="color:#d97706;"> Related invoice records may also be removed.</p>
-        <form method="POST">
+        <form method="POST" onsubmit="return preventDoubleSubmit(this);">
             <input type="hidden" name="product_id" id="deleteProductId">
             <div class="flex gap-3">
                 <button type="submit" name="delete_product" class="flex-1 py-2 rounded-lg text-sm font-semibold text-white" style="background:linear-gradient(135deg,#ef4444,#dc2626);"> Yes, Delete</button>
@@ -1771,6 +1986,29 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 
 <!-- ========== SCRIPTS ========== -->
 <script>
+    /* ---------- Prevent Double Form Submission ---------- */
+    function preventDoubleSubmit(form) {
+        const btn = form.querySelector('button[type="submit"]');
+        if (btn) {
+            if (btn.dataset.submitted === 'true') {
+                return false;
+            }
+            btn.dataset.submitted = 'true';
+            if (btn.name) {
+                const hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = btn.name;
+                hidden.value = btn.value || '1';
+                form.appendChild(hidden);
+            }
+            btn.disabled = true;
+            btn.style.opacity = '0.7';
+            btn.style.cursor = 'not-allowed';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Processing...';
+        }
+        return true;
+    }
+
     /* ---------- Sidebar ---------- */
     function toggleSidebar() {
         const sidebar = document.getElementById('mainSidebar');

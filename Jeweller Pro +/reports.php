@@ -104,10 +104,37 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_delete_invoice'
                                         $product_exists = true;
                                     }
                                 }
+
+                                if (!$product_exists) {
+                                    // Check by serial_no
+                                    if (!empty($serial_no)) {
+                                        $chk_s = mysqli_query($conn, "SELECT id FROM products WHERE serial_no = '$serial_no' LIMIT 1");
+                                        if ($chk_s && $r = mysqli_fetch_assoc($chk_s)) {
+                                            $product_id = intval($r['id']);
+                                            $product_exists = true;
+                                        }
+                                    }
+                                    // Check by huid_code
+                                    if (!$product_exists && !empty($huid_code)) {
+                                        $chk_h = mysqli_query($conn, "SELECT id FROM products WHERE huid_code = '$huid_code' LIMIT 1");
+                                        if ($chk_h && $r = mysqli_fetch_assoc($chk_h)) {
+                                            $product_id = intval($r['id']);
+                                            $product_exists = true;
+                                        }
+                                    }
+                                    // Check by category and name for basket items
+                                    if (!$product_exists && !empty($category) && !empty($product_name)) {
+                                        $chk_b = mysqli_query($conn, "SELECT id FROM products WHERE (serial_no IS NULL OR TRIM(serial_no) = '') AND (huid_code IS NULL OR TRIM(huid_code) = '') AND category = '$category' AND (item_name = '$product_name' OR name = '$product_name') LIMIT 1");
+                                        if ($chk_b && $r = mysqli_fetch_assoc($chk_b)) {
+                                            $product_id = intval($r['id']);
+                                            $product_exists = true;
+                                        }
+                                    }
+                                }
                                 
                                 if ($product_exists) {
-                                    $wt_sql = $restore_weight > 0 ? ", weight = weight + $restore_weight" : "";
-                                    mysqli_query($conn, "UPDATE products SET quantity = quantity + $restore_qty, status = 'In Stock', hsn_code = '$hsn_code' $wt_sql WHERE id = $product_id");
+                                    $wt_sql = $restore_weight > 0 ? ", weight = CAST(weight AS DECIMAL(10,3)) + $restore_weight" : "";
+                                    mysqli_query($conn, "UPDATE products SET quantity = quantity + $restore_qty, status = 'In Stock', hsn_code = '$hsn_code' $wt_sql, updated_at = NOW() WHERE id = $product_id");
                                 } else {
                                     // Re-insert product back to stock
                                     if (empty($category)) {
@@ -127,7 +154,8 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_delete_invoice'
                                     }
                                     
                                     // Insert product
-                                    mysqli_query($conn, "INSERT INTO products (serial_no, name, item_name, category, weight, price, quantity, huid_code, hsn_code, status, created_at) VALUES ('$serial_no', '$product_name', '$product_name', '$category', '$restore_weight', $price, $restore_qty, '$huid_code', '$hsn_code', 'In Stock', NOW())");
+                                    mysqli_query($conn, "INSERT INTO products (serial_no, name, item_name, category, weight, price, quantity, huid_code, hsn_code, status, created_at, updated_at) VALUES ('$serial_no', '$product_name', '$product_name', '$category', '$restore_weight', $price, $restore_qty, '$huid_code', '$hsn_code', 'In Stock', NOW(), NOW())");
+                                    $product_id = mysqli_insert_id($conn);
                                 }
 
                                 if (function_exists('log_product_activity')) {
@@ -171,7 +199,26 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_delete_invoice'
                                         $hsn = mysqli_real_escape_string($conn, $item_detail['hsn_code'] ?? '0');
                                         $price = floatval($item_detail['price']);
                                         $cat = (stripos($name, '18k') !== false) ? 'Gold 18K' : ((stripos($name, '12k') !== false) ? 'Gold 12K' : ((stripos($name, '9k') !== false) ? 'Gold 9K' : ((stripos($name, 'gold') !== false) ? 'Gold 22K' : ((stripos($name, 'silver') !== false) ? 'Silver' : 'Others'))));
-                                        mysqli_query($conn, "INSERT INTO products (serial_no, name, item_name, category, weight, price, quantity, huid_code, hsn_code, created_at) VALUES ('$serial', '$name', '$name', '$cat', '', $price, $p_qty, '$huid', '$hsn', NOW())");
+
+                                        $found_id = 0;
+                                        if (!empty($serial)) {
+                                            $c = mysqli_query($conn, "SELECT id FROM products WHERE serial_no = '$serial' LIMIT 1");
+                                            if ($c && $cr = mysqli_fetch_assoc($c)) $found_id = intval($cr['id']);
+                                        }
+                                        if (!$found_id && !empty($huid)) {
+                                            $c = mysqli_query($conn, "SELECT id FROM products WHERE huid_code = '$huid' LIMIT 1");
+                                            if ($c && $cr = mysqli_fetch_assoc($c)) $found_id = intval($cr['id']);
+                                        }
+                                        if (!$found_id && !empty($cat) && !empty($name)) {
+                                            $c = mysqli_query($conn, "SELECT id FROM products WHERE (serial_no IS NULL OR TRIM(serial_no) = '') AND (huid_code IS NULL OR TRIM(huid_code) = '') AND category = '$cat' AND (item_name = '$name' OR name = '$name') LIMIT 1");
+                                            if ($c && $cr = mysqli_fetch_assoc($c)) $found_id = intval($cr['id']);
+                                        }
+
+                                        if ($found_id > 0) {
+                                            mysqli_query($conn, "UPDATE products SET quantity = quantity + $p_qty, status = 'In Stock', updated_at = NOW() WHERE id = $found_id");
+                                        } else {
+                                            mysqli_query($conn, "INSERT INTO products (serial_no, name, item_name, category, weight, price, quantity, huid_code, hsn_code, status, created_at, updated_at) VALUES ('$serial', '$name', '$name', '$cat', '', $price, $p_qty, '$huid', '$hsn', 'In Stock', NOW(), NOW())");
+                                        }
                                     }
                                 }
                             }
