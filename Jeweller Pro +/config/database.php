@@ -234,6 +234,7 @@ mysqli_query($conn, $create_invoices);
 $columns_to_ensure = [
     'customer_id'        => "INT NULL",
     'customer_address'   => "TEXT NULL",
+    'customer_email'     => "VARCHAR(150) NULL",
     'customer_gstin'     => "VARCHAR(50) NULL",
     'discount'           => "DECIMAL(10,2) DEFAULT 0",
     'advance_adjusted'   => "DECIMAL(10,2) DEFAULT 0",

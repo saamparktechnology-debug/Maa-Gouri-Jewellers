@@ -35,7 +35,9 @@ if(!$initial_metal_rates) {
 
 // AJAX: Search customer profiles & bills by mobile number or customer name
 if(isset($_GET['action']) && ($_GET['action'] === 'search_mobile' || $_GET['action'] === 'search_customer')) {
-    header('Content-Type: application/json');
+    while (ob_get_level()) { ob_end_clean(); }
+    header('Content-Type: application/json; charset=utf-8');
+    
     $query_raw = trim($_GET['query'] ?? $_GET['mobile'] ?? '');
     $query = mysqli_real_escape_string($conn, $query_raw);
     if(empty($query)) {
@@ -43,145 +45,292 @@ if(isset($_GET['action']) && ($_GET['action'] === 'search_mobile' || $_GET['acti
         exit();
     }
 
-    $chk_gst = mysqli_query($conn, "SHOW COLUMNS FROM customers LIKE 'gst_number'");
-    $has_gst_col = ($chk_gst && mysqli_num_rows($chk_gst) > 0);
-    $gst_select = $has_gst_col ? "COALESCE(gst_number, '') as gstin" : "'' as gstin";
-
     $cust_map = [];
 
     // 1. Check customers table
-    $c_q = "SELECT id, name, mobile, address, email, $gst_select, created_at 
-            FROM customers 
-            WHERE mobile LIKE '%$query%' OR name LIKE '%$query%'
-            ORDER BY name ASC 
-            LIMIT 30";
-    $c_res = mysqli_query($conn, $c_q);
-    if($c_res) {
-        while($c = mysqli_fetch_assoc($c_res)) {
-            $key = !empty($c['mobile']) ? trim($c['mobile']) : ('c_' . $c['id']);
-            $cust_map[$key] = [
-                'id' => intval($c['id']),
-                'name' => trim($c['name'] ?? ''),
-                'mobile' => trim($c['mobile'] ?? ''),
-                'address' => trim($c['address'] ?? ''),
-                'email' => trim($c['email'] ?? ''),
-                'gstin' => trim($c['gstin'] ?? ''),
-                'bills_count' => 0,
-                'total_spent' => 0.0,
-                'due_balance' => 0.0,
-                'advance_amount' => 0.0,
-                'advance_receipt' => '',
-                'advance_id' => 0,
-                'source' => 'customers'
-            ];
-        }
-    }
-
-    // 2. Check past invoices to enrich existing or discover previous customers
-    $inv_c_q = "SELECT customer_name, customer_mobile, customer_address, 
-                       customer_email, customer_gstin,
-                       COUNT(*) as bills_count,
-                       COALESCE(SUM(total_amount), 0) as total_spent,
-                       COALESCE(SUM(balance_amount), 0) as due_balance
-                FROM invoices 
-                WHERE customer_mobile LIKE '%$query%' OR customer_name LIKE '%$query%'
-                GROUP BY customer_mobile, customer_name
-                ORDER BY MAX(created_at) DESC
-                LIMIT 30";
-    $inv_c_res = mysqli_query($conn, $inv_c_q);
-    if($inv_c_res) {
-        while($ic = mysqli_fetch_assoc($inv_c_res)) {
-            $mob = trim($ic['customer_mobile'] ?? '');
-            $nm = trim($ic['customer_name'] ?? '');
-            $key = !empty($mob) ? $mob : ('inv_' . md5($nm));
-            
-            if(isset($cust_map[$key])) {
-                $cust_map[$key]['bills_count'] = intval($ic['bills_count']);
-                $cust_map[$key]['total_spent'] = floatval($ic['total_spent']);
-                $cust_map[$key]['due_balance'] = floatval($ic['due_balance']);
-                if(empty($cust_map[$key]['address']) && !empty($ic['customer_address'])) {
-                    $cust_map[$key]['address'] = trim($ic['customer_address']);
-                }
-                if(empty($cust_map[$key]['email']) && !empty($ic['customer_email'])) {
-                    $cust_map[$key]['email'] = trim($ic['customer_email']);
-                }
-                if(empty($cust_map[$key]['gstin']) && !empty($ic['customer_gstin'])) {
-                    $cust_map[$key]['gstin'] = trim($ic['customer_gstin']);
-                }
-            } else {
-                $cust_map[$key] = [
-                    'id' => 0,
-                    'name' => $nm ?: 'Cash Customer',
-                    'mobile' => $mob,
-                    'address' => trim($ic['customer_address'] ?? ''),
-                    'email' => trim($ic['customer_email'] ?? ''),
-                    'gstin' => trim($ic['customer_gstin'] ?? ''),
-                    'bills_count' => intval($ic['bills_count']),
-                    'total_spent' => floatval($ic['total_spent']),
-                    'due_balance' => floatval($ic['due_balance']),
-                    'advance_amount' => 0.0,
-                    'advance_receipt' => '',
-                    'advance_id' => 0,
-                    'source' => 'invoices'
-                ];
+    try {
+        $chk_c_cols = mysqli_query($conn, "SHOW COLUMNS FROM customers");
+        $c_cols = [];
+        if($chk_c_cols) {
+            while($c_col_row = mysqli_fetch_assoc($chk_c_cols)) {
+                $c_cols[] = $c_col_row['Field'];
             }
         }
-    }
+        $c_gst = in_array('gst_number', $c_cols) ? "COALESCE(gst_number, '') as gstin" : "'' as gstin";
+        $c_addr = in_array('address', $c_cols) ? "COALESCE(address, '') as address" : "'' as address";
+        $c_email = in_array('email', $c_cols) ? "COALESCE(email, '') as email" : "'' as email";
+        $c_created = in_array('created_at', $c_cols) ? "created_at" : "NOW() as created_at";
 
-    // 3. Check customer advances
-    $adv_q = mysqli_query($conn, "
-        SELECT id, receipt_no, customer_name, customer_mobile, customer_address, available_amount 
-        FROM customer_advances 
-        WHERE available_amount > 0 AND status != 'cancelled' 
-          AND (customer_mobile LIKE '%$query%' OR customer_name LIKE '%$query%')
-        LIMIT 10
-    ");
-    if($adv_q) {
-        while($ar = mysqli_fetch_assoc($adv_q)) {
-            $mob = trim($ar['customer_mobile'] ?? '');
-            $nm = trim($ar['customer_name'] ?? '');
-            $key = !empty($mob) ? $mob : ('adv_' . md5($nm));
-            if(isset($cust_map[$key])) {
-                $cust_map[$key]['advance_id'] = intval($ar['id']);
-                $cust_map[$key]['advance_amount'] = floatval($ar['available_amount']);
-                $cust_map[$key]['advance_receipt'] = $ar['receipt_no'];
-                if(empty($cust_map[$key]['address']) && !empty($ar['customer_address'])) {
-                    $cust_map[$key]['address'] = trim($ar['customer_address']);
-                }
-            } else {
+        $c_q = "SELECT id, name, mobile, $c_addr, $c_email, $c_gst, $c_created 
+                FROM customers 
+                WHERE mobile LIKE '%$query%' OR name LIKE '%$query%'
+                ORDER BY name ASC 
+                LIMIT 30";
+        $c_res = mysqli_query($conn, $c_q);
+        if($c_res) {
+            while($c = mysqli_fetch_assoc($c_res)) {
+                $mob = trim($c['mobile'] ?? '');
+                $key = !empty($mob) ? $mob : ('c_' . $c['id']);
                 $cust_map[$key] = [
-                    'id' => 0,
-                    'name' => $nm ?: 'Advance Customer',
+                    'id' => intval($c['id']),
+                    'name' => trim($c['name'] ?? ''),
                     'mobile' => $mob,
-                    'address' => trim($ar['customer_address'] ?? ''),
-                    'email' => '',
-                    'gstin' => '',
+                    'address' => trim($c['address'] ?? ''),
+                    'email' => trim($c['email'] ?? ''),
+                    'gstin' => trim($c['gstin'] ?? ''),
                     'bills_count' => 0,
                     'total_spent' => 0.0,
                     'due_balance' => 0.0,
-                    'advance_amount' => floatval($ar['available_amount']),
-                    'advance_receipt' => $ar['receipt_no'],
-                    'advance_id' => intval($ar['id']),
-                    'source' => 'advances'
+                    'advance_amount' => 0.0,
+                    'advance_receipt' => '',
+                    'advance_id' => 0,
+                    'source' => 'customers'
                 ];
             }
         }
+    } catch (Throwable $e) {
+        error_log("Search customers error: " . $e->getMessage());
+    }
+
+    // 1.5 Check contacts table
+    try {
+        $chk_cont_table = mysqli_query($conn, "SHOW TABLES LIKE 'contacts'");
+        if($chk_cont_table && mysqli_num_rows($chk_cont_table) > 0) {
+            $cont_res = mysqli_query($conn, "SELECT id, name, mobile, COALESCE(address, '') as address, COALESCE(email, '') as email, COALESCE(gst_number, '') as gstin FROM contacts WHERE mobile LIKE '%$query%' OR name LIKE '%$query%' LIMIT 20");
+            if($cont_res) {
+                while($cont = mysqli_fetch_assoc($cont_res)) {
+                    $mob = trim($cont['mobile'] ?? '');
+                    $key = !empty($mob) ? $mob : ('cont_' . $cont['id']);
+                    if(!isset($cust_map[$key])) {
+                        $cust_map[$key] = [
+                            'id' => intval($cont['id']),
+                            'name' => trim($cont['name'] ?? ''),
+                            'mobile' => $mob,
+                            'address' => trim($cont['address'] ?? ''),
+                            'email' => trim($cont['email'] ?? ''),
+                            'gstin' => trim($cont['gstin'] ?? ''),
+                            'bills_count' => 0,
+                            'total_spent' => 0.0,
+                            'due_balance' => 0.0,
+                            'advance_amount' => 0.0,
+                            'advance_receipt' => '',
+                            'advance_id' => 0,
+                            'source' => 'contacts'
+                        ];
+                    } else {
+                        if(empty($cust_map[$key]['address']) && !empty($cont['address'])) {
+                            $cust_map[$key]['address'] = trim($cont['address']);
+                        }
+                        if(empty($cust_map[$key]['email']) && !empty($cont['email'])) {
+                            $cust_map[$key]['email'] = trim($cont['email']);
+                        }
+                        if(empty($cust_map[$key]['gstin']) && !empty($cont['gstin'])) {
+                            $cust_map[$key]['gstin'] = trim($cont['gstin']);
+                        }
+                    }
+                }
+            }
+        }
+    } catch (Throwable $e) {
+        error_log("Search contacts error: " . $e->getMessage());
+    }
+
+    // 2. Check past invoices to enrich existing or discover previous customers
+    $inv_cols = [];
+    try {
+        $chk_inv = mysqli_query($conn, "SHOW COLUMNS FROM invoices");
+        if($chk_inv) {
+            while($ic = mysqli_fetch_assoc($chk_inv)) {
+                $inv_cols[] = $ic['Field'];
+            }
+        }
+    } catch (Throwable $e) {}
+
+    $has_inv_addr = in_array('customer_address', $inv_cols);
+    $has_inv_gstin = in_array('customer_gstin', $inv_cols);
+    $has_inv_email = in_array('customer_email', $inv_cols);
+
+    try {
+        $addr_expr = $has_inv_addr ? "MAX(i.customer_address)" : "''";
+        $gstin_expr = $has_inv_gstin ? "MAX(i.customer_gstin)" : "''";
+        $email_expr = $has_inv_email ? "COALESCE(MAX(i.customer_email), MAX(c.email), '')" : "COALESCE(MAX(c.email), '')";
+
+        $inv_c_q = "SELECT i.customer_name, i.customer_mobile, 
+                           $addr_expr as customer_address, 
+                           $email_expr as customer_email,
+                           $gstin_expr as customer_gstin,
+                           COUNT(i.id) as bills_count,
+                           COALESCE(SUM(i.total_amount), 0) as total_spent,
+                           COALESCE(SUM(i.balance_amount), 0) as due_balance
+                    FROM invoices i
+                    LEFT JOIN customers c ON c.mobile = i.customer_mobile
+                    WHERE i.customer_mobile LIKE '%$query%' OR i.customer_name LIKE '%$query%'
+                    GROUP BY i.customer_mobile, i.customer_name
+                    ORDER BY MAX(i.created_at) DESC
+                    LIMIT 30";
+        $inv_c_res = mysqli_query($conn, $inv_c_q);
+        if($inv_c_res) {
+            while($ic = mysqli_fetch_assoc($inv_c_res)) {
+                $mob = trim($ic['customer_mobile'] ?? '');
+                $nm = trim($ic['customer_name'] ?? '');
+                $key = !empty($mob) ? $mob : ('inv_' . md5($nm));
+                
+                if(isset($cust_map[$key])) {
+                    $cust_map[$key]['bills_count'] = intval($ic['bills_count']);
+                    $cust_map[$key]['total_spent'] = floatval($ic['total_spent']);
+                    $cust_map[$key]['due_balance'] = floatval($ic['due_balance']);
+                    if(empty($cust_map[$key]['address']) && !empty($ic['customer_address'])) {
+                        $cust_map[$key]['address'] = trim($ic['customer_address']);
+                    }
+                    if(empty($cust_map[$key]['email']) && !empty($ic['customer_email'])) {
+                        $cust_map[$key]['email'] = trim($ic['customer_email']);
+                    }
+                    if(empty($cust_map[$key]['gstin']) && !empty($ic['customer_gstin'])) {
+                        $cust_map[$key]['gstin'] = trim($ic['customer_gstin']);
+                    }
+                } else {
+                    $cust_map[$key] = [
+                        'id' => 0,
+                        'name' => $nm ?: 'Cash Customer',
+                        'mobile' => $mob,
+                        'address' => trim($ic['customer_address'] ?? ''),
+                        'email' => trim($ic['customer_email'] ?? ''),
+                        'gstin' => trim($ic['customer_gstin'] ?? ''),
+                        'bills_count' => intval($ic['bills_count']),
+                        'total_spent' => floatval($ic['total_spent']),
+                        'due_balance' => floatval($ic['due_balance']),
+                        'advance_amount' => 0.0,
+                        'advance_receipt' => '',
+                        'advance_id' => 0,
+                        'source' => 'invoices'
+                    ];
+                }
+            }
+        }
+    } catch (Throwable $e) {
+        error_log("Search invoice customers error: " . $e->getMessage());
+    }
+
+    // 3. Check customer advances
+    try {
+        $chk_adv_table = mysqli_query($conn, "SHOW TABLES LIKE 'customer_advances'");
+        if($chk_adv_table && mysqli_num_rows($chk_adv_table) > 0) {
+            $adv_q = mysqli_query($conn, "
+                SELECT id, receipt_no, customer_name, customer_mobile, customer_address, available_amount 
+                FROM customer_advances 
+                WHERE available_amount > 0 AND status != 'cancelled' 
+                  AND (customer_mobile LIKE '%$query%' OR customer_name LIKE '%$query%')
+                LIMIT 10
+            ");
+            if($adv_q) {
+                while($ar = mysqli_fetch_assoc($adv_q)) {
+                    $mob = trim($ar['customer_mobile'] ?? '');
+                    $nm = trim($ar['customer_name'] ?? '');
+                    $key = !empty($mob) ? $mob : ('adv_' . md5($nm));
+                    if(isset($cust_map[$key])) {
+                        $cust_map[$key]['advance_id'] = intval($ar['id']);
+                        $cust_map[$key]['advance_amount'] = floatval($ar['available_amount']);
+                        $cust_map[$key]['advance_receipt'] = $ar['receipt_no'];
+                        if(empty($cust_map[$key]['address']) && !empty($ar['customer_address'])) {
+                            $cust_map[$key]['address'] = trim($ar['customer_address']);
+                        }
+                    } else {
+                        $cust_map[$key] = [
+                            'id' => 0,
+                            'name' => $nm ?: 'Advance Customer',
+                            'mobile' => $mob,
+                            'address' => trim($ar['customer_address'] ?? ''),
+                            'email' => '',
+                            'gstin' => '',
+                            'bills_count' => 0,
+                            'total_spent' => 0.0,
+                            'due_balance' => 0.0,
+                            'advance_amount' => floatval($ar['available_amount']),
+                            'advance_receipt' => $ar['receipt_no'],
+                            'advance_id' => intval($ar['id']),
+                            'source' => 'advances'
+                        ];
+                    }
+                }
+            }
+        }
+    } catch (Throwable $e) {
+        error_log("Search customer_advances error: " . $e->getMessage());
+    }
+
+    // 3.5 Check advance_customers if any
+    try {
+        $chk_ac_table = mysqli_query($conn, "SHOW TABLES LIKE 'advance_customers'");
+        if($chk_ac_table && mysqli_num_rows($chk_ac_table) > 0) {
+            $ac_q = mysqli_query($conn, "
+                SELECT id, customer_name, customer_mobile, advance_amount 
+                FROM advance_customers 
+                WHERE (advance_amount > 0) AND (status = 'active' OR status IS NULL)
+                  AND (customer_mobile LIKE '%$query%' OR customer_name LIKE '%$query%')
+                LIMIT 10
+            ");
+            if($ac_q) {
+                while($ar = mysqli_fetch_assoc($ac_q)) {
+                    $mob = trim($ar['customer_mobile'] ?? '');
+                    $nm = trim($ar['customer_name'] ?? '');
+                    $key = !empty($mob) ? $mob : ('adv_cust_' . md5($nm));
+                    $amt = floatval($ar['advance_amount'] ?? 0);
+                    if(isset($cust_map[$key])) {
+                        if($cust_map[$key]['advance_amount'] <= 0 && $amt > 0) {
+                            $cust_map[$key]['advance_amount'] = $amt;
+                            $cust_map[$key]['advance_id'] = intval($ar['id']);
+                            $cust_map[$key]['advance_receipt'] = 'ADV-' . $ar['id'];
+                        }
+                    } else {
+                        $cust_map[$key] = [
+                            'id' => 0,
+                            'name' => $nm ?: 'Advance Customer',
+                            'mobile' => $mob,
+                            'address' => '',
+                            'email' => '',
+                            'gstin' => '',
+                            'bills_count' => 0,
+                            'total_spent' => 0.0,
+                            'due_balance' => 0.0,
+                            'advance_amount' => $amt,
+                            'advance_receipt' => 'ADV-' . $ar['id'],
+                            'advance_id' => intval($ar['id']),
+                            'source' => 'advance_customers'
+                        ];
+                    }
+                }
+            }
+        }
+    } catch (Throwable $e) {
+        error_log("Search advance_customers error: " . $e->getMessage());
     }
 
     // 4. Bills list
-    $q_bills = "SELECT i.invoice_no, i.customer_name, i.customer_mobile, i.customer_address,
-                       i.customer_email, i.customer_gstin, i.total_amount, i.paid_amount,
-                       i.balance_amount, i.payment_status, i.gst_type, i.created_at
-                FROM invoices i
-                WHERE i.customer_mobile LIKE '%$query%' OR i.customer_name LIKE '%$query%'
-                ORDER BY i.created_at DESC
-                LIMIT 50";
-    $bills_res = mysqli_query($conn, $q_bills);
     $bills = [];
-    if($bills_res) {
-        while($row = mysqli_fetch_assoc($bills_res)) {
-            $bills[] = $row;
+    try {
+        $b_addr = $has_inv_addr ? "COALESCE(i.customer_address, '') as customer_address" : "'' as customer_address";
+        $b_gstin = $has_inv_gstin ? "COALESCE(i.customer_gstin, '') as customer_gstin" : "'' as customer_gstin";
+        $b_email = $has_inv_email ? "COALESCE(i.customer_email, c.email, '') as customer_email" : "COALESCE(c.email, '') as customer_email";
+
+        $q_bills = "SELECT i.invoice_no, i.customer_name, i.customer_mobile, 
+                           $b_addr,
+                           $b_email,
+                           $b_gstin, 
+                           i.total_amount, i.paid_amount,
+                           i.balance_amount, i.payment_status, i.gst_type, i.created_at
+                    FROM invoices i
+                    LEFT JOIN customers c ON c.mobile = i.customer_mobile
+                    WHERE i.customer_mobile LIKE '%$query%' OR i.customer_name LIKE '%$query%'
+                    ORDER BY i.created_at DESC
+                    LIMIT 50";
+        $bills_res = mysqli_query($conn, $q_bills);
+        if($bills_res) {
+            while($row = mysqli_fetch_assoc($bills_res)) {
+                $bills[] = $row;
+            }
         }
+    } catch (Throwable $e) {
+        error_log("Search bills error: " . $e->getMessage());
     }
 
     $customer_list = array_values($cust_map);
@@ -1876,10 +2025,11 @@ function submitPayment() {
                 <input type="text" id="searchMobile" placeholder="&#128241; Enter Customer Mobile Number or Full Name (e.g. 98300... or Rahul)..."
                     class="jewel-input w-full rounded-lg px-4 py-2.5 text-sm font-medium"
                     autocomplete="off"
+                    onfocus="if(this.value.trim().length>=2) handleCustomerLiveSearch(this.value)"
                     oninput="handleCustomerLiveSearch(this.value)">
                 
                 <!-- Live Suggestions Dropdown -->
-                <div id="searchLiveDropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-amber-300 rounded-xl shadow-2xl z-50 overflow-hidden max-h-72 overflow-y-auto divide-y divide-amber-100">
+                <div id="searchLiveDropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-amber-300 rounded-xl shadow-2xl overflow-hidden max-h-72 overflow-y-auto divide-y divide-amber-100" style="z-index:9999;">
                 </div>
             </div>
 
@@ -5654,9 +5804,9 @@ function renderLiveDropdown(customers, bills, query) {
         html += '<i class="fas fa-file-invoice mr-1"></i> Recent Matching Invoices';
         html += '</div>';
 
-        bills.slice(0, 3).forEach((b) => {
+        bills.slice(0, 4).forEach((b, bIdx) => {
             const date = b.created_at ? new Date(b.created_at).toLocaleDateString('en-IN', {day:'2-digit', month:'short'}) : '';
-            html += `<div class="p-2 hover:bg-stone-50 cursor-pointer transition flex items-center justify-between text-xs border-b border-stone-100" onclick="useBillCustomer('${escapeHtml(b.customer_name)}', '${escapeHtml(b.customer_mobile)}', '${escapeHtml(b.customer_address||'')}', '${escapeHtml(b.customer_email||'')}', '${escapeHtml(b.customer_gstin||'')}')">
+            html += `<div class="p-2 hover:bg-stone-50 cursor-pointer transition flex items-center justify-between text-xs border-b border-stone-100" onclick="selectAndFillBillByIndex(${bIdx})">
                 <div>
                     <span class="font-semibold text-amber-900 font-mono">${escapeHtml(b.invoice_no)}</span>
                     <span class="text-stone-500 text-[11px] ml-1">(${escapeHtml(b.customer_name)})</span>
@@ -5823,7 +5973,7 @@ function searchBillsByMobile() {
                             <td class="p-2.5 text-center">${statusBadge}</td>
                             <td class="p-2.5 text-stone-600">${date}</td>
                             <td class="p-2.5 text-center whitespace-nowrap">
-                                <button type="button" onclick="useBillCustomer('${escapeHtml(b.customer_name)}', '${escapeHtml(b.customer_mobile)}', '${escapeHtml(b.customer_address||'')}', '${escapeHtml(b.customer_email||'')}', '${escapeHtml(b.customer_gstin||'')}')" 
+                                <button type="button" onclick="selectAndFillBillByIndex(${i})" 
                                     class="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-[11px] font-bold mr-1 cursor-pointer" title="Auto-fill this customer">
                                     <i class="fas fa-user-plus mr-1"></i> Use Customer
                                 </button>
@@ -5841,8 +5991,8 @@ function searchBillsByMobile() {
             contentDiv.innerHTML = html;
         })
         .catch(err => {
-            console.error(err);
-            contentDiv.innerHTML = '<p class="text-rose-600 font-bold p-3 bg-rose-50 rounded-lg">❌ Network error. Please try again.</p>';
+            console.error('Search error:', err);
+            contentDiv.innerHTML = '<div class="p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-xs font-semibold">❌ Unable to fetch results: ' + escapeHtml(err.message || 'Network error. Please try again.') + '</div>';
         });
 }
 
@@ -5850,6 +6000,18 @@ function selectAndFillCustomerByIndex(idx, source) {
     if (!searchResultsData || !searchResultsData.customers || !searchResultsData.customers[idx]) return;
     const c = searchResultsData.customers[idx];
     applyCustomerToBillingForm(c);
+}
+
+function selectAndFillBillByIndex(idx) {
+    if (!searchResultsData || !searchResultsData.bills || !searchResultsData.bills[idx]) return;
+    const b = searchResultsData.bills[idx];
+    applyCustomerToBillingForm({
+        name: b.customer_name || '',
+        mobile: b.customer_mobile || '',
+        address: b.customer_address || '',
+        email: b.customer_email || '',
+        gstin: b.customer_gstin || ''
+    });
 }
 
 function useBillCustomer(name, mobile, address, email, gstin) {
