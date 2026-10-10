@@ -263,7 +263,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename=geomorphology_sales_reports_' . date('Ymd_His') . '.csv');
     $out = fopen('php://output', 'w');
-    fputcsv($out, ['#', 'Cash Memo No', 'Customer Name', 'Mobile', 'Products / Items', 'Total Weight (g)', 'Subtotal', 'Cash Paid', 'UPI Paid', 'Old Gold Value', 'Total Amount', 'Paid Amount', 'Due Balance', 'Status', 'Date']);
+    fputcsv($out, ['#', 'Cash Memo No', 'Customer Name', 'Mobile', 'Products / Items', 'Total Weight (g)', 'Gross Value (₹)', 'Old Gold Value (₹)', 'Net Payable (₹)', 'Cash Paid (₹)', 'UPI Paid (₹)', 'Total Paid (₹)', 'Due Balance (₹)', 'Status', 'Date']);
     
     $export_res = mysqli_query($conn, "SELECT * FROM invoices $where_sql ORDER BY created_at DESC");
     if ($export_res) {
@@ -298,20 +298,23 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
                     $row_weight += $wt;
                 }
             }
+            $og_val = floatval($row['old_gold_amount'] > 0 ? $row['old_gold_amount'] : ($row['old_gold_value'] ?? 0));
+            $tot_val = floatval($row['total_amount'] ?? 0);
+            $sub_val = floatval($row['subtotal'] > 0 ? $row['subtotal'] : ($tot_val + $og_val));
             fputcsv($out, [
                 $idx++,
                 $row['invoice_no'],
-                $row['customer_name'],
-                $row['customer_mobile'],
+                $row['customer_name'] ?: 'Cash Customer',
+                $row['customer_mobile'] ?: 'N/A',
                 implode(', ', $p_names),
                 !empty($p_weights) ? implode(', ', $p_weights) : ($row_weight > 0 ? number_format($row_weight, 3) . 'g' : '0g'),
-                $row['subtotal'],
-                $row['cash_paid'] ?? 0,
-                $row['upi_paid'] ?? 0,
-                $row['old_gold_value'] ?? 0,
-                $row['total_amount'],
-                $row['paid_amount'],
-                $row['balance_amount'],
+                $sub_val,
+                $og_val,
+                $tot_val,
+                floatval($row['cash_paid'] ?? 0),
+                floatval($row['upi_paid'] ?? 0),
+                floatval($row['paid_amount'] ?? 0),
+                floatval($row['balance_amount'] ?? 0),
                 $row['payment_status'],
                 $row['created_at']
             ]);
@@ -330,7 +333,8 @@ $stat_res = mysqli_fetch_assoc(mysqli_query($conn, "
         COALESCE(SUM(balance_amount), 0) as total_due,
         COALESCE(SUM(cash_paid), 0) as total_cash,
         COALESCE(SUM(upi_paid), 0) as total_upi,
-        COALESCE(SUM(old_gold_value), 0) as total_oldgold
+        COALESCE(SUM(COALESCE(old_gold_amount, old_gold_value, 0)), 0) as total_oldgold,
+        COALESCE(SUM(COALESCE(NULLIF(subtotal, 0), total_amount + COALESCE(old_gold_amount, old_gold_value, 0))), 0) as gross_total
     FROM invoices $where_sql
 "));
 
@@ -341,19 +345,78 @@ $total_due_sum    = floatval($stat_res['total_due'] ?? 0);
 $total_cash_sum   = floatval($stat_res['total_cash'] ?? 0);
 $total_upi_sum    = floatval($stat_res['total_upi'] ?? 0);
 $total_gold_sum   = floatval($stat_res['total_oldgold'] ?? 0);
+$gross_total_sum  = floatval($stat_res['gross_total'] ?? 0);
 
 // Invoices Query
 $bills_rows = [];
 $inv_res = mysqli_query($conn, "
-    SELECT id, invoice_no, customer_name, customer_mobile, customer_address, subtotal, total_amount, paid_amount, balance_amount, payment_status, payment_method, cash_paid, upi_paid, old_gold_value, created_at 
+    SELECT id, invoice_no, customer_name, customer_mobile, customer_address, subtotal, 
+           total_amount, paid_amount, balance_amount, payment_status, payment_method, 
+           cash_paid, upi_paid, COALESCE(old_gold_amount, old_gold_value, 0) AS old_gold_value, 
+           old_gold_type, created_at 
     FROM invoices 
     $where_sql 
     ORDER BY created_at DESC 
     LIMIT 300
 ");
 if ($inv_res) {
-    while($r = mysqli_fetch_assoc($inv_res)) $bills_rows[] = $r;
+    while($r = mysqli_fetch_assoc($inv_res)) {
+        $r['product_names'] = '';
+        $r['item_weights'] = '';
+        $r['total_weight'] = 0.0;
+        $bills_rows[$r['invoice_no']] = $r;
+    }
 }
+
+$geo_inv_ids = [];
+foreach ($bills_rows as $br) {
+    if (!empty($br['id'])) $geo_inv_ids[] = intval($br['id']);
+}
+if (!empty($geo_inv_ids)) {
+    $ids_str = implode(',', $geo_inv_ids);
+    $items_res = mysqli_query($conn, "
+        SELECT ii.invoice_id, ii.product_name, ii.gross_wt, ii.net_wt, ii.pcs, ii.quantity, ii.unit, ii.hallmark_type, i.invoice_no
+        FROM invoice_items ii
+        JOIN invoices i ON ii.invoice_id = i.id
+        WHERE ii.invoice_id IN ($ids_str)
+        ORDER BY ii.id ASC
+    ");
+    if ($items_res) {
+        $inv_items_map = [];
+        $inv_weights_list = [];
+        $inv_weights_map = [];
+        while ($it = mysqli_fetch_assoc($items_res)) {
+            $inv_no = $it['invoice_no'];
+            $pname = trim($it['product_name'] ?: 'Jewellery Item');
+            $hm_t = trim($it['hallmark_type'] ?? '');
+            $kt = '';
+            if (preg_match('/\b(24k|22k|18k|14k|12k|9k)\b/i', $pname, $m_kt)) {
+                $kt = strtoupper($m_kt[1]);
+            } else if (!empty($hm_t) && preg_match('/\b(24k|22k|18k|14k|12k|9k)\b/i', $hm_t, $m_kt2)) {
+                $kt = strtoupper($m_kt2[1]);
+            }
+            $clean_p = preg_replace('/\s*\(\s*(?:Gold\s*)?(?:24K|22K|18K|14K|12K|9K)\s*\)/i', '', $pname);
+            $clean_p = preg_replace('/\b(?:Gold\s+)?(?:24K|22K|18K|14K|12K|9K)\b/i', '', $clean_p);
+            $clean_p = trim(preg_replace('/\s+/', ' ', $clean_p));
+            $final_p = !empty($kt) ? $clean_p . ' (' . $kt . ')' : $clean_p;
+
+            $wt = floatval($it['gross_wt'] > 0 ? $it['gross_wt'] : ($it['net_wt'] > 0 ? $it['net_wt'] : ($it['unit'] === 'g' ? $it['quantity'] : 0)));
+
+            $inv_items_map[$inv_no][] = $final_p;
+            $inv_weights_list[$inv_no][] = $wt > 0 ? number_format($wt, 3) . "g" : "0g";
+            if (!isset($inv_weights_map[$inv_no])) $inv_weights_map[$inv_no] = 0.0;
+            $inv_weights_map[$inv_no] += $wt;
+        }
+        foreach ($inv_items_map as $inv_no => $names) {
+            if (isset($bills_rows[$inv_no])) {
+                $bills_rows[$inv_no]['product_names'] = implode(', ', $names);
+                $bills_rows[$inv_no]['item_weights'] = implode(', ', $inv_weights_list[$inv_no] ?? []);
+                $bills_rows[$inv_no]['total_weight'] = round($inv_weights_map[$inv_no] ?? 0, 3);
+            }
+        }
+    }
+}
+$bills_rows = array_values($bills_rows);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -367,6 +430,8 @@ if ($inv_res) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../assets/css/theme.css">
     <link rel="stylesheet" href="../mobile.css">
+    <script src="../assets/js/xlsx.full.min.js"></script>
+    <script>if (typeof XLSX === 'undefined') { document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>'); }</script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap');
         * { font-family: 'Poppins', sans-serif; box-sizing: border-box; }
@@ -517,12 +582,15 @@ if ($inv_res) {
                 </div>
 
                 <div class="flex items-center gap-2 flex-wrap">
+                    <button onclick="downloadGeoExcel()" class="px-4 py-2 bg-green-700 hover:bg-green-800 text-white font-bold rounded-xl text-xs shadow transition inline-flex items-center gap-1.5 cursor-pointer">
+                        <i class="fas fa-file-excel"></i> Export Excel (.xlsx)
+                    </button>
                     <?php 
                         $csv_query = $_GET;
                         $csv_query['export'] = 'csv';
                         $csv_url = 'reports.php?' . http_build_query($csv_query);
                     ?>
-                    <a href="<?php echo $csv_url; ?>" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs shadow transition inline-flex items-center gap-1.5">
+                    <a href="<?php echo $csv_url; ?>" class="px-4 py-2 bg-stone-700 hover:bg-stone-800 text-white font-bold rounded-xl text-xs shadow transition inline-flex items-center gap-1.5">
                         <i class="fas fa-file-csv"></i> Export CSV
                     </a>
                 </div>
@@ -598,8 +666,14 @@ if ($inv_res) {
 
                 <div class="card-gold p-4 border-l-4 border-blue-600">
                     <span class="text-[11px] font-bold text-stone-500 uppercase">Total Sales Value</span>
-                    <div class="text-xl font-extrabold text-blue-900 mt-1">₹<?php echo number_format($total_amount_sum, 2); ?></div>
-                    <div class="text-[10px] text-stone-400 mt-0.5">Non-GST Gross</div>
+                    <div class="text-xl font-extrabold text-blue-900 mt-1">₹<?php echo number_format($gross_total_sum, 2); ?></div>
+                    <div class="text-[10px] text-stone-400 mt-0.5">Net Payable: ₹<?php echo number_format($total_amount_sum, 2); ?></div>
+                </div>
+
+                <div class="card-gold p-4 border-l-4 border-purple-600">
+                    <span class="text-[11px] font-bold text-stone-500 uppercase"><i class="fas fa-coins text-amber-500 mr-1"></i> Old Gold Value</span>
+                    <div class="text-xl font-extrabold text-purple-700 mt-1">₹<?php echo number_format($total_gold_sum, 2); ?></div>
+                    <div class="text-[10px] text-stone-400 mt-0.5">Exchange Adjusted</div>
                 </div>
 
                 <div class="card-gold p-4 border-l-4 border-emerald-600">
@@ -612,12 +686,6 @@ if ($inv_res) {
                     <span class="text-[11px] font-bold text-stone-500 uppercase">UPI / Online</span>
                     <div class="text-xl font-extrabold text-teal-700 mt-1">₹<?php echo number_format($total_upi_sum, 2); ?></div>
                     <div class="text-[10px] text-stone-400 mt-0.5">Digital Payments</div>
-                </div>
-
-                <div class="card-gold p-4 border-l-4 border-purple-600">
-                    <span class="text-[11px] font-bold text-stone-500 uppercase">Old Gold Value</span>
-                    <div class="text-xl font-extrabold text-purple-700 mt-1">₹<?php echo number_format($total_gold_sum, 2); ?></div>
-                    <div class="text-[10px] text-stone-400 mt-0.5">Exchange Adjusted</div>
                 </div>
 
                 <div class="card-gold p-4 border-l-4 border-rose-600">
@@ -641,7 +709,8 @@ if ($inv_res) {
                                 <th class="py-3 px-3">Memo No</th>
                                 <th class="py-3 px-3">Date</th>
                                 <th class="py-3 px-3">Customer Details</th>
-                                <th class="py-3 px-3 text-right">Total Amount</th>
+                                <th class="py-3 px-3 text-right">Net Amount</th>
+                                <th class="py-3 px-3 text-right">Old Gold</th>
                                 <th class="py-3 px-3 text-right">Paid Amount</th>
                                 <th class="py-3 px-3 text-right">Due Balance</th>
                                 <th class="py-3 px-3 text-center">Status</th>
@@ -650,7 +719,7 @@ if ($inv_res) {
                         </thead>
                         <tbody class="divide-y divide-stone-200">
                             <?php if(empty($bills_rows)): ?>
-                            <tr><td colspan="9" class="text-center py-10 text-stone-400">No Non-GST invoices found matching your criteria.</td></tr>
+                            <tr><td colspan="10" class="text-center py-10 text-stone-400">No Non-GST invoices found matching your criteria.</td></tr>
                             <?php else: foreach($bills_rows as $idx => $b): ?>
                             <tr class="hover:bg-amber-50/50 transition" id="row-memo-<?php echo $b['id']; ?>">
                                 <td class="py-3 px-3 text-stone-400 font-semibold"><?php echo $idx + 1; ?></td>
@@ -665,7 +734,20 @@ if ($inv_res) {
                                     <div class="font-bold text-stone-900"><?php echo htmlspecialchars($b['customer_name'] ?: 'Cash Customer'); ?></div>
                                     <div class="text-[10px] text-stone-500">Ph: <?php echo htmlspecialchars($b['customer_mobile'] ?: 'N/A'); ?></div>
                                 </td>
-                                <td class="py-3 px-3 text-right font-extrabold text-stone-900">₹<?php echo number_format($b['total_amount'], 2); ?></td>
+                                <td class="py-3 px-3 text-right font-extrabold text-stone-900">
+                                    ₹<?php echo number_format($b['total_amount'], 2); ?>
+                                    <?php if(floatval($b['old_gold_value']) > 0): ?>
+                                        <div class="text-[9px] text-stone-400 font-normal">Gross: ₹<?php echo number_format($b['total_amount'] + $b['old_gold_value'], 2); ?></div>
+                                    <?php endif; ?>
+                                </td>
+                                <td class="py-3 px-3 text-right font-bold text-purple-700">
+                                    <?php if(floatval($b['old_gold_value']) > 0): ?>
+                                        ₹<?php echo number_format($b['old_gold_value'], 2); ?>
+                                        <div class="text-[9px] text-purple-500 font-normal"><?php echo htmlspecialchars($b['old_gold_type'] ?: 'Old Gold'); ?></div>
+                                    <?php else: ?>
+                                        <span class="text-stone-300 font-normal">-</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="py-3 px-3 text-right font-bold text-emerald-700">₹<?php echo number_format($b['paid_amount'], 2); ?></td>
                                 <td class="py-3 px-3 text-right font-bold <?php echo $b['balance_amount'] > 0 ? 'text-rose-600 font-extrabold' : 'text-stone-400'; ?>">
                                     ₹<?php echo number_format($b['balance_amount'], 2); ?>
@@ -692,7 +774,7 @@ if ($inv_res) {
                             </tr>
                             <!-- Line Items Accordion Row -->
                             <tr id="items-row-<?php echo $b['id']; ?>" class="hidden bg-stone-50/80">
-                                <td colspan="9" class="p-3 border-t border-b border-stone-200">
+                                <td colspan="10" class="p-3 border-t border-b border-stone-200">
                                     <div id="items-container-<?php echo $b['id']; ?>" class="p-3 bg-white rounded-xl border border-stone-200 text-xs">
                                         <div class="text-center py-2 text-stone-400"><i class="fas fa-spinner fa-spin mr-1"></i> Loading items...</div>
                                     </div>
@@ -982,6 +1064,180 @@ if ($inv_res) {
             
             document.body.appendChild(form);
             form.submit();
+        }
+
+        const geoBillsData = <?php echo json_encode($bills_rows, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+
+        function downloadGeoExcel() {
+            if (typeof XLSX === 'undefined') {
+                alert('Excel library is still loading. Please check your internet connection or try again in a few seconds.');
+                return;
+            }
+            const wb = XLSX.utils.book_new();
+            const today = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+            const todayFile = new Date().toISOString().split('T')[0];
+
+            const inrFmt = v => '₹' + parseFloat(v||0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+            const fmtDate = d => {
+                if (!d) return '';
+                const dt = new Date(d);
+                return isNaN(dt.getTime()) ? d : dt.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+            };
+
+            let totalWeightSum = 0;
+            let totalAmt = 0;
+            let totalOldGold = 0;
+            let totalPaid = 0;
+            let totalBalance = 0;
+            let totalCash = 0;
+            let totalUpi = 0;
+            let paidCount = 0;
+            let partCount = 0;
+            let unpaidCount = 0;
+
+            geoBillsData.forEach(b => {
+                totalWeightSum += parseFloat(b.total_weight || 0);
+                totalAmt += parseFloat(b.total_amount || 0);
+                totalOldGold += parseFloat(b.old_gold_value || 0);
+                totalPaid += parseFloat(b.paid_amount || 0);
+                totalBalance += parseFloat(b.balance_amount || 0);
+                totalCash += parseFloat(b.cash_amount || 0);
+                totalUpi += parseFloat(b.online_amount || 0);
+                if (b.payment_status === 'paid') paidCount++;
+                else if (b.payment_status === 'part') partCount++;
+                else unpaidCount++;
+            });
+
+            const grossTotal = totalAmt + totalOldGold;
+
+            // Sheet 1 - Cash Memos
+            const aoa1 = [];
+            aoa1.push(['MAA GOURI JEWELLERS', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+            aoa1.push(['Geomorphology Non-GST Sales Report - Generated: ' + today, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+            aoa1.push([]);
+            aoa1.push(['Total Memos', geoBillsData.length, '', 'Gross Sales Value', inrFmt(grossTotal), '', 'Old Gold Exchanged', inrFmt(totalOldGold), '', 'Net Payable', inrFmt(totalAmt), '', 'Total Paid', inrFmt(totalPaid), '', 'Balance Due', inrFmt(totalBalance)]);
+            aoa1.push(['Full Paid', paidCount, '', 'Part Paid', partCount, '', 'Unpaid', unpaidCount, '', 'Total Weight', totalWeightSum.toFixed(3) + 'g', '', 'Cash Received', inrFmt(totalCash), '', 'UPI/Online', inrFmt(totalUpi)]);
+            aoa1.push([]);
+            aoa1.push(['#', 'Memo / Bill No', 'Customer Name', 'Mobile', 'Address', 'Products / Items', 'Weight (g)', 'Gross Bill (₹)', 'Old Gold (₹)', 'Net Payable (₹)', 'Cash Paid (₹)', 'UPI / Online (₹)', 'Total Paid (₹)', 'Balance Due (₹)', 'Status', 'Date']);
+
+            geoBillsData.forEach((b, i) => {
+                const ogVal = parseFloat(b.old_gold_value || 0);
+                const netVal = parseFloat(b.total_amount || 0);
+                const grossVal = ogVal > 0 ? (netVal + ogVal) : netVal;
+                const cashVal = parseFloat(b.cash_amount || 0);
+                const upiVal = parseFloat(b.online_amount || 0);
+                const paidVal = parseFloat(b.paid_amount || 0);
+                const balVal = parseFloat(b.balance_amount || 0);
+                
+                let statusLabel = 'Unpaid';
+                if (b.payment_status === 'paid') statusLabel = 'Paid';
+                else if (b.payment_status === 'part') statusLabel = 'Part Paid';
+
+                aoa1.push([
+                    i + 1,
+                    b.invoice_no,
+                    b.customer_name || 'Cash Customer',
+                    b.customer_mobile || '',
+                    b.customer_address || '',
+                    b.product_names || '',
+                    b.item_weights || (parseFloat(b.total_weight||0) > 0 ? parseFloat(b.total_weight).toFixed(3) + 'g' : '0.000g'),
+                    grossVal,
+                    ogVal,
+                    netVal,
+                    cashVal,
+                    upiVal,
+                    paidVal,
+                    balVal,
+                    statusLabel,
+                    fmtDate(b.created_at)
+                ]);
+            });
+
+            // Summary row
+            aoa1.push([
+                '', 'TOTAL', '', '', '', '',
+                parseFloat(totalWeightSum.toFixed(3)),
+                grossTotal,
+                totalOldGold,
+                totalAmt,
+                totalCash,
+                totalUpi,
+                totalPaid,
+                totalBalance,
+                '', ''
+            ]);
+
+            const ws1 = XLSX.utils.aoa_to_sheet(aoa1);
+            ws1['!cols'] = [
+                {wch: 5}, {wch: 18}, {wch: 22}, {wch: 14}, {wch: 26},
+                {wch: 32}, {wch: 16}, {wch: 16}, {wch: 16}, {wch: 16},
+                {wch: 14}, {wch: 16}, {wch: 16}, {wch: 16}, {wch: 14}, {wch: 14}
+            ];
+            ws1['!merges'] = [
+                {s:{r:0,c:0}, e:{r:0,c:15}},
+                {s:{r:1,c:0}, e:{r:1,c:15}}
+            ];
+            XLSX.utils.book_append_sheet(wb, ws1, 'Cash Memos');
+
+            // Sheet 2 - Settlement Summary
+            const aoa2 = [];
+            aoa2.push(['MAA GOURI JEWELLERS - Geomorphology Sales & Settlement Summary']);
+            aoa2.push(['Generated: ' + today]);
+            aoa2.push([]);
+            aoa2.push(['Category / Metric', 'Count', 'Amount (₹)']);
+            aoa2.push(['Full Paid Memos', paidCount, totalPaid]);
+            aoa2.push(['Part Paid Memos', partCount, geoBillsData.filter(b=>b.payment_status==='part').reduce((s,b)=>s+parseFloat(b.total_amount||0),0)]);
+            aoa2.push(['Unpaid Memos', unpaidCount, geoBillsData.filter(b=>b.payment_status==='unpaid').reduce((s,b)=>s+parseFloat(b.total_amount||0),0)]);
+            aoa2.push(['Old Gold Adjusted Memos', geoBillsData.filter(b=>parseFloat(b.old_gold_value||0)>0).length, totalOldGold]);
+            aoa2.push(['TOTAL NET PAYABLE', geoBillsData.length, totalAmt]);
+            aoa2.push(['GROSS SALES VALUE (with Old Gold)', geoBillsData.length, grossTotal]);
+            aoa2.push([]);
+            aoa2.push(['Cash Collections', '', totalCash]);
+            aoa2.push(['UPI / Online Collections', '', totalUpi]);
+            aoa2.push(['Total Collected Amount', '', totalPaid]);
+            aoa2.push(['Pending Balance Due', '', totalBalance]);
+            aoa2.push(['Total Items Sold Weight', '', totalWeightSum.toFixed(3) + 'g']);
+            
+            const ws2 = XLSX.utils.aoa_to_sheet(aoa2);
+            ws2['!cols'] = [{wch: 36}, {wch: 12}, {wch: 20}];
+            XLSX.utils.book_append_sheet(wb, ws2, 'Summary');
+
+            // Sheet 3 - Pending Payments
+            const pendingData = geoBillsData.filter(b => b.payment_status !== 'paid' && parseFloat(b.balance_amount||0) > 0);
+            const aoa3 = [['#', 'Memo / Bill No', 'Customer Name', 'Mobile', 'Address', 'Products / Items', 'Weight (g)', 'Gross Bill (₹)', 'Old Gold (₹)', 'Net Payable (₹)', 'Paid (₹)', 'Balance Due (₹)', 'Status', 'Date']];
+            pendingData.forEach((b, i) => {
+                const ogVal = parseFloat(b.old_gold_value || 0);
+                const netVal = parseFloat(b.total_amount || 0);
+                const grossVal = ogVal > 0 ? (netVal + ogVal) : netVal;
+                aoa3.push([
+                    i + 1,
+                    b.invoice_no,
+                    b.customer_name || 'Cash Customer',
+                    b.customer_mobile || '',
+                    b.customer_address || '',
+                    b.product_names || '',
+                    b.item_weights || (parseFloat(b.total_weight||0) > 0 ? parseFloat(b.total_weight).toFixed(3) + 'g' : '0.000g'),
+                    grossVal,
+                    ogVal,
+                    netVal,
+                    parseFloat(b.paid_amount || 0),
+                    parseFloat(b.balance_amount || 0),
+                    b.payment_status === 'part' ? 'Part Paid' : 'Unpaid',
+                    fmtDate(b.created_at)
+                ]);
+            });
+            if (!pendingData.length) {
+                aoa3.push(['', 'No pending payments! All settled.', '', '', '', '', '', '', '', '', '', '', '', '']);
+            }
+            const ws3 = XLSX.utils.aoa_to_sheet(aoa3);
+            ws3['!cols'] = [
+                {wch: 5}, {wch: 18}, {wch: 22}, {wch: 14}, {wch: 26},
+                {wch: 32}, {wch: 16}, {wch: 16}, {wch: 16}, {wch: 16},
+                {wch: 16}, {wch: 16}, {wch: 14}, {wch: 14}
+            ];
+            XLSX.utils.book_append_sheet(wb, ws3, 'Pending Due');
+
+            XLSX.writeFile(wb, `MAA_GOURI_Geomorphology_Report_${todayFile}.xlsx`);
         }
     </script>
 </body>

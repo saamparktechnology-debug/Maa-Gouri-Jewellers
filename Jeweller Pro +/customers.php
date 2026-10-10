@@ -51,6 +51,88 @@ if(isset($_GET['action']) && $_GET['action'] === 'get_orders') {
     exit();
 }
 
+// AJAX: Bulk Import Customers from Excel/JSON
+if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['action'] === 'import_customers') {
+    header('Content-Type: application/json');
+    $raw_input = file_get_contents('php://input');
+    $data = json_decode($raw_input, true);
+    if(!$data || !isset($data['rows']) || !is_array($data['rows'])) {
+        echo json_encode(['success' => false, 'message' => 'No valid customer rows received.']);
+        exit();
+    }
+
+    $update_existing = !empty($data['update_existing']);
+    $rows = $data['rows'];
+    $added = 0;
+    $updated = 0;
+    $skipped = 0;
+    $errors = [];
+
+    $chk_gst = mysqli_query($conn, "SHOW COLUMNS FROM customers LIKE 'gst_number'");
+    if(mysqli_num_rows($chk_gst) == 0) {
+        mysqli_query($conn, "ALTER TABLE customers ADD COLUMN gst_number VARCHAR(20) DEFAULT '' AFTER address");
+    }
+
+    foreach($rows as $idx => $r) {
+        $name    = trim($r['name'] ?? '');
+        $mobile  = preg_replace('/[^0-9]/', '', trim($r['mobile'] ?? ''));
+        if(strlen($mobile) === 12 && substr($mobile, 0, 2) === '91') {
+            $mobile = substr($mobile, 2);
+        }
+        $email   = trim($r['email'] ?? '');
+        $address = trim($r['address'] ?? '');
+        $gst     = strtoupper(trim($r['gst_number'] ?? ($r['gst'] ?? '')));
+
+        if(empty($name) || empty($mobile) || strlen($mobile) < 10) {
+            $skipped++;
+            continue;
+        }
+
+        $e_name    = mysqli_real_escape_string($conn, $name);
+        $e_mobile  = mysqli_real_escape_string($conn, $mobile);
+        $e_email   = mysqli_real_escape_string($conn, $email);
+        $e_address = mysqli_real_escape_string($conn, $address);
+        $e_gst     = mysqli_real_escape_string($conn, $gst);
+
+        $chk = mysqli_query($conn, "SELECT id FROM customers WHERE mobile = '$e_mobile' LIMIT 1");
+        if($chk && mysqli_num_rows($chk) > 0) {
+            if($update_existing) {
+                $exist_id = mysqli_fetch_assoc($chk)['id'];
+                $update_fields = ["name = '$e_name'"];
+                if(!empty($email))   $update_fields[] = "email = '$e_email'";
+                if(!empty($address)) $update_fields[] = "address = '$e_address'";
+                if(!empty($gst))     $update_fields[] = "gst_number = '$e_gst'";
+                $u_sql = "UPDATE customers SET " . implode(', ', $update_fields) . " WHERE id = $exist_id";
+                if(mysqli_query($conn, $u_sql)) {
+                    $updated++;
+                } else {
+                    $errors[] = "Error updating $name ($mobile): " . mysqli_error($conn);
+                }
+            } else {
+                $skipped++;
+            }
+        } else {
+            $ins_sql = "INSERT INTO customers (name, mobile, email, address, gst_number, created_at)
+                        VALUES ('$e_name', '$e_mobile', '$e_email', '$e_address', '$e_gst', NOW())";
+            if(mysqli_query($conn, $ins_sql)) {
+                $added++;
+            } else {
+                $errors[] = "Error inserting $name ($mobile): " . mysqli_error($conn);
+            }
+        }
+    }
+
+    echo json_encode([
+        'success' => true,
+        'added' => $added,
+        'updated' => $updated,
+        'skipped' => $skipped,
+        'total' => count($rows),
+        'errors' => array_slice($errors, 0, 10)
+    ]);
+    exit();
+}
+
 // Handle Add Customer
 if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_customer'])) {
     $name    = mysqli_real_escape_string($conn, trim($_POST['name']));
@@ -128,7 +210,17 @@ $query .= " ORDER BY c.created_at DESC";
 $customers_result = mysqli_query($conn, $query);
 $total_customers  = $customers_result ? mysqli_num_rows($customers_result) : 0;
 $customers = [];
-if($customers_result) while($row = mysqli_fetch_assoc($customers_result)) $customers[] = $row;
+if($customers_result) {
+    while($row = mysqli_fetch_assoc($customers_result)) {
+        $mob = $row['mobile'];
+        $ocr = mysqli_query($conn, "SELECT COUNT(*) as c, COALESCE(SUM(total_amount), 0) as t, MAX(created_at) as l FROM invoices WHERE customer_mobile='$mob'");
+        $stats = $ocr ? mysqli_fetch_assoc($ocr) : null;
+        $row['order_count'] = intval($stats['c'] ?? 0);
+        $row['total_amt'] = floatval($stats['t'] ?? 0);
+        $row['last_order'] = $stats['l'] ?? null;
+        $customers[] = $row;
+    }
+}
 
 $error_message = isset($error_msg) ? $error_msg : '';
 $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-preview.png','moti-removebg-preview.png','radhey shyam logo.png'];
@@ -142,6 +234,8 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="assets/css/theme.css">
+    <script src="assets/js/xlsx.full.min.js"></script>
+    <script>if(typeof XLSX === 'undefined'){document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');}</script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap');
 
@@ -334,6 +428,26 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             gap: 6px; text-decoration: none; font-size: 13px; cursor: pointer;
         }
         .btn-jewel:hover { transform: scale(1.04); box-shadow: 0 8px 24px rgba(214,139,22,0.35); color: #fff; }
+
+        .btn-excel {
+            background: linear-gradient(135deg, #16a34a, #15803d);
+            border: none; border-radius: 50px;
+            padding: 9px 20px; font-weight: 700; color: #fff;
+            transition: all 0.3s ease; display: inline-flex; align-items: center;
+            gap: 6px; text-decoration: none; font-size: 13px; cursor: pointer;
+            box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3);
+        }
+        .btn-excel:hover { transform: scale(1.04); box-shadow: 0 8px 24px rgba(22, 163, 74, 0.45); color: #fff; }
+
+        .btn-import {
+            background: linear-gradient(135deg, #0284c7, #0369a1);
+            border: none; border-radius: 50px;
+            padding: 9px 20px; font-weight: 700; color: #fff;
+            transition: all 0.3s ease; display: inline-flex; align-items: center;
+            gap: 6px; text-decoration: none; font-size: 13px; cursor: pointer;
+            box-shadow: 0 4px 14px rgba(2, 132, 199, 0.3);
+        }
+        .btn-import:hover { transform: scale(1.04); box-shadow: 0 8px 24px rgba(2, 132, 199, 0.45); color: #fff; }
 
         .btn-filter {
             padding: 7px 16px; border-radius: 8px; font-size: 12px; font-weight: 600;
@@ -634,11 +748,21 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             </div>
         </div>
 
-        <!-- Add Customer Button -->
-        <div class="flex justify-end mb-4">
-            <button onclick="openAddModal()" class="btn-jewel">
-                <i class="fas fa-user-plus"></i> Add Customer
-            </button>
+        <!-- Action Buttons -->
+        <div class="flex justify-between items-center flex-wrap gap-3 mb-4">
+            <div class="flex items-center gap-2 flex-wrap">
+                <button onclick="exportCustomersToExcel()" class="btn-excel" title="Download all customers as Excel spreadsheet">
+                    <i class="fas fa-file-excel mr-1"></i> Export Excel (.xlsx)
+                </button>
+                <button onclick="openImportModal()" class="btn-import" title="Import customers from Excel or CSV file">
+                    <i class="fas fa-file-import mr-1"></i> Import Excel / CSV
+                </button>
+            </div>
+            <div>
+                <button onclick="openAddModal()" class="btn-jewel">
+                    <i class="fas fa-user-plus"></i> Add Customer
+                </button>
+            </div>
         </div>
 
         <!-- Customers Table -->
@@ -665,12 +789,9 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
                     <tbody>
                         <?php if($total_customers > 0): foreach($customers as $customer):
                             $mob = $customer['mobile'];
-                            $ocr = mysqli_query($conn, "SELECT COUNT(*) as c FROM invoices WHERE customer_mobile='$mob'");
-                            $order_count = $ocr ? mysqli_fetch_assoc($ocr)['c'] : 0;
-                            $tcr = mysqli_query($conn, "SELECT SUM(total_amount) as t FROM invoices WHERE customer_mobile='$mob'");
-                            $total_amt = $tcr ? (mysqli_fetch_assoc($tcr)['t'] ?? 0) : 0;
-                            $lcr = mysqli_query($conn, "SELECT MAX(created_at) as l FROM invoices WHERE customer_mobile='$mob'");
-                            $last_order = $lcr ? (mysqli_fetch_assoc($lcr)['l'] ?? null) : null;
+                            $order_count = intval($customer['order_count'] ?? 0);
+                            $total_amt = floatval($customer['total_amt'] ?? 0);
+                            $last_order = $customer['last_order'] ?? null;
                         ?>
                         <tr>
                             <td class="text-sm font-semibold" style="color:#d68b16;">#<?php echo $customer['id']; ?></td>
@@ -854,22 +975,107 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
         document.body.style.overflow = '';
     }
 
+    /* ---------- Import Modal ---------- */
+    function openImportModal() {
+        document.getElementById('importModal').classList.add('flex');
+        document.body.style.overflow = 'hidden';
+    }
+    function closeImportModal() {
+        document.getElementById('importModal').classList.remove('flex');
+        document.body.style.overflow = '';
+    }
+
     /* Outside-click & ESC close */
-    ['addModal','editModal'].forEach(function(id) {
-        document.getElementById(id).addEventListener('click', function(e) {
-            if(e.target === this) {
-                this.classList.remove('flex');
-                document.body.style.overflow = '';
-            }
-        });
+    ['addModal','editModal','importModal'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if(el) {
+            el.addEventListener('click', function(e) {
+                if(e.target === this) {
+                    this.classList.remove('flex');
+                    document.body.style.overflow = '';
+                }
+            });
+        }
     });
     document.addEventListener('keydown', function(e) {
-        if(e.key === 'Escape') { closeAddModal(); closeEditModal(); }
+        if(e.key === 'Escape') { closeAddModal(); closeEditModal(); closeImportModal(); closeOrderHistory(); }
     });
 </script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-</body>
-</html>
+
+<!-- ========== IMPORT CUSTOMERS MODAL ========== -->
+<div id="importModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 620px;">
+        <div class="flex justify-between items-center mb-4 pb-2 border-b border-amber-200">
+            <h3 class="text-xl font-bold gold-font mb-0" style="color:#800020;">
+                <i class="fas fa-file-excel mr-2" style="color:#16a34a;"></i> Import Customers from Excel
+            </h3>
+            <button type="button" onclick="closeImportModal()" style="color:#7a4e0a;font-size:22px;background:none;border:none;cursor:pointer;line-height:1;">&times;</button>
+        </div>
+
+        <!-- Step 1: Download Template -->
+        <div class="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200/80 flex items-center justify-between flex-wrap gap-2">
+            <div>
+                <div class="text-xs font-bold text-amber-900">Need the correct column format?</div>
+                <div class="text-[11px] text-stone-600">Download our sample spreadsheet pre-filled with required headers.</div>
+            </div>
+            <button type="button" onclick="downloadCustomerTemplate()" class="px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-green-700 hover:from-emerald-700 hover:to-green-800 text-white rounded-lg text-xs font-bold shadow-sm transition inline-flex items-center gap-1.5 cursor-pointer">
+                <i class="fas fa-download"></i> Download Template (.xlsx)
+            </button>
+        </div>
+
+        <!-- Step 2: Upload File -->
+        <div class="mb-4">
+            <label class="block text-xs font-bold text-amber-900 mb-1.5">Select Excel or CSV File (.xlsx, .xls, .csv)</label>
+            <div class="border-2 border-dashed border-amber-300 rounded-xl p-4 text-center bg-white hover:bg-amber-50/50 transition cursor-pointer" onclick="document.getElementById('excelFileInput').click()">
+                <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleExcelFileSelect(this)">
+                <i class="fas fa-cloud-upload-alt text-2xl text-amber-600 mb-1.5 block"></i>
+                <span class="text-xs font-semibold text-stone-700 block" id="uploadFileNameLabel">Click to browse file or drag and drop here</span>
+                <span class="text-[10px] text-stone-400 block mt-0.5">Supports Microsoft Excel (.xlsx / .xls) and CSV files</span>
+            </div>
+        </div>
+
+        <!-- Step 3: Options -->
+        <div class="mb-4 flex items-center gap-2">
+            <input type="checkbox" id="importUpdateExisting" class="w-4 h-4 text-amber-600 rounded border-amber-300 focus:ring-amber-500" checked>
+            <label for="importUpdateExisting" class="text-xs text-stone-700 font-medium cursor-pointer mb-0">
+                Update existing customer details if mobile number is already registered
+            </label>
+        </div>
+
+        <!-- Step 4: Preview Card -->
+        <div id="importPreviewCard" style="display:none;" class="mb-4">
+            <div class="flex justify-between items-center mb-1.5">
+                <span class="text-xs font-bold text-emerald-800" id="importPreviewStats">0 rows found</span>
+                <span class="text-[10px] text-stone-400">Preview (up to 10 rows)</span>
+            </div>
+            <div class="max-h-40 overflow-y-auto border border-amber-200 rounded-lg bg-stone-50 p-1">
+                <table class="w-full text-left text-[11px]">
+                    <thead>
+                        <tr class="bg-amber-100/70 text-stone-700 font-semibold border-b border-amber-200">
+                            <th class="p-1">#</th>
+                            <th class="p-1">Name</th>
+                            <th class="p-1">Mobile</th>
+                            <th class="p-1">GSTIN</th>
+                            <th class="p-1">Address</th>
+                        </tr>
+                    </thead>
+                    <tbody id="importPreviewTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Step 5: Modal Actions -->
+        <div class="flex gap-3 pt-2 border-t border-amber-200">
+            <button type="button" onclick="closeImportModal()" class="flex-1 py-2 rounded-lg text-xs font-semibold bg-stone-200 hover:bg-stone-300 text-stone-700 transition">
+                Cancel
+            </button>
+            <button type="button" id="btnConfirmImport" onclick="executeCustomerImport()" disabled class="flex-1 py-2 rounded-lg text-xs font-bold text-white bg-gradient-to-r from-emerald-600 to-green-700 hover:from-emerald-700 hover:to-green-800 disabled:opacity-50 disabled:cursor-not-allowed shadow transition cursor-pointer">
+                <i class="fas fa-check mr-1"></i> Confirm Import
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- ========== ORDER HISTORY MODAL ========== -->
 <div id="orderHistoryModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.55);backdrop-filter:blur(3px);" onclick="if(event.target===this)closeOrderHistory()">
     <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:min(96vw,780px);max-height:88vh;background:#fff;border-radius:20px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,0.3);">
@@ -882,7 +1088,10 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
             <div style="display:flex;align-items:center;gap:8px;">
                 <div id="ohSummaryBadge" style="background:rgba(255,255,255,0.2);color:#fff;font-size:11px;font-weight:700;padding:4px 14px;border-radius:20px;"></div>
                 <button id="ohDownloadBtn" onclick="downloadStatementPDF()" style="display:none;background:rgba(255,255,255,0.22);border:1.5px solid rgba(255,255,255,0.5);color:#fff;font-size:11px;font-weight:700;padding:5px 13px;border-radius:20px;cursor:pointer;gap:5px;align-items:center;">
-                     PDF
+                    <i class="fas fa-file-pdf mr-1"></i> PDF
+                </button>
+                <button id="ohDownloadExcelBtn" onclick="downloadStatementExcel()" style="display:none;background:rgba(22,163,74,0.9);border:1.5px solid rgba(255,255,255,0.5);color:#fff;font-size:11px;font-weight:700;padding:5px 13px;border-radius:20px;cursor:pointer;gap:5px;align-items:center;">
+                    <i class="fas fa-file-excel mr-1"></i> Excel
                 </button>
                 <button onclick="closeOrderHistory()" style="background:rgba(255,255,255,0.2);border:none;color:#fff;width:30px;height:30px;border-radius:50%;font-size:16px;cursor:pointer;line-height:1;">&times;</button>
             </div>
@@ -931,7 +1140,226 @@ $logo_paths = ['assets/images/moti-removebg-preview.png','images/moti-removebg-p
 .oh-item-row:last-child{border-bottom:none;}
 </style>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
 <script>
+/* ---------- Global Customer Export Data ---------- */
+const customersExportData = <?php echo json_encode($customers); ?>;
+
+/* ---------- Export Customers to Excel (.xlsx) ---------- */
+function exportCustomersToExcel() {
+    if (!customersExportData || customersExportData.length === 0) {
+        alert('No customers found to export!');
+        return;
+    }
+    const today = '<?php echo date("d M Y"); ?>';
+    const todayFile = '<?php echo date("Y-m-d"); ?>';
+    const totalOrders = customersExportData.reduce((s, c) => s + parseInt(c.order_count || 0), 0);
+    const totalRevenue = customersExportData.reduce((s, c) => s + parseFloat(c.total_amt || 0), 0);
+
+    const wb = XLSX.utils.book_new();
+
+    // Sheet 1 - All GST Customers
+    const aoa = [];
+    aoa.push(['MAA GOURI JEWELLERS - Royal Customers Directory (GST Section)']);
+    aoa.push(['Report Generated: ' + today + ' | Jeweller Pro+ Enterprise']);
+    aoa.push([]);
+    aoa.push(['Total Customers', customersExportData.length, '', 'Total Invoices', totalOrders, '', 'Total Purchases Value', '₹' + totalRevenue.toLocaleString('en-IN', {minimumFractionDigits: 2})]);
+    aoa.push([]);
+    aoa.push(['#', 'Customer ID', 'Customer Name', 'Mobile Number', 'GSTIN / GST No', 'Email Address', 'Address', 'Total Orders', 'Total Purchases (₹)', 'Registration Date', 'Last Order Date']);
+
+    customersExportData.forEach((c, idx) => {
+        const regDate = c.created_at ? new Date(c.created_at).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'}) : '-';
+        const lastDate = c.last_order ? new Date(c.last_order).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'}) : '-';
+        aoa.push([
+            idx + 1,
+            '#' + c.id,
+            c.name || '',
+            c.mobile || '',
+            c.gst_number || '',
+            c.email || '',
+            c.address || '',
+            parseInt(c.order_count || 0),
+            parseFloat(c.total_amt || 0),
+            regDate,
+            lastDate
+        ]);
+    });
+
+    aoa.push([]);
+    aoa.push(['', 'TOTAL', '', '', '', '', '', totalOrders, totalRevenue, '', '']);
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [
+        {wch: 6},   // #
+        {wch: 14},  // ID
+        {wch: 26},  // Name
+        {wch: 16},  // Mobile
+        {wch: 20},  // GSTIN
+        {wch: 26},  // Email
+        {wch: 34},  // Address
+        {wch: 14},  // Orders
+        {wch: 22},  // Purchases
+        {wch: 16},  // Reg Date
+        {wch: 16}   // Last Order
+    ];
+    ws['!merges'] = [
+        {s: {r:0, c:0}, e: {r:0, c:10}},
+        {s: {r:1, c:0}, e: {r:1, c:10}}
+    ];
+
+    XLSX.utils.book_append_sheet(wb, ws, 'GST Customers');
+    XLSX.writeFile(wb, `MAA_GOURI_Customers_GST_${todayFile}.xlsx`);
+}
+
+/* ---------- Download Sample Excel Template ---------- */
+function downloadCustomerTemplate() {
+    const wb = XLSX.utils.book_new();
+    const aoa = [
+        ['Customer Name', 'Mobile Number', 'Email Address', 'Address', 'GST Number'],
+        ['Rajesh Verma', '9876543210', 'rajesh@example.com', 'Station Road, Kolkata', '19AAAAA0000A1Z5'],
+        ['Sunita Roy', '9830112233', 'sunita@example.com', 'Bowbazar Market, Kolkata', '']
+    ];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{wch: 22}, {wch: 16}, {wch: 24}, {wch: 28}, {wch: 18}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Customers');
+    XLSX.writeFile(wb, 'Customer_Import_Template_GST.xlsx');
+}
+
+/* ---------- Parse Excel/CSV File Client-Side ---------- */
+let parsedImportRows = [];
+
+function escapeHtml(text) {
+    if (!text) return '';
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function handleExcelFileSelect(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    document.getElementById('uploadFileNameLabel').textContent = file.name;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const rawRows = XLSX.utils.sheet_to_json(firstSheet, {defval: ''});
+
+            if (!rawRows || rawRows.length === 0) {
+                alert('No data rows found in the uploaded spreadsheet.');
+                return;
+            }
+
+            parsedImportRows = [];
+            rawRows.forEach((r) => {
+                let name = '', mobile = '', email = '', address = '', gst = '';
+                for (let k in r) {
+                    const lk = k.trim().toLowerCase();
+                    const val = String(r[k]).trim();
+                    if (lk.includes('name')) name = val;
+                    else if (lk.includes('mobile') || lk.includes('phone') || lk.includes('contact')) mobile = val;
+                    else if (lk.includes('email') || lk.includes('mail')) email = val;
+                    else if (lk.includes('address') || lk.includes('city') || lk.includes('village')) address = val;
+                    else if (lk.includes('gst') || lk.includes('gstin')) gst = val;
+                }
+                const cleanMob = mobile.replace(/[^0-9]/g, '');
+                if (name && cleanMob.length >= 10) {
+                    parsedImportRows.push({
+                        name: name,
+                        mobile: cleanMob.length === 12 && cleanMob.startsWith('91') ? cleanMob.substring(2) : cleanMob,
+                        email: email,
+                        address: address,
+                        gst_number: gst.toUpperCase()
+                    });
+                }
+            });
+
+            const previewCard = document.getElementById('importPreviewCard');
+            const previewStats = document.getElementById('importPreviewStats');
+            const previewTableBody = document.getElementById('importPreviewTableBody');
+            const confirmBtn = document.getElementById('btnConfirmImport');
+
+            if (parsedImportRows.length === 0) {
+                alert('No valid rows found. Please make sure your spreadsheet has "Customer Name" and 10-digit "Mobile Number" columns.');
+                previewCard.style.display = 'none';
+                confirmBtn.disabled = true;
+                return;
+            }
+
+            previewStats.textContent = `${parsedImportRows.length} valid customers found`;
+            previewTableBody.innerHTML = '';
+            parsedImportRows.slice(0, 10).forEach((row, i) => {
+                previewTableBody.innerHTML += `
+                    <tr class="border-b border-amber-100 text-xs">
+                        <td class="p-1 font-mono text-stone-500">${i+1}</td>
+                        <td class="p-1 font-bold text-gray-800">${escapeHtml(row.name)}</td>
+                        <td class="p-1 font-mono text-stone-700">${escapeHtml(row.mobile)}</td>
+                        <td class="p-1 text-purple-700">${escapeHtml(row.gst_number || '-')}</td>
+                        <td class="p-1 text-stone-600 truncate max-w-xs">${escapeHtml(row.address || '-')}</td>
+                    </tr>
+                `;
+            });
+            if (parsedImportRows.length > 10) {
+                previewTableBody.innerHTML += `<tr><td colspan="5" class="p-1 text-center text-xs text-stone-400 italic">...and ${parsedImportRows.length - 10} more rows</td></tr>`;
+            }
+
+            previewCard.style.display = 'block';
+            confirmBtn.disabled = false;
+        } catch (err) {
+            console.error(err);
+            alert('Failed to read Excel file: ' + err.message);
+        }
+    };
+    reader.readAsArrayBuffer(file);
+}
+
+/* ---------- Execute Customer Import via AJAX ---------- */
+function executeCustomerImport() {
+    if (!parsedImportRows || parsedImportRows.length === 0) {
+        alert('Please select and parse an Excel file first.');
+        return;
+    }
+    const updateExisting = document.getElementById('importUpdateExisting').checked;
+    const confirmBtn = document.getElementById('btnConfirmImport');
+    confirmBtn.disabled = true;
+    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Importing...';
+
+    fetch('customers.php?action=import_customers', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            action: 'import_customers',
+            rows: parsedImportRows,
+            update_existing: updateExisting
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert(`🎉 Customer Import Successful!\n\nAdded: ${data.added} new customers\nUpdated: ${data.updated} existing customers\nSkipped: ${data.skipped}`);
+            window.location.reload();
+        } else {
+            alert('Import failed: ' + (data.message || 'Unknown error'));
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = '<i class="fas fa-check mr-1"></i> Confirm Import';
+        }
+    })
+    .catch(err => {
+        alert('Network or server error during import: ' + err.message);
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i class="fas fa-check mr-1"></i> Confirm Import';
+    });
+}
+
+/* ---------- Order History Handling ---------- */
 function openOrderHistory(mobile, name) {
     document.getElementById('orderHistoryModal').style.display = 'block';
     document.getElementById('ohCustomerName').textContent = ' ' + name;
@@ -966,9 +1394,12 @@ function openOrderHistory(mobile, name) {
             document.getElementById('ohTotalPaid').textContent   = '₹' + totalPaid.toLocaleString('en-IN',  {minimumFractionDigits:2});
             document.getElementById('ohTotalBalance').textContent = totalBal > 0 ? '₹' + totalBal.toLocaleString('en-IN', {minimumFractionDigits:2}) : '₹0.00';
             document.getElementById('ohSummaryBadge').textContent = data.orders.length + ' order' + (data.orders.length > 1 ? 's' : '');
-            // Store for PDF
+
+            // Store for PDF & Excel
             window._ohData = { orders: data.orders, totalSpent, totalPaid, totalBal };
+            window._ohCustomer = { name, mobile };
             document.getElementById('ohDownloadBtn').style.display = 'inline-flex';
+            document.getElementById('ohDownloadExcelBtn').style.display = 'inline-flex';
 
             // Render cards
             let html = '';
@@ -1029,28 +1460,78 @@ function openOrderHistory(mobile, name) {
 function closeOrderHistory() {
     document.getElementById('orderHistoryModal').style.display = 'none';
     document.getElementById('ohDownloadBtn').style.display = 'none';
+    document.getElementById('ohDownloadExcelBtn').style.display = 'none';
     window._ohData = null;
+    window._ohCustomer = null;
     document.body.style.overflow = '';
 }
 
-document.addEventListener('keydown', function(e) {
-    if(e.key === 'Escape') closeOrderHistory();
-});
+/* ---------- Customer Orders Statement Excel Export ---------- */
+function downloadStatementExcel() {
+    const d = window._ohData;
+    const c = window._ohCustomer;
+    if (!d || !d.orders || !d.orders.length) {
+        alert('No orders found to export!');
+        return;
+    }
+    const name = (c?.name || 'Customer').trim();
+    const mobile = (c?.mobile || '').trim();
+    const today = '<?php echo date("d M Y"); ?>';
+    const todayFile = '<?php echo date("Y-m-d"); ?>';
+    const wb = XLSX.utils.book_new();
 
-//  PDF Statement Download 
+    const aoa = [];
+    aoa.push(['MAA GOURI JEWELLERS - Customer Order Statement']);
+    aoa.push([`Customer: ${name} | Mobile: ${mobile} | Statement Date: ${today}`]);
+    aoa.push([]);
+
+    aoa.push(['Total Orders', d.orders.length, '', 'Total Billed', '₹' + d.totalSpent.toLocaleString('en-IN', {minimumFractionDigits:2}), '', 'Total Paid', '₹' + d.totalPaid.toLocaleString('en-IN', {minimumFractionDigits:2}), '', 'Balance Due', '₹' + d.totalBal.toLocaleString('en-IN', {minimumFractionDigits:2})]);
+    aoa.push([]);
+    aoa.push(['#', 'Invoice No', 'Date', 'Items / Products', 'Total Qty', 'Total Amount (₹)', 'Paid Amount (₹)', 'Balance Due (₹)', 'Payment Status', 'Payment Method']);
+
+    d.orders.forEach((o, i) => {
+        const itemNames = (o.items||[]).map(it => it.desc).join(', ') || '-';
+        const totalQty = (o.items||[]).reduce((s, it) => s + parseFloat(it.qty||0), 0);
+        const dateStr = o.created_at ? new Date(o.created_at).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'}) : '-';
+        aoa.push([
+            i + 1,
+            o.invoice_no,
+            dateStr,
+            itemNames,
+            totalQty,
+            parseFloat(o.total_amount||0),
+            parseFloat(o.paid_amount||0),
+            parseFloat(o.balance_amount||0),
+            o.payment_status === 'paid' ? 'Full Paid' : (o.payment_status === 'part' ? 'Part Payment' : 'Unpaid'),
+            o.payment_method || 'Cash'
+        ]);
+    });
+
+    aoa.push([]);
+    aoa.push(['', 'TOTAL', '', '', '', d.totalSpent, d.totalPaid, d.totalBal, '', '']);
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws['!cols'] = [{wch:6},{wch:18},{wch:14},{wch:36},{wch:12},{wch:16},{wch:16},{wch:16},{wch:16},{wch:16}];
+    ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:9}},{s:{r:1,c:0},e:{r:1,c:9}}];
+    XLSX.utils.book_append_sheet(wb, ws, 'Orders Statement');
+
+    const safeName = name.replace(/[^a-zA-Z0-9]/g, '_');
+    XLSX.writeFile(wb, `Statement_${safeName}_${todayFile}.xlsx`);
+}
+
+// PDF Statement Download
 function downloadStatementPDF() {
     const d = window._ohData;
     if(!d) return;
     const name   = document.getElementById('ohCustomerName').textContent.replace(' ','').trim();
     const mobile = document.getElementById('ohCustomerMobile').textContent.replace(' ','').trim();
 
-    // Use jsPDF (loaded below)
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit:'mm', format:'a4', orientation:'portrait' });
     const W = 210, margin = 14;
     let y = 0;
 
-    //  Header bar 
+    // Header bar
     doc.setFillColor(122, 78, 10);
     doc.rect(0, 0, W, 28, 'F');
     doc.setTextColor(255, 255, 255);
@@ -1062,7 +1543,7 @@ function downloadStatementPDF() {
     doc.text('CUSTOMER ACCOUNT STATEMENT', W/2, 24, {align:'center'});
     y = 34;
 
-    //  Customer info box 
+    // Customer info box
     doc.setFillColor(253, 246, 227);
     doc.setDrawColor(181, 115, 14);
     doc.roundedRect(margin, y, W - margin*2, 22, 3, 3, 'FD');
@@ -1074,7 +1555,7 @@ function downloadStatementPDF() {
     doc.text('Total Orders: ' + d.orders.length, W - margin - 4, y+15, {align:'right'});
     y += 28;
 
-    //  Summary strip 
+    // Summary strip
     const cols4 = (W - margin*2) / 4;
     const summaryItems = [
         { label:'Total Spent',   val:'Rs.' + d.totalSpent.toLocaleString('en-IN',{minimumFractionDigits:2}), color:[5,150,105] },
@@ -1094,12 +1575,11 @@ function downloadStatementPDF() {
     });
     y += 22;
 
-    //  Orders table 
-    const colW = [28, 22, 62, 22, 28, 24]; // Invoice, Date, Items, Qty, Amount, Status
+    // Orders table
+    const colW = [28, 22, 62, 22, 28, 24];
     const headers = ['Invoice No', 'Date', 'Items', 'Qty(gm)', 'Amount', 'Status'];
     const tblW = W - margin*2;
 
-    // Table header
     doc.setFillColor(122, 78, 10);
     doc.rect(margin, y, tblW, 7, 'F');
     doc.setTextColor(255,255,255); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
@@ -1110,7 +1590,6 @@ function downloadStatementPDF() {
     });
     y += 7;
 
-    // Rows
     doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
     let rowIdx = 0;
     d.orders.forEach(o => {
@@ -1121,16 +1600,13 @@ function downloadStatementPDF() {
         const status    = o.payment_status === 'paid' ? 'Paid' : (o.payment_status === 'part' ? 'Part Paid' : 'Unpaid');
         const statusColor = o.payment_status === 'paid' ? [5,150,105] : (o.payment_status === 'part' ? [146,64,14] : [220,38,38]);
 
-        // Wrap long item names
         const maxItemW = colW[2] - 3;
         const itemLines = doc.splitTextToSize(itemNames, maxItemW);
         const rowH = Math.max(8, itemLines.length * 4 + 3);
 
-        // Page break check
         if(y + rowH > 272) {
             doc.addPage();
             y = 14;
-            // Repeat header
             doc.setFillColor(122, 78, 10);
             doc.rect(margin, y, tblW, 7, 'F');
             doc.setTextColor(255,255,255); doc.setFontSize(7.5); doc.setFont('helvetica','bold');
@@ -1140,12 +1616,10 @@ function downloadStatementPDF() {
             doc.setFont('helvetica','normal'); doc.setFontSize(7.5);
         }
 
-        // Row bg
         doc.setFillColor(rowIdx % 2 === 0 ? 255 : 252, rowIdx % 2 === 0 ? 255 : 248, rowIdx % 2 === 0 ? 255 : 235);
         doc.setDrawColor(220, 200, 160);
         doc.rect(margin, y, tblW, rowH, 'FD');
 
-        // Cell content
         doc.setTextColor(60,60,60);
         const cy = y + rowH/2 + 1.2;
         let cx = margin;
@@ -1153,7 +1627,6 @@ function downloadStatementPDF() {
         doc.text(o.invoice_no, cx + colW[0]/2, cy, {align:'center'}); cx += colW[0];
         doc.setFont('helvetica','normal'); doc.setTextColor(80,80,80);
         doc.text(date, cx + colW[1]/2, cy, {align:'center'}); cx += colW[1];
-        // Items (multiline)
         doc.setTextColor(50,50,50);
         const lineStartY = y + 3.5;
         itemLines.forEach((ln, li) => { doc.text(ln, cx + 1, lineStartY + li*4); });
@@ -1169,7 +1642,6 @@ function downloadStatementPDF() {
         rowIdx++;
     });
 
-    //  Footer 
     y += 6;
     if(y > 265) { doc.addPage(); y = 20; }
     doc.setDrawColor(181,115,14); doc.line(margin, y, W-margin, y);
@@ -1177,7 +1649,6 @@ function downloadStatementPDF() {
     doc.setFontSize(7); doc.setTextColor(140,140,140); doc.setFont('helvetica','italic');
     doc.text('This is a computer-generated statement from MAA GOURI JEWELLERS. For queries contact +91-9091518567.', W/2, y, {align:'center'});
 
-    // Page numbers
     const totalPages = doc.internal.getNumberOfPages();
     for(let p = 1; p <= totalPages; p++) {
         doc.setPage(p);
@@ -1188,8 +1659,9 @@ function downloadStatementPDF() {
     const safeName = name.replace(/[^a-zA-Z0-9]/g,'_');
     doc.save('Statement_' + safeName + '_' + new Date().toISOString().slice(0,10) + '.pdf');
 }
-
 </script>
+</body>
+</html>
 
 
 

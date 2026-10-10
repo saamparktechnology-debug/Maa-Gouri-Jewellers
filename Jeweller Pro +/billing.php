@@ -33,28 +33,167 @@ if(!$initial_metal_rates) {
     ];
 }
 
-// AJAX: Search bills by mobile number
-if(isset($_GET['action']) && $_GET['action'] === 'search_mobile') {
+// AJAX: Search customer profiles & bills by mobile number or customer name
+if(isset($_GET['action']) && ($_GET['action'] === 'search_mobile' || $_GET['action'] === 'search_customer')) {
     header('Content-Type: application/json');
-    $mobile = mysqli_real_escape_string($conn, trim($_GET['mobile'] ?? ''));
-    if(empty($mobile)) {
-        echo json_encode(['success' => false, 'message' => 'Mobile number required']);
+    $query_raw = trim($_GET['query'] ?? $_GET['mobile'] ?? '');
+    $query = mysqli_real_escape_string($conn, $query_raw);
+    if(empty($query)) {
+        echo json_encode(['success' => false, 'message' => 'Please enter a mobile number or customer name']);
         exit();
     }
-    $q = "SELECT i.invoice_no, i.customer_name, i.customer_mobile, i.customer_address,
-                 i.total_amount, i.gst_type, i.created_at
-          FROM invoices i
-          WHERE i.customer_mobile LIKE '%$mobile%'
-          ORDER BY i.created_at DESC
-          LIMIT 50";
-    $res = mysqli_query($conn, $q);
+
+    $chk_gst = mysqli_query($conn, "SHOW COLUMNS FROM customers LIKE 'gst_number'");
+    $has_gst_col = ($chk_gst && mysqli_num_rows($chk_gst) > 0);
+    $gst_select = $has_gst_col ? "COALESCE(gst_number, '') as gstin" : "'' as gstin";
+
+    $cust_map = [];
+
+    // 1. Check customers table
+    $c_q = "SELECT id, name, mobile, address, email, $gst_select, created_at 
+            FROM customers 
+            WHERE mobile LIKE '%$query%' OR name LIKE '%$query%'
+            ORDER BY name ASC 
+            LIMIT 30";
+    $c_res = mysqli_query($conn, $c_q);
+    if($c_res) {
+        while($c = mysqli_fetch_assoc($c_res)) {
+            $key = !empty($c['mobile']) ? trim($c['mobile']) : ('c_' . $c['id']);
+            $cust_map[$key] = [
+                'id' => intval($c['id']),
+                'name' => trim($c['name'] ?? ''),
+                'mobile' => trim($c['mobile'] ?? ''),
+                'address' => trim($c['address'] ?? ''),
+                'email' => trim($c['email'] ?? ''),
+                'gstin' => trim($c['gstin'] ?? ''),
+                'bills_count' => 0,
+                'total_spent' => 0.0,
+                'due_balance' => 0.0,
+                'advance_amount' => 0.0,
+                'advance_receipt' => '',
+                'advance_id' => 0,
+                'source' => 'customers'
+            ];
+        }
+    }
+
+    // 2. Check past invoices to enrich existing or discover previous customers
+    $inv_c_q = "SELECT customer_name, customer_mobile, customer_address, 
+                       customer_email, customer_gstin,
+                       COUNT(*) as bills_count,
+                       COALESCE(SUM(total_amount), 0) as total_spent,
+                       COALESCE(SUM(balance_amount), 0) as due_balance
+                FROM invoices 
+                WHERE customer_mobile LIKE '%$query%' OR customer_name LIKE '%$query%'
+                GROUP BY customer_mobile, customer_name
+                ORDER BY MAX(created_at) DESC
+                LIMIT 30";
+    $inv_c_res = mysqli_query($conn, $inv_c_q);
+    if($inv_c_res) {
+        while($ic = mysqli_fetch_assoc($inv_c_res)) {
+            $mob = trim($ic['customer_mobile'] ?? '');
+            $nm = trim($ic['customer_name'] ?? '');
+            $key = !empty($mob) ? $mob : ('inv_' . md5($nm));
+            
+            if(isset($cust_map[$key])) {
+                $cust_map[$key]['bills_count'] = intval($ic['bills_count']);
+                $cust_map[$key]['total_spent'] = floatval($ic['total_spent']);
+                $cust_map[$key]['due_balance'] = floatval($ic['due_balance']);
+                if(empty($cust_map[$key]['address']) && !empty($ic['customer_address'])) {
+                    $cust_map[$key]['address'] = trim($ic['customer_address']);
+                }
+                if(empty($cust_map[$key]['email']) && !empty($ic['customer_email'])) {
+                    $cust_map[$key]['email'] = trim($ic['customer_email']);
+                }
+                if(empty($cust_map[$key]['gstin']) && !empty($ic['customer_gstin'])) {
+                    $cust_map[$key]['gstin'] = trim($ic['customer_gstin']);
+                }
+            } else {
+                $cust_map[$key] = [
+                    'id' => 0,
+                    'name' => $nm ?: 'Cash Customer',
+                    'mobile' => $mob,
+                    'address' => trim($ic['customer_address'] ?? ''),
+                    'email' => trim($ic['customer_email'] ?? ''),
+                    'gstin' => trim($ic['customer_gstin'] ?? ''),
+                    'bills_count' => intval($ic['bills_count']),
+                    'total_spent' => floatval($ic['total_spent']),
+                    'due_balance' => floatval($ic['due_balance']),
+                    'advance_amount' => 0.0,
+                    'advance_receipt' => '',
+                    'advance_id' => 0,
+                    'source' => 'invoices'
+                ];
+            }
+        }
+    }
+
+    // 3. Check customer advances
+    $adv_q = mysqli_query($conn, "
+        SELECT id, receipt_no, customer_name, customer_mobile, customer_address, available_amount 
+        FROM customer_advances 
+        WHERE available_amount > 0 AND status != 'cancelled' 
+          AND (customer_mobile LIKE '%$query%' OR customer_name LIKE '%$query%')
+        LIMIT 10
+    ");
+    if($adv_q) {
+        while($ar = mysqli_fetch_assoc($adv_q)) {
+            $mob = trim($ar['customer_mobile'] ?? '');
+            $nm = trim($ar['customer_name'] ?? '');
+            $key = !empty($mob) ? $mob : ('adv_' . md5($nm));
+            if(isset($cust_map[$key])) {
+                $cust_map[$key]['advance_id'] = intval($ar['id']);
+                $cust_map[$key]['advance_amount'] = floatval($ar['available_amount']);
+                $cust_map[$key]['advance_receipt'] = $ar['receipt_no'];
+                if(empty($cust_map[$key]['address']) && !empty($ar['customer_address'])) {
+                    $cust_map[$key]['address'] = trim($ar['customer_address']);
+                }
+            } else {
+                $cust_map[$key] = [
+                    'id' => 0,
+                    'name' => $nm ?: 'Advance Customer',
+                    'mobile' => $mob,
+                    'address' => trim($ar['customer_address'] ?? ''),
+                    'email' => '',
+                    'gstin' => '',
+                    'bills_count' => 0,
+                    'total_spent' => 0.0,
+                    'due_balance' => 0.0,
+                    'advance_amount' => floatval($ar['available_amount']),
+                    'advance_receipt' => $ar['receipt_no'],
+                    'advance_id' => intval($ar['id']),
+                    'source' => 'advances'
+                ];
+            }
+        }
+    }
+
+    // 4. Bills list
+    $q_bills = "SELECT i.invoice_no, i.customer_name, i.customer_mobile, i.customer_address,
+                       i.customer_email, i.customer_gstin, i.total_amount, i.paid_amount,
+                       i.balance_amount, i.payment_status, i.gst_type, i.created_at
+                FROM invoices i
+                WHERE i.customer_mobile LIKE '%$query%' OR i.customer_name LIKE '%$query%'
+                ORDER BY i.created_at DESC
+                LIMIT 50";
+    $bills_res = mysqli_query($conn, $q_bills);
     $bills = [];
-    if($res) {
-        while($row = mysqli_fetch_assoc($res)) {
+    if($bills_res) {
+        while($row = mysqli_fetch_assoc($bills_res)) {
             $bills[] = $row;
         }
     }
-    echo json_encode(['success' => true, 'bills' => $bills, 'count' => count($bills)]);
+
+    $customer_list = array_values($cust_map);
+
+    echo json_encode([
+        'success' => true,
+        'query' => $query_raw,
+        'customers' => $customer_list,
+        'customers_count' => count($customer_list),
+        'bills' => $bills,
+        'count' => count($bills)
+    ]);
     exit();
 }
 
@@ -1715,19 +1854,44 @@ function submitPayment() {
 </script>
     <!--  END PAYMENT DUE TODAY SECTION  -->
 
-    <!-- Search Bill by Mobile -->
-    <div class="jewel-card p-4 sm:p-5 mb-6">
-        <h3 class="text-base font-bold mb-3" style="color:#7a4e0a;">
-            <i class="fas fa-search mr-2" style="color:#d68b16;"></i> Search Bill by Mobile Number
-        </h3>
-        <div class="flex flex-col sm:flex-row gap-3">
-            <input type="tel" id="searchMobile" placeholder="&#128241; Enter Customer Mobile Number..."
-                class="jewel-input flex-1 rounded-lg px-4 py-2 text-sm" maxlength="15"
-                oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-            <button onclick="searchBillsByMobile()" class="btn-gold px-6 py-2 rounded-lg text-sm font-bold">&#128269; Search</button>
-            <button onclick="clearSearch()" class="px-4 py-2 rounded-lg text-sm font-semibold"
-                style="background:#fff;border:1.5px solid rgba(181,115,14,0.4);color:#7a4e0a;">&#10006; Clear</button>
+    <!-- Search Customer & Bills by Mobile or Name -->
+    <div class="jewel-card p-4 sm:p-5 mb-6 shadow-sm border border-amber-200/80">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+            <div>
+                <h3 class="text-base font-bold flex items-center gap-2" style="color:#7a4e0a;">
+                    <i class="fas fa-search" style="color:#d68b16;"></i>
+                    <span>Search Customer by Phone or Name</span>
+                </h3>
+                <p class="text-xs text-stone-500 mt-0.5">Find existing customer profiles to auto-fill invoice details or inspect past bill history</p>
+            </div>
+            <div id="activeCustomerPill" class="hidden text-xs py-1 px-3 rounded-full font-bold flex items-center gap-2" style="background:#ecfdf5;color:#047857;border:1.5px solid #6ee7b7;">
+                <span><i class="fas fa-user-check mr-1"></i> Active Customer:</span>
+                <span id="activeCustomerPillName" class="underline decoration-dotted">-</span>
+                <button type="button" onclick="clearLoadedCustomer()" title="Clear filled customer" class="text-rose-500 hover:text-rose-700 ml-1 font-bold cursor-pointer">&times;</button>
+            </div>
         </div>
+
+        <div class="flex flex-col sm:flex-row gap-3 relative">
+            <div class="relative flex-1">
+                <input type="text" id="searchMobile" placeholder="&#128241; Enter Customer Mobile Number or Full Name (e.g. 98300... or Rahul)..."
+                    class="jewel-input w-full rounded-lg px-4 py-2.5 text-sm font-medium"
+                    autocomplete="off"
+                    oninput="handleCustomerLiveSearch(this.value)">
+                
+                <!-- Live Suggestions Dropdown -->
+                <div id="searchLiveDropdown" class="hidden absolute left-0 right-0 top-full mt-1 bg-white border border-amber-300 rounded-xl shadow-2xl z-50 overflow-hidden max-h-72 overflow-y-auto divide-y divide-amber-100">
+                </div>
+            </div>
+
+            <button type="button" onclick="searchBillsByMobile()" class="btn-gold px-6 py-2.5 rounded-lg text-sm font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm">
+                <i class="fas fa-search"></i> <span>Search</span>
+            </button>
+            <button type="button" onclick="clearSearch()" class="px-4 py-2.5 rounded-lg text-sm font-semibold transition hover:bg-stone-100 flex items-center justify-center gap-1.5 cursor-pointer"
+                style="background:#fff;border:1.5px solid rgba(181,115,14,0.4);color:#7a4e0a;">
+                <i class="fas fa-times"></i> <span>Clear</span>
+            </button>
+        </div>
+
         <div id="searchResults" class="mt-4 hidden">
             <div id="searchResultsContent"></div>
         </div>
@@ -5408,53 +5572,440 @@ function showNotif(msg, type) {
     setTimeout(() => { d.style.opacity='0'; d.style.transition='opacity 0.3s'; setTimeout(()=>d.remove(),300); }, 3500);
 }
 
-// Mobile search
+// Customer & Bills Search by Phone or Name
+let liveSearchTimer = null;
+let searchResultsData = { customers: [], bills: [] };
+
+function handleCustomerLiveSearch(val) {
+    const q = val.trim();
+    clearTimeout(liveSearchTimer);
+    const dropdown = document.getElementById('searchLiveDropdown');
+    
+    if (q.length < 2) {
+        if (dropdown) dropdown.classList.add('hidden');
+        return;
+    }
+
+    liveSearchTimer = setTimeout(() => {
+        fetch('billing.php?action=search_mobile&query=' + encodeURIComponent(q))
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success || (!data.customers.length && !data.bills.length)) {
+                    if (dropdown) dropdown.classList.add('hidden');
+                    return;
+                }
+                searchResultsData = data;
+                renderLiveDropdown(data.customers, data.bills, q);
+            })
+            .catch(() => {
+                if (dropdown) dropdown.classList.add('hidden');
+            });
+    }, 250);
+}
+
+function renderLiveDropdown(customers, bills, query) {
+    const dropdown = document.getElementById('searchLiveDropdown');
+    if (!dropdown) return;
+    
+    if ((!customers || !customers.length) && (!bills || !bills.length)) {
+        dropdown.classList.add('hidden');
+        return;
+    }
+
+    let html = '';
+    
+    if (customers && customers.length > 0) {
+        html += '<div class="px-3 py-1.5 bg-amber-50 text-[10px] font-bold text-amber-800 uppercase tracking-wider flex items-center justify-between border-b border-amber-200">';
+        html += '<span><i class="fas fa-users mr-1"></i> Customer Profiles (Click to Auto-fill)</span>';
+        html += '<span class="text-[9px] text-stone-500">' + customers.length + ' found</span>';
+        html += '</div>';
+
+        customers.slice(0, 5).forEach((c, idx) => {
+            const adv = parseFloat(c.advance_amount || 0);
+            const advBadge = adv > 0 ? `<span class="px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-800 font-bold border border-emerald-300">⚡ ₹${adv.toLocaleString('en-IN')} Adv</span>` : '';
+            const billsBadge = c.bills_count > 0 ? `<span class="px-1.5 py-0.5 rounded text-[10px] bg-stone-100 text-stone-700 font-semibold">${c.bills_count} bills</span>` : '';
+            
+            html += `<div class="p-2.5 hover:bg-amber-100/70 cursor-pointer transition flex items-center justify-between gap-2 border-b border-amber-50" onclick="selectAndFillCustomerByIndex(${idx}, 'live')">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="w-8 h-8 rounded-full bg-amber-700 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
+                        ${escapeHtml((c.name || 'C').charAt(0).toUpperCase())}
+                    </div>
+                    <div class="min-w-0">
+                        <div class="text-xs font-bold text-stone-900 truncate flex items-center gap-1.5">
+                            <span>${escapeHtml(c.name || 'Cash Customer')}</span>
+                            ${advBadge}
+                            ${billsBadge}
+                        </div>
+                        <div class="text-[11px] text-stone-600 truncate">
+                            <span class="font-mono text-stone-800 font-semibold">📱 ${escapeHtml(c.mobile || 'No Mobile')}</span>
+                            ${c.address ? `<span class="text-stone-400 mx-1">|</span> <span class="text-stone-500">📍 ${escapeHtml(c.address)}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+                <button type="button" class="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-[11px] font-bold shadow-xs whitespace-nowrap flex-shrink-0">
+                    ⚡ Auto-Fill
+                </button>
+            </div>`;
+        });
+    }
+
+    if (bills && bills.length > 0) {
+        html += '<div class="px-3 py-1.5 bg-stone-100 text-[10px] font-bold text-stone-700 uppercase tracking-wider border-b border-stone-200">';
+        html += '<i class="fas fa-file-invoice mr-1"></i> Recent Matching Invoices';
+        html += '</div>';
+
+        bills.slice(0, 3).forEach((b) => {
+            const date = b.created_at ? new Date(b.created_at).toLocaleDateString('en-IN', {day:'2-digit', month:'short'}) : '';
+            html += `<div class="p-2 hover:bg-stone-50 cursor-pointer transition flex items-center justify-between text-xs border-b border-stone-100" onclick="useBillCustomer('${escapeHtml(b.customer_name)}', '${escapeHtml(b.customer_mobile)}', '${escapeHtml(b.customer_address||'')}', '${escapeHtml(b.customer_email||'')}', '${escapeHtml(b.customer_gstin||'')}')">
+                <div>
+                    <span class="font-semibold text-amber-900 font-mono">${escapeHtml(b.invoice_no)}</span>
+                    <span class="text-stone-500 text-[11px] ml-1">(${escapeHtml(b.customer_name)})</span>
+                </div>
+                <div class="text-right">
+                    <span class="font-bold text-emerald-700">₹${parseFloat(b.total_amount||0).toLocaleString('en-IN')}</span>
+                    <span class="text-[10px] text-stone-400 ml-1">${date}</span>
+                </div>
+            </div>`;
+        });
+    }
+
+    html += `<div class="p-2 bg-amber-50 text-center">
+        <button type="button" onclick="searchBillsByMobile(); const dd = document.getElementById('searchLiveDropdown'); if(dd) dd.classList.add('hidden');" class="text-xs font-bold text-amber-800 hover:text-amber-950 underline cursor-pointer">
+            View All Matching Results &amp; Bills →
+        </button>
+    </div>`;
+
+    dropdown.innerHTML = html;
+    dropdown.classList.remove('hidden');
+}
+
+// Full Search Trigger
 function searchBillsByMobile() {
-    const mobile = document.getElementById('searchMobile').value.trim();
-    if(mobile.length < 5) { alert('Please enter at least 5 digits!'); return; }
+    const inputEl = document.getElementById('searchMobile');
+    const query = inputEl ? inputEl.value.trim() : '';
+    if (query.length < 2) {
+        alert('Please enter at least 2 characters (Phone number or Name) to search.');
+        if (inputEl) inputEl.focus();
+        return;
+    }
+
+    const dropdown = document.getElementById('searchLiveDropdown');
+    if (dropdown) dropdown.classList.add('hidden');
+
     const resultsDiv = document.getElementById('searchResults');
     const contentDiv = document.getElementById('searchResultsContent');
-    contentDiv.innerHTML = '<p style="color:#b5730e;font-size:13px;">\uD83D\uDD0D Searching...</p>';
     resultsDiv.classList.remove('hidden');
-    fetch('billing.php?action=search_mobile&mobile=' + encodeURIComponent(mobile))
+    contentDiv.innerHTML = '<div class="py-6 text-center text-amber-800 font-semibold text-sm"><i class="fas fa-spinner fa-spin mr-2"></i> Searching customers and bills matching "' + escapeHtml(query) + '"...</div>';
+
+    fetch('billing.php?action=search_mobile&query=' + encodeURIComponent(query))
         .then(r => r.json())
         .then(data => {
-            if(!data.success) { contentDiv.innerHTML = '<p style="color:#dc2626;">\u274C ' + data.message + '</p>'; return; }
-            if(data.count === 0) { contentDiv.innerHTML = '<p style="color:#d97706;">\u26A0\uFE0F No bills found for: <strong>' + mobile + '</strong></p>'; return; }
-            let html = '<p style="color:#059669;font-size:13px;margin-bottom:12px;">\u2705 <strong>' + data.count + '</strong> bill(s) found for <strong>' + data.bills[0].customer_name + '</strong></p>';
-            html += '<div class="overflow-x-auto"><table style="width:100%;border-collapse:collapse;font-size:12px;">' +
-                '<thead><tr style="background:linear-gradient(135deg,#7a4e0a,#d68b16);">' +
-                '<th style="padding:8px;color:#fff;text-align:left;">Invoice No</th>' +
-                '<th style="padding:8px;color:#fff;text-align:left;">Customer</th>' +
-                '<th style="padding:8px;color:#fff;text-align:left;">Amount</th>' +
-                '<th style="padding:8px;color:#fff;text-align:left;">Date</th>' +
-                '<th style="padding:8px;color:#fff;text-align:center;">Action</th>' +
-                '</tr></thead><tbody>';
-            data.bills.forEach((bill,i) => {
-                const date = new Date(bill.created_at).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
-                html += '<tr style="background:' + (i%2===0?'#fdf6e3':'#f5ead0') + ';border-bottom:1px solid rgba(181,115,14,0.15);">' +
-                    '<td style="padding:8px;color:#7a4e0a;font-weight:600;">' + bill.invoice_no + '</td>' +
-                    '<td style="padding:8px;color:#374151;">' + bill.customer_name + '<br><small style="color:#9ca3af;">' + bill.customer_mobile + '</small></td>' +
-                    '<td style="padding:8px;color:#059669;font-weight:700;">\u20B9' + parseFloat(bill.total_amount).toLocaleString('en-IN',{minimumFractionDigits:2}) + '</td>' +
-                    '<td style="padding:8px;color:#6b7280;">' + date + '</td>' +
-                    '<td style="padding:8px;text-align:center;">' +
-                    '<a href="view_pdf.php?invoice_no=' + encodeURIComponent(bill.invoice_no) + '" target="_blank" ' +
-                    'style="background:linear-gradient(135deg,#800020,#d68b16);color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:bold;text-decoration:none;">\uD83D\uDDA8\uFE0F Print</a>' +
-                    '</td></tr>';
-            });
-            html += '</tbody></table></div>';
+            if (!data.success) {
+                contentDiv.innerHTML = '<p class="text-rose-600 font-bold p-3 bg-rose-50 rounded-lg">❌ ' + escapeHtml(data.message) + '</p>';
+                return;
+            }
+
+            searchResultsData = data;
+            const customers = data.customers || [];
+            const bills = data.bills || [];
+
+            if (customers.length === 0 && bills.length === 0) {
+                contentDiv.innerHTML = `
+                    <div class="p-4 bg-amber-50/80 rounded-xl border border-amber-200 text-stone-700 text-xs">
+                        <div class="font-bold text-sm text-amber-900 mb-1">⚠️ No customer or bills found for: <strong>${escapeHtml(query)}</strong></div>
+                        <p class="text-stone-600">You can type the new customer name and details directly in the invoice form below.</p>
+                    </div>`;
+                return;
+            }
+
+            let html = '';
+
+            // 1. Matching Customer Profiles Section
+            if (customers.length > 0) {
+                html += `
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <h4 class="text-xs font-bold text-amber-900 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fas fa-user-check text-amber-600"></i>
+                            <span>Found ${customers.length} Customer Profile(s) &bull; Click to Auto-fill Invoice</span>
+                        </h4>
+                        <span class="text-[11px] text-stone-500 font-medium">Select any customer to load details</span>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">`;
+
+                customers.forEach((c, idx) => {
+                    const adv = parseFloat(c.advance_amount || 0);
+                    const spent = parseFloat(c.total_spent || 0);
+                    const due = parseFloat(c.due_balance || 0);
+
+                    html += `
+                        <div class="p-3.5 rounded-xl border border-amber-200/90 bg-gradient-to-r from-amber-50/70 via-white to-amber-50/30 hover:border-amber-400 hover:shadow-md transition cursor-pointer flex flex-col justify-between gap-3 group"
+                             onclick="selectAndFillCustomerByIndex(${idx}, 'full')"
+                             title="Click to auto-fill this customer into invoice">
+                            <div>
+                                <div class="flex items-start justify-between gap-2">
+                                    <div class="flex items-center gap-2.5">
+                                        <div class="w-9 h-9 rounded-full bg-gradient-to-br from-amber-700 to-amber-600 text-white font-bold flex items-center justify-center text-sm shadow-sm flex-shrink-0">
+                                            ${escapeHtml((c.name || 'C').charAt(0).toUpperCase())}
+                                        </div>
+                                        <div>
+                                            <div class="font-bold text-sm text-stone-900 group-hover:text-amber-900 transition flex items-center gap-1.5 flex-wrap">
+                                                <span>${escapeHtml(c.name || 'Cash Customer')}</span>
+                                                ${adv > 0 ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-100 text-emerald-800 border border-emerald-300">⚡ ₹${adv.toLocaleString('en-IN')} Advance</span>` : ''}
+                                            </div>
+                                            <div class="text-xs font-mono font-bold text-stone-700 mt-0.5">
+                                                📱 ${escapeHtml(c.mobile || 'No Mobile')}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button type="button" onclick="event.stopPropagation(); selectAndFillCustomerByIndex(${idx}, 'full');" 
+                                        class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-xs shadow-sm transition flex items-center gap-1 cursor-pointer">
+                                        <i class="fas fa-check"></i> Fill
+                                    </button>
+                                </div>
+
+                                <div class="mt-2.5 pt-2 border-t border-amber-100 text-[11px] text-stone-600 space-y-1">
+                                    ${c.address ? `<div class="truncate"><i class="fas fa-map-marker-alt text-amber-600 mr-1 w-3 text-center"></i> ${escapeHtml(c.address)}</div>` : '<div class="text-stone-400 italic"><i class="fas fa-map-marker-alt text-stone-300 mr-1 w-3 text-center"></i> No address recorded</div>'}
+                                    ${c.email ? `<div class="truncate"><i class="fas fa-envelope text-blue-600 mr-1 w-3 text-center"></i> ${escapeHtml(c.email)}</div>` : ''}
+                                    ${c.gstin ? `<div class="font-mono text-purple-700 font-semibold"><i class="fas fa-id-card text-purple-500 mr-1 w-3 text-center"></i> GSTIN: ${escapeHtml(c.gstin)}</div>` : ''}
+                                </div>
+                            </div>
+
+                            <div class="pt-2 border-t border-dashed border-stone-200 flex items-center justify-between text-[11px] text-stone-500">
+                                <div>
+                                    <span>Bills: <strong>${c.bills_count || 0}</strong></span>
+                                    ${spent > 0 ? `<span class="mx-1">&bull;</span><span>Total: <strong>₹${Math.round(spent).toLocaleString('en-IN')}</strong></span>` : ''}
+                                </div>
+                                ${due > 0 ? `<div class="font-bold text-rose-600">Due: ₹${due.toLocaleString('en-IN')}</div>` : '<div class="text-emerald-700 font-semibold">✓ No Due</div>'}
+                            </div>
+                        </div>`;
+                });
+
+                html += `</div></div>`;
+            }
+
+            // 2. Past Bills / Invoices Section
+            if (bills.length > 0) {
+                html += `
+                <div>
+                    <h4 class="text-xs font-bold text-stone-800 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                        <i class="fas fa-history text-stone-500"></i>
+                        <span>Past Invoices Matching Search (${bills.length})</span>
+                    </h4>
+                    <div class="overflow-x-auto rounded-xl border border-stone-200 shadow-sm">
+                        <table class="w-full text-xs text-left" style="border-collapse:collapse;">
+                            <thead>
+                                <tr style="background:linear-gradient(135deg,#7a4e0a,#d68b16);color:#fff;">
+                                    <th class="p-2.5 text-left font-bold">Invoice No</th>
+                                    <th class="p-2.5 text-left font-bold">Customer Details</th>
+                                    <th class="p-2.5 text-right font-bold">Bill Total</th>
+                                    <th class="p-2.5 text-center font-bold">Status</th>
+                                    <th class="p-2.5 text-left font-bold">Date</th>
+                                    <th class="p-2.5 text-center font-bold">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-stone-200">`;
+
+                bills.forEach((b, i) => {
+                    const date = b.created_at ? new Date(b.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+                    let statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">Paid</span>';
+                    if (b.payment_status === 'unpaid') statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800">Unpaid</span>';
+                    else if (b.payment_status === 'part') statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800">Part Paid</span>';
+
+                    html += `
+                        <tr class="${i % 2 === 0 ? 'bg-white' : 'bg-stone-50'} hover:bg-amber-50/70 transition">
+                            <td class="p-2.5 font-bold font-mono text-amber-900">${escapeHtml(b.invoice_no)}</td>
+                            <td class="p-2.5">
+                                <div class="font-bold text-stone-800">${escapeHtml(b.customer_name || 'Cash Customer')}</div>
+                                <div class="text-[10px] text-stone-500 font-mono">${escapeHtml(b.customer_mobile || 'N/A')}</div>
+                            </td>
+                            <td class="p-2.5 text-right font-bold text-emerald-700">₹${parseFloat(b.total_amount || 0).toLocaleString('en-IN', {minimumFractionDigits:2})}</td>
+                            <td class="p-2.5 text-center">${statusBadge}</td>
+                            <td class="p-2.5 text-stone-600">${date}</td>
+                            <td class="p-2.5 text-center whitespace-nowrap">
+                                <button type="button" onclick="useBillCustomer('${escapeHtml(b.customer_name)}', '${escapeHtml(b.customer_mobile)}', '${escapeHtml(b.customer_address||'')}', '${escapeHtml(b.customer_email||'')}', '${escapeHtml(b.customer_gstin||'')}')" 
+                                    class="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded text-[11px] font-bold mr-1 cursor-pointer" title="Auto-fill this customer">
+                                    <i class="fas fa-user-plus mr-1"></i> Use Customer
+                                </button>
+                                <a href="view_pdf.php?invoice_no=${encodeURIComponent(b.invoice_no)}" target="_blank" 
+                                    class="px-2.5 py-1 bg-stone-700 hover:bg-stone-800 text-white rounded text-[11px] font-bold inline-block" title="Print PDF">
+                                    🖨️ Print
+                                </a>
+                            </td>
+                        </tr>`;
+                });
+
+                html += `</tbody></table></div></div>`;
+            }
+
             contentDiv.innerHTML = html;
         })
-        .catch(() => { contentDiv.innerHTML = '<p style="color:#dc2626;">\u274C Network error. Please try again.</p>'; });
+        .catch(err => {
+            console.error(err);
+            contentDiv.innerHTML = '<p class="text-rose-600 font-bold p-3 bg-rose-50 rounded-lg">❌ Network error. Please try again.</p>';
+        });
+}
+
+function selectAndFillCustomerByIndex(idx, source) {
+    if (!searchResultsData || !searchResultsData.customers || !searchResultsData.customers[idx]) return;
+    const c = searchResultsData.customers[idx];
+    applyCustomerToBillingForm(c);
+}
+
+function useBillCustomer(name, mobile, address, email, gstin) {
+    applyCustomerToBillingForm({
+        name: name,
+        mobile: mobile,
+        address: address,
+        email: email,
+        gstin: gstin
+    });
+}
+
+function applyCustomerToBillingForm(c) {
+    if (!c) return;
+
+    // 1. Populate form fields
+    const nameEl = document.getElementById('customerName');
+    const mobEl = document.getElementById('customerMobile');
+    const addrEl = document.getElementById('customerAddress');
+    const emailEl = document.getElementById('customerEmail');
+    const gstinEl = document.getElementById('customerGstin');
+
+    if (nameEl) nameEl.value = c.name || '';
+    if (mobEl) mobEl.value = c.mobile || '';
+    if (addrEl) addrEl.value = c.address || '';
+    if (emailEl) emailEl.value = c.email || '';
+    if (gstinEl) {
+        gstinEl.value = c.gstin || '';
+        if (typeof calculateTotal === 'function') calculateTotal();
+    }
+
+    // 2. Advance Credit checking & application
+    if (c.advance_amount && parseFloat(c.advance_amount) > 0) {
+        showCustomerAdvanceCredit({
+            id: c.advance_id || 0,
+            customer_name: c.name,
+            customer_mobile: c.mobile,
+            customer_address: c.address || '',
+            advance_amount: c.advance_amount,
+            available_amount: c.advance_amount,
+            receipt_no: c.advance_receipt || ''
+        });
+        const advSel = document.getElementById('advanceCustomerDropdownSelect');
+        if (advSel && c.advance_id) advSel.value = c.advance_id;
+    } else {
+        if (typeof onCustomerDetailsInput === 'function') {
+            onCustomerDetailsInput();
+        }
+    }
+
+    // 3. Update top Active Customer Pill
+    const pill = document.getElementById('activeCustomerPill');
+    const pillName = document.getElementById('activeCustomerPillName');
+    if (pill && pillName) {
+        pillName.textContent = (c.name || 'Customer') + (c.mobile ? ' (' + c.mobile + ')' : '');
+        pill.classList.remove('hidden');
+    }
+
+    // 4. Highlight inputs temporarily
+    [nameEl, mobEl, addrEl, emailEl, gstinEl].forEach(el => {
+        if (el && el.value) {
+            el.style.backgroundColor = '#fef3c7';
+            el.style.borderColor = '#d68b16';
+        }
+    });
+    setTimeout(() => {
+        [nameEl, mobEl, addrEl, emailEl, gstinEl].forEach(el => {
+            if (el) {
+                el.style.backgroundColor = '';
+                el.style.borderColor = '';
+            }
+        });
+    }, 2000);
+
+    // 5. Hide live dropdown
+    const dropdown = document.getElementById('searchLiveDropdown');
+    if (dropdown) dropdown.classList.add('hidden');
+
+    // 6. Smooth scroll to Billing Form
+    const scrollTarget = document.getElementById('billingForm') || document.getElementById('customerName');
+    if (scrollTarget) {
+        scrollTarget.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // 7. Show success toast notification
+    if (typeof showNotif === 'function') {
+        showNotif('✅ Customer details filled for <strong>' + escapeHtml(c.name || 'Customer') + '</strong>', 'success');
+    }
+}
+
+function clearLoadedCustomer() {
+    const pill = document.getElementById('activeCustomerPill');
+    if (pill) pill.classList.add('hidden');
+
+    const nameEl = document.getElementById('customerName');
+    const mobEl = document.getElementById('customerMobile');
+    const addrEl = document.getElementById('customerAddress');
+    const emailEl = document.getElementById('customerEmail');
+    const gstinEl = document.getElementById('customerGstin');
+
+    if (nameEl) nameEl.value = '';
+    if (mobEl) mobEl.value = '';
+    if (addrEl) addrEl.value = '';
+    if (emailEl) emailEl.value = '';
+    if (gstinEl) gstinEl.value = '';
+
+    if (typeof clearCustomerAdvanceCredit === 'function') {
+        clearCustomerAdvanceCredit();
+    }
+    const advSel = document.getElementById('advanceCustomerDropdownSelect');
+    if (advSel) advSel.value = '';
+
+    if (typeof showNotif === 'function') {
+        showNotif('Customer fields cleared', 'info');
+    }
 }
 
 function clearSearch() {
-    document.getElementById('searchMobile').value = '';
-    document.getElementById('searchResults').classList.add('hidden');
-    document.getElementById('searchResultsContent').innerHTML = '';
+    const input = document.getElementById('searchMobile');
+    if (input) input.value = '';
+    const resultsDiv = document.getElementById('searchResults');
+    if (resultsDiv) resultsDiv.classList.add('hidden');
+    const contentDiv = document.getElementById('searchResultsContent');
+    if (contentDiv) contentDiv.innerHTML = '';
+    const dropdown = document.getElementById('searchLiveDropdown');
+    if (dropdown) dropdown.classList.add('hidden');
 }
 
-document.getElementById('searchMobile').addEventListener('keydown', e => { if(e.key === 'Enter') searchBillsByMobile(); });
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+// Close live dropdown on outside click
+document.addEventListener('click', function(e) {
+    const dropdown = document.getElementById('searchLiveDropdown');
+    const input = document.getElementById('searchMobile');
+    if (dropdown && !dropdown.contains(e.target) && e.target !== input) {
+        dropdown.classList.add('hidden');
+    }
+});
+
+const searchInputEl = document.getElementById('searchMobile');
+if (searchInputEl) {
+    searchInputEl.addEventListener('keydown', e => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            searchBillsByMobile();
+        }
+    });
+}
 
 // Handle Enter key across Billing Form
 document.getElementById('billingForm').addEventListener('keydown', function(e) {

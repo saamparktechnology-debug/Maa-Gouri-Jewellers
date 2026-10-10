@@ -73,6 +73,80 @@ if(isset($_GET['action']) && $_GET['action'] === 'get_orders') {
     exit();
 }
 
+// AJAX: Bulk Import Non-GST Customers from Excel/JSON
+if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['action'] === 'import_customers') {
+    header('Content-Type: application/json');
+    $raw_input = file_get_contents('php://input');
+    $data = json_decode($raw_input, true);
+    if(!$data || !isset($data['rows']) || !is_array($data['rows'])) {
+        echo json_encode(['success' => false, 'message' => 'No valid customer rows received.']);
+        exit();
+    }
+
+    $update_existing = !empty($data['update_existing']);
+    $rows = $data['rows'];
+    $added = 0;
+    $updated = 0;
+    $skipped = 0;
+    $errors = [];
+
+    foreach($rows as $idx => $r) {
+        $name    = trim($r['name'] ?? '');
+        $mobile  = preg_replace('/[^0-9]/', '', trim($r['mobile'] ?? ''));
+        if(strlen($mobile) === 12 && substr($mobile, 0, 2) === '91') {
+            $mobile = substr($mobile, 2);
+        }
+        $email   = trim($r['email'] ?? '');
+        $address = trim($r['address'] ?? '');
+
+        if(empty($name) || empty($mobile) || strlen($mobile) < 10) {
+            $skipped++;
+            continue;
+        }
+
+        $e_name    = mysqli_real_escape_string($conn, $name);
+        $e_mobile  = mysqli_real_escape_string($conn, $mobile);
+        $e_email   = mysqli_real_escape_string($conn, $email);
+        $e_address = mysqli_real_escape_string($conn, $address);
+
+        $chk = mysqli_query($conn, "SELECT id FROM customers WHERE mobile = '$e_mobile' LIMIT 1");
+        if($chk && mysqli_num_rows($chk) > 0) {
+            if($update_existing) {
+                $exist_id = mysqli_fetch_assoc($chk)['id'];
+                $update_fields = ["name = '$e_name'"];
+                if(!empty($email))   $update_fields[] = "email = '$e_email'";
+                if(!empty($address)) $update_fields[] = "address = '$e_address'";
+                $u_sql = "UPDATE customers SET " . implode(', ', $update_fields) . " WHERE id = $exist_id";
+                if(mysqli_query($conn, $u_sql)) {
+                    $updated++;
+                } else {
+                    $errors[] = "Error updating $name ($mobile): " . mysqli_error($conn);
+                }
+            } else {
+                $skipped++;
+            }
+        } else {
+            $ins_sql = "INSERT INTO customers (name, mobile, email, address, created_at)
+                        VALUES ('$e_name', '$e_mobile', '$e_email', '$e_address', NOW())";
+            if(mysqli_query($conn, $ins_sql)) {
+                $added++;
+            } else {
+                $errors[] = "Error inserting $name ($mobile): " . mysqli_error($conn);
+            }
+        }
+    }
+
+    echo json_encode([
+        'success' => true,
+        'added' => $added,
+        'updated' => $updated,
+        'skipped' => $skipped,
+        'total' => count($rows),
+        'errors' => array_slice($errors, 0, 10)
+    ]);
+    exit();
+}
+
 // Handle Add Customer
 if($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['add_customer'])) {
     $name    = mysqli_real_escape_string($conn, trim($_POST['name']));
@@ -131,7 +205,7 @@ if($filter == 'last_month') {
 
 $where_sql = implode(' AND ', $where_clauses);
 
-// Query all customers who have Non-GST invoices
+// Query all customers who have Non-GST invoices or belong to Non-GST
 $query = "
     SELECT 
         c.id, c.name, c.mobile, c.email, c.address, c.created_at,
@@ -140,8 +214,9 @@ $query = "
         COALESCE(SUM(i.balance_amount), 0) as total_due,
         MAX(i.created_at) as last_memo_date
     FROM customers c
-    INNER JOIN invoices i ON c.mobile = i.customer_mobile AND (i.gst_type NOT LIKE 'gst%' AND (i.gst_amount IS NULL OR i.gst_amount = 0))
+    LEFT JOIN invoices i ON c.mobile = i.customer_mobile AND (i.gst_type NOT LIKE 'gst%' AND (i.gst_amount IS NULL OR i.gst_amount = 0))
     WHERE $where_sql
+      AND NOT EXISTS (SELECT 1 FROM invoices i_g WHERE i_g.customer_mobile = c.mobile AND (i_g.gst_type LIKE 'gst%' OR i_g.gst_amount > 0))
     GROUP BY c.id, c.name, c.mobile, c.email, c.address, c.created_at
     ORDER BY last_memo_date DESC, c.id DESC
 ";
@@ -167,6 +242,8 @@ $total_due_all = array_sum(array_column($customers, 'total_due'));
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="../assets/css/theme.css">
+    <script src="../assets/js/xlsx.full.min.js"></script>
+    <script>if(typeof XLSX === 'undefined'){document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>');}</script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Poppins:wght@300;400;500;600;700&display=swap');
         * { font-family: 'Poppins', sans-serif; box-sizing: border-box; }
@@ -327,6 +404,12 @@ $total_due_all = array_sum(array_column($customers, 'total_due'));
                 </div>
 
                 <div class="flex items-center gap-2 flex-wrap">
+                    <button onclick="exportGeoCustomersToExcel()" class="px-3.5 py-2 bg-gradient-to-r from-emerald-600 to-green-700 hover:from-emerald-700 hover:to-green-800 text-white font-bold rounded-xl text-xs shadow-md transition inline-flex items-center gap-1.5 cursor-pointer" title="Download Non-GST customers directory as Excel">
+                        <i class="fas fa-file-excel"></i> Export Excel (.xlsx)
+                    </button>
+                    <button onclick="openGeoImportModal()" class="px-3.5 py-2 bg-white hover:bg-stone-100 text-stone-800 font-bold rounded-xl text-xs border border-stone-300 shadow-sm transition inline-flex items-center gap-1.5 cursor-pointer" title="Import Non-GST customers from Excel or CSV">
+                        <i class="fas fa-file-import text-emerald-700"></i> Import Excel
+                    </button>
                     <button onclick="openAddCustomerModal()" class="px-4 py-2 bg-gradient-to-r from-[#d68b16] to-[#b5730e] hover:from-[#b5730e] hover:to-[#7a4e0a] text-white font-bold rounded-xl text-xs shadow-md transition inline-flex items-center gap-1.5 cursor-pointer">
                         <i class="fas fa-user-plus"></i> Add New Customer
                     </button>
@@ -567,7 +650,12 @@ $total_due_all = array_sum(array_column($customers, 'total_due'));
                     </h3>
                     <p class="text-[10px] text-amber-200 mt-0.5" id="modalCustomerTitle">Customer Records</p>
                 </div>
-                <button onclick="closeModal('ordersModal')" class="text-white hover:text-gray-300 text-xl font-bold">&times;</button>
+                <div class="flex items-center gap-2">
+                    <button id="geoOrderExcelBtn" onclick="downloadGeoCustomerMemosExcel()" style="display:none;" class="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold inline-flex items-center gap-1 cursor-pointer">
+                        <i class="fas fa-file-excel mr-1"></i> Excel
+                    </button>
+                    <button onclick="closeModal('ordersModal')" class="text-white hover:text-gray-300 text-xl font-bold">&times;</button>
+                </div>
             </div>
             
             <div class="p-5 overflow-y-auto flex-1 space-y-3" id="ordersContainer">
@@ -582,7 +670,300 @@ $total_due_all = array_sum(array_column($customers, 'total_due'));
         </div>
     </div>
 
+    <!-- Modal: Import Non-GST Customers from Excel -->
+    <div id="geoImportModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+        <div class="bg-white rounded-2xl border border-amber-200 shadow-2xl w-full max-w-lg overflow-hidden text-xs">
+            <div class="px-5 py-4 bg-gradient-to-r from-[#011921] to-[#044e54] text-white flex justify-between items-center">
+                <h3 class="text-sm font-bold flex items-center gap-2">
+                    <i class="fas fa-file-excel text-emerald-400"></i> Import Non-GST Customers from Excel
+                </h3>
+                <button onclick="closeGeoImportModal()" class="text-white hover:text-gray-300 text-xl font-bold">&times;</button>
+            </div>
+            <div class="p-5 space-y-4">
+                <!-- Step 1: Download Template -->
+                <div class="p-3 rounded-xl bg-amber-50 border border-amber-200/80 flex items-center justify-between flex-wrap gap-2">
+                    <div>
+                        <div class="text-xs font-bold text-amber-900">Need the standard spreadsheet format?</div>
+                        <div class="text-[11px] text-stone-600">Download sample template with Name, Mobile, Address, Email headers.</div>
+                    </div>
+                    <button type="button" onclick="downloadGeoCustomerTemplate()" class="px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-green-700 hover:from-emerald-700 hover:to-green-800 text-white rounded-lg text-xs font-bold shadow-sm transition inline-flex items-center gap-1.5 cursor-pointer">
+                        <i class="fas fa-download"></i> Download Template (.xlsx)
+                    </button>
+                </div>
+
+                <!-- Step 2: Upload File -->
+                <div>
+                    <label class="block text-xs font-bold text-stone-700 mb-1.5">Select Excel or CSV File (.xlsx, .xls, .csv)</label>
+                    <div class="border-2 border-dashed border-amber-300 rounded-xl p-4 text-center bg-stone-50 hover:bg-amber-50/50 transition cursor-pointer" onclick="document.getElementById('geoExcelFileInput').click()">
+                        <input type="file" id="geoExcelFileInput" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleGeoExcelFileSelect(this)">
+                        <i class="fas fa-cloud-upload-alt text-2xl text-amber-600 mb-1.5 block"></i>
+                        <span class="text-xs font-semibold text-stone-700 block" id="geoUploadFileNameLabel">Click to browse file or drag and drop here</span>
+                        <span class="text-[10px] text-stone-400 block mt-0.5">Supports Microsoft Excel (.xlsx / .xls) and CSV</span>
+                    </div>
+                </div>
+
+                <!-- Step 3: Options -->
+                <div class="flex items-center gap-2">
+                    <input type="checkbox" id="geoImportUpdateExisting" class="w-4 h-4 text-amber-600 rounded border-amber-300 focus:ring-amber-500" checked>
+                    <label for="geoImportUpdateExisting" class="text-xs text-stone-700 font-medium cursor-pointer mb-0">
+                        Update existing customer details if mobile number is already registered
+                    </label>
+                </div>
+
+                <!-- Step 4: Preview Card -->
+                <div id="geoImportPreviewCard" style="display:none;" class="space-y-1.5">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold text-emerald-800" id="geoImportPreviewStats">0 rows found</span>
+                        <span class="text-[10px] text-stone-400">Preview (up to 10 rows)</span>
+                    </div>
+                    <div class="max-h-36 overflow-y-auto border border-amber-200 rounded-lg bg-stone-50 p-1">
+                        <table class="w-full text-left text-[11px]">
+                            <thead>
+                                <tr class="bg-amber-100/70 text-stone-700 font-semibold border-b border-amber-200">
+                                    <th class="p-1">#</th>
+                                    <th class="p-1">Name</th>
+                                    <th class="p-1">Mobile</th>
+                                    <th class="p-1">Address</th>
+                                </tr>
+                            </thead>
+                            <tbody id="geoImportPreviewTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Step 5: Modal Actions -->
+                <div class="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                    <button type="button" onclick="closeGeoImportModal()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold text-gray-700">Cancel</button>
+                    <button type="button" id="btnConfirmGeoImport" onclick="executeGeoCustomerImport()" disabled class="px-5 py-2 bg-gradient-to-r from-emerald-600 to-green-700 hover:from-emerald-700 hover:to-green-800 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg font-bold shadow transition cursor-pointer">
+                        <i class="fas fa-check mr-1"></i> Confirm Import
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
+        /* ---------- Non-GST Customers Data for Export ---------- */
+        const geoCustomersExportData = <?php echo json_encode($customers); ?>;
+
+        /* ---------- Export Non-GST Customers to Excel (.xlsx) ---------- */
+        function exportGeoCustomersToExcel() {
+            if (!geoCustomersExportData || geoCustomersExportData.length === 0) {
+                alert('No Non-GST customers found to export!');
+                return;
+            }
+            const today = '<?php echo date("d M Y"); ?>';
+            const todayFile = '<?php echo date("Y-m-d"); ?>';
+            const totalMemos = geoCustomersExportData.reduce((s, c) => s + parseInt(c.memo_count || 0), 0);
+            const totalPurchases = geoCustomersExportData.reduce((s, c) => s + parseFloat(c.total_purchases || 0), 0);
+            const totalDue = geoCustomersExportData.reduce((s, c) => s + parseFloat(c.total_due || 0), 0);
+
+            const wb = XLSX.utils.book_new();
+
+            const aoa = [];
+            aoa.push(['MAA GOURI JEWELLERS - Non-GST Customer Directory (Geomorphology Portal)']);
+            aoa.push(['Generated: ' + today + ' | Protected Non-GST Ledger']);
+            aoa.push([]);
+            aoa.push(['Total Customers', geoCustomersExportData.length, '', 'Total Cash Memos', totalMemos, '', 'Total Purchases', '₹' + totalPurchases.toLocaleString('en-IN', {minimumFractionDigits: 2}), '', 'Total Dues', '₹' + totalDue.toLocaleString('en-IN', {minimumFractionDigits: 2})]);
+            aoa.push([]);
+            aoa.push(['#', 'Customer Name', 'Mobile Number', 'Address / Village', 'Email Address', 'Cash Memos', 'Total Purchases (₹)', 'Due Balance (₹)', 'Last Memo Date', 'Registration Date']);
+
+            geoCustomersExportData.forEach((c, idx) => {
+                const regDate = c.created_at ? new Date(c.created_at).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'}) : '-';
+                const lastMemo = c.last_memo_date ? new Date(c.last_memo_date).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'}) : '-';
+                aoa.push([
+                    idx + 1,
+                    c.name || '',
+                    c.mobile || '',
+                    c.address || '',
+                    c.email || '',
+                    parseInt(c.memo_count || 0),
+                    parseFloat(c.total_purchases || 0),
+                    parseFloat(c.total_due || 0),
+                    lastMemo,
+                    regDate
+                ]);
+            });
+
+            aoa.push([]);
+            aoa.push(['', 'TOTAL', '', '', '', totalMemos, totalPurchases, totalDue, '', '']);
+
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            ws['!cols'] = [
+                {wch: 6},   // #
+                {wch: 26},  // Name
+                {wch: 16},  // Mobile
+                {wch: 32},  // Address
+                {wch: 24},  // Email
+                {wch: 14},  // Cash Memos
+                {wch: 22},  // Purchases
+                {wch: 18},  // Due Balance
+                {wch: 16},  // Last Memo
+                {wch: 16}   // Reg Date
+            ];
+            ws['!merges'] = [
+                {s: {r:0, c:0}, e: {r:0, c:9}},
+                {s: {r:1, c:0}, e: {r:1, c:9}}
+            ];
+
+            XLSX.utils.book_append_sheet(wb, ws, 'Non-GST Customers');
+            XLSX.writeFile(wb, `MAA_GOURI_Customers_NonGST_${todayFile}.xlsx`);
+        }
+
+        /* ---------- Download Sample Non-GST Template ---------- */
+        function downloadGeoCustomerTemplate() {
+            const wb = XLSX.utils.book_new();
+            const aoa = [
+                ['Customer Name', 'Mobile Number', 'Address / Village', 'Email Address'],
+                ['Bishnu Pad Maji', '9732001122', 'Krishnapriya Village, Midnapore', 'bishnu@example.com'],
+                ['Pratima Das', '9832554433', 'Debra, Paschim Medinipur', '']
+            ];
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            ws['!cols'] = [{wch: 24}, {wch: 16}, {wch: 32}, {wch: 24}];
+            XLSX.utils.book_append_sheet(wb, ws, 'Customers');
+            XLSX.writeFile(wb, 'Customer_Import_Template_NonGST.xlsx');
+        }
+
+        /* ---------- Import Non-GST Modal Functions ---------- */
+        let parsedGeoImportRows = [];
+
+        function openGeoImportModal() {
+            document.getElementById('geoImportModal').classList.remove('hidden');
+            document.getElementById('geoImportModal').classList.add('flex');
+        }
+
+        function closeGeoImportModal() {
+            document.getElementById('geoImportModal').classList.remove('flex');
+            document.getElementById('geoImportModal').classList.add('hidden');
+        }
+
+        function escapeGeoHtml(text) {
+            if (!text) return '';
+            return String(text)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function handleGeoExcelFileSelect(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            document.getElementById('geoUploadFileNameLabel').textContent = file.name;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const rawRows = XLSX.utils.sheet_to_json(firstSheet, {defval: ''});
+
+                    if (!rawRows || rawRows.length === 0) {
+                        alert('No data rows found in the uploaded file.');
+                        return;
+                    }
+
+                    parsedGeoImportRows = [];
+                    rawRows.forEach((r) => {
+                        let name = '', mobile = '', email = '', address = '';
+                        for (let k in r) {
+                            const lk = k.trim().toLowerCase();
+                            const val = String(r[k]).trim();
+                            if (lk.includes('name')) name = val;
+                            else if (lk.includes('mobile') || lk.includes('phone') || lk.includes('contact')) mobile = val;
+                            else if (lk.includes('email') || lk.includes('mail')) email = val;
+                            else if (lk.includes('address') || lk.includes('city') || lk.includes('village')) address = val;
+                        }
+                        const cleanMob = mobile.replace(/[^0-9]/g, '');
+                        if (name && cleanMob.length >= 10) {
+                            parsedGeoImportRows.push({
+                                name: name,
+                                mobile: cleanMob.length === 12 && cleanMob.startsWith('91') ? cleanMob.substring(2) : cleanMob,
+                                email: email,
+                                address: address
+                            });
+                        }
+                    });
+
+                    const previewCard = document.getElementById('geoImportPreviewCard');
+                    const previewStats = document.getElementById('geoImportPreviewStats');
+                    const previewTableBody = document.getElementById('geoImportPreviewTableBody');
+                    const confirmBtn = document.getElementById('btnConfirmGeoImport');
+
+                    if (parsedGeoImportRows.length === 0) {
+                        alert('No valid customer rows found. Please make sure your file has "Customer Name" and 10-digit "Mobile Number" columns.');
+                        previewCard.style.display = 'none';
+                        confirmBtn.disabled = true;
+                        return;
+                    }
+
+                    previewStats.textContent = `${parsedGeoImportRows.length} valid customers found`;
+                    previewTableBody.innerHTML = '';
+                    parsedGeoImportRows.slice(0, 10).forEach((row, i) => {
+                        previewTableBody.innerHTML += `
+                            <tr class="border-b border-amber-100 text-xs">
+                                <td class="p-1 font-mono text-stone-500">${i+1}</td>
+                                <td class="p-1 font-bold text-gray-800">${escapeGeoHtml(row.name)}</td>
+                                <td class="p-1 font-mono text-stone-700">${escapeGeoHtml(row.mobile)}</td>
+                                <td class="p-1 text-stone-600 truncate max-w-xs">${escapeGeoHtml(row.address || '-')}</td>
+                            </tr>
+                        `;
+                    });
+                    if (parsedGeoImportRows.length > 10) {
+                        previewTableBody.innerHTML += `<tr><td colspan="4" class="p-1 text-center text-xs text-stone-400 italic">...and ${parsedGeoImportRows.length - 10} more rows</td></tr>`;
+                    }
+
+                    previewCard.style.display = 'block';
+                    confirmBtn.disabled = false;
+                } catch (err) {
+                    console.error(err);
+                    alert('Failed to read Excel file: ' + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function executeGeoCustomerImport() {
+            if (!parsedGeoImportRows || parsedGeoImportRows.length === 0) {
+                alert('Please select and parse an Excel file first.');
+                return;
+            }
+            const updateExisting = document.getElementById('geoImportUpdateExisting').checked;
+            const confirmBtn = document.getElementById('btnConfirmGeoImport');
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Importing...';
+
+            fetch('customers.php?action=import_customers', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    action: 'import_customers',
+                    rows: parsedGeoImportRows,
+                    update_existing: updateExisting
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`🎉 Customer Import Successful!\n\nAdded: ${data.added} new customers\nUpdated: ${data.updated} existing customers\nSkipped: ${data.skipped}`);
+                    window.location.reload();
+                } else {
+                    alert('Import failed: ' + (data.message || 'Unknown error'));
+                    confirmBtn.disabled = false;
+                    confirmBtn.innerHTML = '<i class="fas fa-check mr-1"></i> Confirm Import';
+                }
+            })
+            .catch(err => {
+                alert('Network or server error during import: ' + err.message);
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="fas fa-check mr-1"></i> Confirm Import';
+            });
+        }
+
+        /* ---------- Standard Modals ---------- */
         function openAddCustomerModal() {
             document.getElementById('addCustomerModal').classList.remove('hidden');
             document.getElementById('addCustomerModal').classList.add('flex');
@@ -599,10 +980,20 @@ $total_due_all = array_sum(array_column($customers, 'total_due'));
         }
 
         function closeModal(modalId) {
-            document.getElementById(modalId).classList.remove('flex');
-            document.getElementById(modalId).classList.add('hidden');
+            const m = document.getElementById(modalId);
+            if (m) {
+                m.classList.remove('flex');
+                m.classList.add('hidden');
+            }
+            if (modalId === 'ordersModal') {
+                const btn = document.getElementById('geoOrderExcelBtn');
+                if (btn) btn.style.display = 'none';
+                window._geoCurrentOrders = null;
+                window._geoCurrentCustomer = null;
+            }
         }
 
+        /* ---------- Customer Cash Memos History & Excel ---------- */
         function viewCustomerOrders(mobile, name) {
             document.getElementById('modalCustomerTitle').textContent = name + ' (' + mobile + ')';
             const container = document.getElementById('ordersContainer');
@@ -616,8 +1007,15 @@ $total_due_all = array_sum(array_column($customers, 'total_due'));
                 .then(data => {
                     if(!data.success || !data.orders || data.orders.length === 0) {
                         container.innerHTML = '<p class="text-center py-6 text-stone-500 italic">No non-GST cash memos found for this customer.</p>';
+                        const btn = document.getElementById('geoOrderExcelBtn');
+                        if (btn) btn.style.display = 'none';
                         return;
                     }
+
+                    window._geoCurrentOrders = data.orders;
+                    window._geoCurrentCustomer = { name, mobile };
+                    const btn = document.getElementById('geoOrderExcelBtn');
+                    if (btn) btn.style.display = 'inline-flex';
                     
                     let html = '';
                     data.orders.forEach(o => {
@@ -669,6 +1067,65 @@ $total_due_all = array_sum(array_column($customers, 'total_due'));
                 .catch(err => {
                     container.innerHTML = '<p class="text-center py-6 text-rose-500">Error loading customer memos.</p>';
                 });
+        }
+
+        /* ---------- Download Cash Memos Statement to Excel ---------- */
+        function downloadGeoCustomerMemosExcel() {
+            const orders = window._geoCurrentOrders;
+            const customer = window._geoCurrentCustomer;
+            if (!orders || !orders.length) {
+                alert('No cash memos found to export!');
+                return;
+            }
+            const name = (customer?.name || 'Customer').trim();
+            const mobile = (customer?.mobile || '').trim();
+            const today = '<?php echo date("d M Y"); ?>';
+            const todayFile = '<?php echo date("Y-m-d"); ?>';
+            const wb = XLSX.utils.book_new();
+
+            const aoa = [];
+            aoa.push(['MAA GOURI JEWELLERS - Non-GST Cash Memo Statement']);
+            aoa.push([`Customer: ${name} | Mobile: ${mobile} | Statement Date: ${today}`]);
+            aoa.push([]);
+
+            const totalAmt = orders.reduce((s,o)=>s+parseFloat(o.total_amount||0),0);
+            const totalPaid = orders.reduce((s,o)=>s+parseFloat(o.paid_amount||0),0);
+            const totalDue = orders.reduce((s,o)=>s+parseFloat(o.balance_amount||0),0);
+
+            aoa.push(['Total Memos', orders.length, '', 'Total Purchases', '₹' + totalAmt.toLocaleString('en-IN', {minimumFractionDigits:2}), '', 'Total Paid', '₹' + totalPaid.toLocaleString('en-IN', {minimumFractionDigits:2}), '', 'Outstanding Due', '₹' + totalDue.toLocaleString('en-IN', {minimumFractionDigits:2})]);
+            aoa.push([]);
+            aoa.push(['#', 'Memo / Invoice No', 'Date', 'Jewellery Items', 'Total Qty', 'Total Weight', 'Amount (₹)', 'Paid (₹)', 'Due Balance (₹)', 'Status', 'Payment Mode']);
+
+            orders.forEach((o, i) => {
+                const itemNames = (o.items||[]).map(it => it.desc).join(', ') || 'Jewellery Item';
+                const totalQty = (o.items||[]).reduce((s, it) => s + parseFloat(it.qty||0), 0);
+                const totalWt = (o.items||[]).map(it => it.weight).filter(Boolean).join(', ') || '-';
+                const dateStr = o.created_at ? new Date(o.created_at).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'}) : '-';
+                aoa.push([
+                    i + 1,
+                    o.invoice_no,
+                    dateStr,
+                    itemNames,
+                    totalQty,
+                    totalWt,
+                    parseFloat(o.total_amount||0),
+                    parseFloat(o.paid_amount||0),
+                    parseFloat(o.balance_amount||0),
+                    o.payment_status === 'paid' ? 'Paid' : (o.payment_status === 'part' ? 'Part Paid' : 'Unpaid'),
+                    o.payment_method || 'Cash'
+                ]);
+            });
+
+            aoa.push([]);
+            aoa.push(['', 'TOTAL', '', '', '', '', totalAmt, totalPaid, totalDue, '', '']);
+
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            ws['!cols'] = [{wch:6},{wch:20},{wch:14},{wch:36},{wch:12},{wch:16},{wch:16},{wch:16},{wch:16},{wch:14},{wch:16}];
+            ws['!merges'] = [{s:{r:0,c:0},e:{r:0,c:10}},{s:{r:1,c:0},e:{r:1,c:10}}];
+            XLSX.utils.book_append_sheet(wb, ws, 'Cash Memos');
+
+            const safeName = name.replace(/[^a-zA-Z0-9]/g, '_');
+            XLSX.writeFile(wb, `NonGST_Statement_${safeName}_${todayFile}.xlsx`);
         }
     </script>
 </body>

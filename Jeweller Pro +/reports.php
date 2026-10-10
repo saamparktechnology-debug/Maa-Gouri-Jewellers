@@ -580,6 +580,26 @@ $unpaid_customers = mysqli_query($conn, "SELECT invoice_no, customer_name, custo
 $unpaid_rows = [];
 while($r = mysqli_fetch_assoc($unpaid_customers)) $unpaid_rows[] = $r;
 
+// Old Gold Exchanged Summary (GST Invoices)
+$old_gold_summary = mysqli_fetch_assoc(mysqli_query($conn, "
+    SELECT 
+        COUNT(*) as og_count,
+        COALESCE(SUM(COALESCE(old_gold_amount, old_gold_value, 0)), 0) as og_total
+    FROM invoices 
+    WHERE (gst_type LIKE 'gst%' OR gst_amount > 0) AND (old_gold_amount > 0 OR old_gold_value > 0)
+")) ?: ['og_count' => 0, 'og_total' => 0];
+
+$og_cust_res = mysqli_query($conn, "
+    SELECT invoice_no, customer_name, customer_mobile, total_amount, COALESCE(old_gold_amount, old_gold_value, 0) as old_gold_amount, old_gold_type, payment_status, created_at 
+    FROM invoices 
+    WHERE (gst_type LIKE 'gst%' OR gst_amount > 0) AND (old_gold_amount > 0 OR old_gold_value > 0) 
+    ORDER BY created_at DESC LIMIT 100
+");
+$og_rows = [];
+if ($og_cust_res) {
+    while($ogr = mysqli_fetch_assoc($og_cust_res)) $og_rows[] = $ogr;
+}
+
 // Advance Credits Summary from customer_advances
 $adv_summary = mysqli_fetch_assoc(mysqli_query($conn, "
     SELECT 
@@ -611,15 +631,17 @@ $gst_summary = mysqli_fetch_assoc(mysqli_query($conn, "
     SELECT
         SUM(CASE WHEN (gst_type LIKE 'gst%' OR gst_amount > 0) THEN 1 ELSE 0 END) as gst_count,
         SUM(CASE WHEN (gst_type NOT LIKE 'gst%' AND (gst_amount IS NULL OR gst_amount = 0)) THEN 1 ELSE 0 END) as nongst_count,
-        SUM(CASE WHEN (gst_type LIKE 'gst%' OR gst_amount > 0) THEN (total_amount - COALESCE(gst_amount, 0)) ELSE 0 END) as gst_taxable_total,
+        SUM(CASE WHEN (gst_type LIKE 'gst%' OR gst_amount > 0) THEN COALESCE(NULLIF(subtotal, 0), (total_amount + COALESCE(old_gold_amount, old_gold_value, 0) - COALESCE(gst_amount, 0))) ELSE 0 END) as gst_taxable_total,
         SUM(CASE WHEN (gst_type NOT LIKE 'gst%' AND (gst_amount IS NULL OR gst_amount = 0)) THEN total_amount ELSE 0 END) as nongst_amt,
+        SUM(CASE WHEN (gst_type NOT LIKE 'gst%' AND (gst_amount IS NULL OR gst_amount = 0)) THEN COALESCE(old_gold_amount, old_gold_value, 0) ELSE 0 END) as nongst_old_gold,
+        SUM(CASE WHEN (gst_type LIKE 'gst%' OR gst_amount > 0) THEN COALESCE(old_gold_amount, old_gold_value, 0) ELSE 0 END) as gst_old_gold,
         SUM(CASE WHEN (gst_type LIKE 'gst%' OR gst_amount > 0) THEN gst_amount ELSE 0 END) as actual_gst_collected,
-        SUM(CASE WHEN ((gst_type LIKE 'gst%' OR gst_amount > 0) AND NOT (gst_type = 'gst_18' OR (total_amount - gst_amount > 0 AND (gst_amount / (total_amount - gst_amount)) > 0.10))) THEN 1 ELSE 0 END) as gst_3_count,
-        SUM(CASE WHEN ((gst_type LIKE 'gst%' OR gst_amount > 0) AND NOT (gst_type = 'gst_18' OR (total_amount - gst_amount > 0 AND (gst_amount / (total_amount - gst_amount)) > 0.10))) THEN (total_amount - COALESCE(gst_amount, 0)) ELSE 0 END) as gst_3_taxable,
-        SUM(CASE WHEN ((gst_type LIKE 'gst%' OR gst_amount > 0) AND NOT (gst_type = 'gst_18' OR (total_amount - gst_amount > 0 AND (gst_amount / (total_amount - gst_amount)) > 0.10))) THEN gst_amount ELSE 0 END) as gst_3_amt,
-        SUM(CASE WHEN ((gst_type LIKE 'gst%' OR gst_amount > 0) AND (gst_type = 'gst_18' OR (total_amount - gst_amount > 0 AND (gst_amount / (total_amount - gst_amount)) > 0.10))) THEN 1 ELSE 0 END) as gst_18_count,
-        SUM(CASE WHEN ((gst_type LIKE 'gst%' OR gst_amount > 0) AND (gst_type = 'gst_18' OR (total_amount - gst_amount > 0 AND (gst_amount / (total_amount - gst_amount)) > 0.10))) THEN (total_amount - COALESCE(gst_amount, 0)) ELSE 0 END) as gst_18_taxable,
-        SUM(CASE WHEN ((gst_type LIKE 'gst%' OR gst_amount > 0) AND (gst_type = 'gst_18' OR (total_amount - gst_amount > 0 AND (gst_amount / (total_amount - gst_amount)) > 0.10))) THEN gst_amount ELSE 0 END) as gst_18_amt
+        SUM(CASE WHEN ((gst_type LIKE 'gst%' OR gst_amount > 0) AND NOT (gst_type = 'gst_18' OR (COALESCE(NULLIF(subtotal, 0), total_amount - gst_amount) > 0 AND (gst_amount / COALESCE(NULLIF(subtotal, 0), total_amount - gst_amount)) > 0.10))) THEN 1 ELSE 0 END) as gst_3_count,
+        SUM(CASE WHEN ((gst_type LIKE 'gst%' OR gst_amount > 0) AND NOT (gst_type = 'gst_18' OR (COALESCE(NULLIF(subtotal, 0), total_amount - gst_amount) > 0 AND (gst_amount / COALESCE(NULLIF(subtotal, 0), total_amount - gst_amount)) > 0.10))) THEN COALESCE(NULLIF(subtotal, 0), (total_amount + COALESCE(old_gold_amount, old_gold_value, 0) - COALESCE(gst_amount, 0))) ELSE 0 END) as gst_3_taxable,
+        SUM(CASE WHEN ((gst_type LIKE 'gst%' OR gst_amount > 0) AND NOT (gst_type = 'gst_18' OR (COALESCE(NULLIF(subtotal, 0), total_amount - gst_amount) > 0 AND (gst_amount / COALESCE(NULLIF(subtotal, 0), total_amount - gst_amount)) > 0.10))) THEN gst_amount ELSE 0 END) as gst_3_amt,
+        SUM(CASE WHEN ((gst_type LIKE 'gst%' OR gst_amount > 0) AND (gst_type = 'gst_18' OR (COALESCE(NULLIF(subtotal, 0), total_amount - gst_amount) > 0 AND (gst_amount / COALESCE(NULLIF(subtotal, 0), total_amount - gst_amount)) > 0.10))) THEN 1 ELSE 0 END) as gst_18_count,
+        SUM(CASE WHEN ((gst_type LIKE 'gst%' OR gst_amount > 0) AND (gst_type = 'gst_18' OR (COALESCE(NULLIF(subtotal, 0), total_amount - gst_amount) > 0 AND (gst_amount / COALESCE(NULLIF(subtotal, 0), total_amount - gst_amount)) > 0.10))) THEN COALESCE(NULLIF(subtotal, 0), (total_amount + COALESCE(old_gold_amount, old_gold_value, 0) - COALESCE(gst_amount, 0))) ELSE 0 END) as gst_18_taxable,
+        SUM(CASE WHEN ((gst_type LIKE 'gst%' OR gst_amount > 0) AND (gst_type = 'gst_18' OR (COALESCE(NULLIF(subtotal, 0), total_amount - gst_amount) > 0 AND (gst_amount / COALESCE(NULLIF(subtotal, 0), total_amount - gst_amount)) > 0.10))) THEN gst_amount ELSE 0 END) as gst_18_amt
     FROM invoices $gst_month_where
 "));
 
@@ -635,13 +657,32 @@ if($filter_from)   $where_clauses[] = "DATE(created_at) >= '$filter_from'";
 if($filter_to)     $where_clauses[] = "DATE(created_at) <= '$filter_to'";
 if($filter_name)   $where_clauses[] = "(customer_name LIKE '%$filter_name%' OR customer_mobile LIKE '%$filter_name%')";
 if($filter_status) $where_clauses[] = "payment_status = '$filter_status'";
-if($filter_gst === 'gst_3')     $where_clauses[] = "((gst_type LIKE 'gst%' OR gst_amount > 0) AND NOT (gst_type = 'gst_18' OR (total_amount - gst_amount > 0 AND (gst_amount / (total_amount - gst_amount)) > 0.10)))";
-elseif($filter_gst === 'gst_18')    $where_clauses[] = "((gst_type LIKE 'gst%' OR gst_amount > 0) AND (gst_type = 'gst_18' OR (total_amount - gst_amount > 0 AND (gst_amount / (total_amount - gst_amount)) > 0.10)))";
-else $where_clauses[] = "(gst_type LIKE 'gst%' OR gst_amount > 0)";
+
+if($filter_gst === 'gst_3') {
+    $where_clauses[] = "((gst_type LIKE 'gst%' OR gst_amount > 0) AND NOT (gst_type = 'gst_18' OR (COALESCE(NULLIF(subtotal,0), total_amount - gst_amount) > 0 AND (gst_amount / COALESCE(NULLIF(subtotal,0), total_amount - gst_amount)) > 0.10)))";
+} elseif($filter_gst === 'gst_18') {
+    $where_clauses[] = "((gst_type LIKE 'gst%' OR gst_amount > 0) AND (gst_type = 'gst_18' OR (COALESCE(NULLIF(subtotal,0), total_amount - gst_amount) > 0 AND (gst_amount / COALESCE(NULLIF(subtotal,0), total_amount - gst_amount)) > 0.10)))";
+} elseif($filter_gst === 'non_gst') {
+    $where_clauses[] = "(gst_type NOT LIKE 'gst%' AND (gst_amount IS NULL OR gst_amount = 0))";
+} elseif($filter_gst === 'all') {
+    // Show all invoices (GST and Non-GST)
+} else {
+    // Default: GST bills
+    $where_clauses[] = "(gst_type LIKE 'gst%' OR gst_amount > 0)";
+}
 $where_sql = $where_clauses ? 'WHERE ' . implode(' AND ', $where_clauses) : '';
 
-// customer_gstin column exists directly in invoices table
-$bills_result = mysqli_query($conn, "SELECT id, invoice_no, customer_name, customer_mobile, customer_address, customer_gstin, total_amount, paid_amount, balance_amount, payment_status, gst_type, gst_amount, subtotal, created_at FROM invoices $where_sql ORDER BY created_at DESC LIMIT 500");
+// customer_gstin, old_gold columns queried from invoices table
+$bills_result = mysqli_query($conn, "
+    SELECT id, invoice_no, customer_name, customer_mobile, customer_address, customer_gstin, 
+           total_amount, paid_amount, balance_amount, payment_status, gst_type, gst_amount, subtotal, 
+           COALESCE(old_gold_amount, old_gold_value, 0) AS old_gold_amount,
+           old_gold_type, created_at 
+    FROM invoices 
+    $where_sql 
+    ORDER BY created_at DESC 
+    LIMIT 500
+");
 $bills_rows = [];
 $invoice_ids = [];
 if($bills_result) {
@@ -707,8 +748,9 @@ if (!empty($invoice_ids)) {
 }
 $bills_rows = array_values($bills_rows);
 
-$total_bills_amount = array_sum(array_column($bills_rows, 'total_amount'));
-$total_bills_count  = count($bills_rows);
+$total_bills_amount   = array_sum(array_column($bills_rows, 'total_amount'));
+$total_bills_count    = count($bills_rows);
+$total_bills_old_gold = array_sum(array_column($bills_rows, 'old_gold_amount'));
 
 $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-preview.png', 'moti-removebg-preview.png', 'radhey shyam logo.png'];
 ?>
@@ -1154,38 +1196,58 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
 
         <!--  PAYMENT STATUS OVERVIEW  -->
         <div class="jewel-card p-5 sm:p-6 mb-6">
-            <h3 class="section-title mb-5"><i class="fas fa-wallet"></i> Payment Status Overview</h3>
+            <h3 class="section-title mb-5"><i class="fas fa-wallet"></i> Payment &amp; Settlement Overview</h3>
 
-            <div class="stats-3col grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
                 <!-- Paid -->
-                <div class="stat-card-paid p-4">
+                <div class="stat-card-paid p-4 rounded-xl border border-green-200">
                     <div class="flex justify-between items-start mb-2">
-                        <span class="font-bold text-sm" style="color:#166534;"> Full Paid</span>
-                        <span class="text-2xl font-black" style="color:#166534;"><?php echo $pay_summary['paid_count']; ?></span>
+                        <span class="font-bold text-xs uppercase text-green-800">Full Paid</span>
+                        <span class="text-xl font-black text-green-800"><?php echo intval($pay_summary['paid_count'] ?? 0); ?></span>
                     </div>
-                    <p class="font-bold text-lg" style="color:#166534;">₹<?php echo number_format($pay_summary['paid_amt'],2); ?></p>
-                    <p class="text-xs mt-1" style="color:#15803d;">Total collected (full payment)</p>
-                    <button onclick="toggleDetail('detailPaid')" class="toggle-detail-btn"> View Customers</button>
+                    <p class="font-bold text-base text-green-900">₹<?php echo number_format($pay_summary['paid_amt'] ?? 0, 2); ?></p>
+                    <p class="text-[11px] mt-1 text-green-700">Settled in full</p>
+                    <button onclick="toggleDetail('detailPaid')" class="toggle-detail-btn mt-2">View Bills</button>
                 </div>
                 <!-- Part -->
-                <div class="stat-card-part p-4">
+                <div class="stat-card-part p-4 rounded-xl border border-amber-200">
                     <div class="flex justify-between items-start mb-2">
-                        <span class="font-bold text-sm" style="color:#9a3412;"> Part Payment</span>
-                        <span class="text-2xl font-black" style="color:#9a3412;"><?php echo $pay_summary['part_count']; ?></span>
+                        <span class="font-bold text-xs uppercase text-amber-800">Part Payment</span>
+                        <span class="text-xl font-black text-amber-800"><?php echo intval($pay_summary['part_count'] ?? 0); ?></span>
                     </div>
-                    <p class="font-bold text-lg" style="color:#9a3412;">₹<?php echo number_format($pay_summary['part_amt'],2); ?></p>
-                    <p class="text-xs mt-1" style="color:#c2410c;"> Balance: ₹<?php echo number_format($pay_summary['part_balance'],2); ?></p>
-                    <button onclick="toggleDetail('detailPart')" class="toggle-detail-btn"> View Customers</button>
+                    <p class="font-bold text-base text-amber-900">₹<?php echo number_format($pay_summary['part_amt'] ?? 0, 2); ?></p>
+                    <p class="text-[11px] mt-1 text-amber-700">Due: ₹<?php echo number_format($pay_summary['part_balance'] ?? 0, 2); ?></p>
+                    <button onclick="toggleDetail('detailPart')" class="toggle-detail-btn mt-2">View Bills</button>
+                </div>
+                <!-- Unpaid -->
+                <div class="p-4 rounded-xl border border-red-200" style="background:linear-gradient(135deg,#fff5f5,#fee2e2);">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="font-bold text-xs uppercase text-red-800">Unpaid (Due)</span>
+                        <span class="text-xl font-black text-red-800"><?php echo intval($pay_summary['unpaid_count'] ?? 0); ?></span>
+                    </div>
+                    <p class="font-bold text-base text-red-900">₹<?php echo number_format($pay_summary['unpaid_amt'] ?? 0, 2); ?></p>
+                    <p class="text-[11px] mt-1 text-red-700">Due: ₹<?php echo number_format($pay_summary['unpaid_balance'] ?? 0, 2); ?></p>
+                    <button onclick="toggleDetail('detailUnpaidBills')" class="toggle-detail-btn mt-2" style="background:#dc2626;color:#fff;">View Bills</button>
+                </div>
+                <!-- Old Gold Exchanged -->
+                <div class="p-4 rounded-xl border border-purple-200" style="background:linear-gradient(135deg,#faf5ff,#f3e8ff);">
+                    <div class="flex justify-between items-start mb-2">
+                        <span class="font-bold text-xs uppercase text-purple-900"><i class="fas fa-coins text-amber-500 mr-1"></i> Old Gold</span>
+                        <span class="text-xl font-black text-purple-900"><?php echo intval($old_gold_summary['og_count'] ?? 0); ?></span>
+                    </div>
+                    <p class="font-bold text-base text-purple-900">₹<?php echo number_format($old_gold_summary['og_total'] ?? 0, 2); ?></p>
+                    <p class="text-[11px] mt-1 text-purple-700">Exchange Adjusted</p>
+                    <button onclick="toggleDetail('detailOldGold')" class="toggle-detail-btn mt-2" style="background:#7c3aed;color:#fff;">View Exchanges</button>
                 </div>
                 <!-- Advance Credit -->
-                <div class="stat-card-unpaid p-4" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1.5px solid #f59e0b;border-radius:12px;">
+                <div class="stat-card-unpaid p-4 rounded-xl border border-amber-300" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);">
                     <div class="flex justify-between items-start mb-2">
-                        <span class="font-bold text-sm" style="color:#92400e;">✨ Advanced (Credit)</span>
-                        <span class="text-2xl font-black" style="color:#92400e;"><?php echo intval($adv_summary['active_adv_count'] ?? 0); ?></span>
+                        <span class="font-bold text-xs uppercase text-yellow-900">✨ Advances</span>
+                        <span class="text-xl font-black text-yellow-900"><?php echo intval($adv_summary['active_adv_count'] ?? 0); ?></span>
                     </div>
-                    <p class="font-bold text-lg" style="color:#92400e;">₹<?php echo number_format($adv_summary['total_adv_amount'] ?? 0, 2); ?></p>
-                    <p class="text-xs mt-1 font-semibold" style="color:#059669;">Available Credit: ₹<?php echo number_format($adv_summary['total_adv_available'] ?? 0, 2); ?></p>
-                    <button onclick="toggleDetail('detailUnpaid')" class="toggle-detail-btn" style="background:#d97706;color:#fff;">View Advance Customers</button>
+                    <p class="font-bold text-base text-yellow-900">₹<?php echo number_format($adv_summary['total_adv_amount'] ?? 0, 2); ?></p>
+                    <p class="text-[11px] mt-1 text-emerald-800 font-semibold">Active: ₹<?php echo number_format($adv_summary['total_adv_available'] ?? 0, 2); ?></p>
+                    <button onclick="toggleDetail('detailAdvance')" class="toggle-detail-btn mt-2" style="background:#d97706;color:#fff;">View Advances</button>
                 </div>
             </div>
 
@@ -1249,8 +1311,91 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 <?php endif; ?>
             </div>
 
+            <!-- Unpaid Detail Collapse -->
+            <div id="detailUnpaidBills" class="detail-collapse mb-3">
+                <h4 class="font-bold text-sm mb-3" style="color:#dc2626;"><i class="fas fa-exclamation-circle mr-1"></i> Unpaid Bills (Full Balance Outstanding)</h4>
+                <?php if(empty($unpaid_rows)): ?>
+                    <p class="text-sm" style="color:#7a4e0a;">No unpaid bills found.</p>
+                <?php else: ?>
+                <div class="overflow-x-auto">
+                    <table class="report-table">
+                        <thead><tr>
+                            <th>Customer</th><th>Mobile</th><th class="text-right">Bill Total</th><th class="text-right">Due Balance</th><th class="text-center">Date</th><th class="text-center">Invoice</th><th class="text-center">Action</th>
+                        </tr></thead>
+                        <tbody>
+                        <?php foreach($unpaid_rows as $r): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($r['customer_name']); ?></td>
+                                <td><?php echo htmlspecialchars($r['customer_mobile']); ?></td>
+                                <td class="text-right font-bold" style="color:#dc2626;">₹<?php echo number_format($r['total_amount'],2); ?></td>
+                                <td class="text-right font-extrabold text-red-600">₹<?php echo number_format($r['balance_amount'],2); ?></td>
+                                <td class="text-center"><?php echo date('d M Y', strtotime($r['created_at'])); ?></td>
+                                <td class="text-center font-mono text-xs" style="color:#d68b16;"><?php echo htmlspecialchars($r['invoice_no']); ?></td>
+                                <td class="text-center">
+                                    <button onclick='markAsPaid(<?php echo json_encode($r['invoice_no']); ?>, <?php echo floatval($r['balance_amount']); ?>)' class="btn-jewel" style="background:linear-gradient(135deg,#16a34a,#15803d);padding:5px 8px;font-size:11px;border-radius:16px;"> Mark Paid</button>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Old Gold Detail Collapse -->
+            <div id="detailOldGold" class="detail-collapse mb-3">
+                <div class="flex items-center justify-between mb-3">
+                    <h4 class="font-bold text-sm" style="color:#6b21a8;"><i class="fas fa-coins text-amber-500 mr-1"></i> Old Gold Exchange Records</h4>
+                    <span class="text-xs font-bold text-purple-900 bg-purple-100 px-2 py-0.5 rounded-lg">Total Old Gold Exchanged: ₹<?php echo number_format($old_gold_summary['og_total'] ?? 0, 2); ?></span>
+                </div>
+                <?php if(empty($og_rows)): ?>
+                    <p class="text-sm" style="color:#7a4e0a;">No old gold exchange records found in recent GST invoices.</p>
+                <?php else: ?>
+                <div class="overflow-x-auto">
+                    <table class="report-table">
+                        <thead><tr>
+                            <th>Invoice No</th>
+                            <th>Customer Name</th>
+                            <th>Mobile</th>
+                            <th class="text-right">Old Gold Value</th>
+                            <th>Metal / Type</th>
+                            <th class="text-right">Net Bill Amount</th>
+                            <th class="text-center">Status</th>
+                            <th class="text-center">Date</th>
+                            <th class="text-center">Action</th>
+                        </tr></thead>
+                        <tbody>
+                        <?php foreach($og_rows as $r): ?>
+                            <tr>
+                                <td class="font-mono text-xs font-bold" style="color:#d68b16;">
+                                    <?php echo htmlspecialchars($r['invoice_no']); ?>
+                                </td>
+                                <td class="font-bold"><?php echo htmlspecialchars($r['customer_name']); ?></td>
+                                <td><?php echo htmlspecialchars($r['customer_mobile']); ?></td>
+                                <td class="text-right font-black text-purple-700">₹<?php echo number_format($r['old_gold_amount'], 2); ?></td>
+                                <td><span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800"><?php echo htmlspecialchars($r['old_gold_type'] ?: 'Old Gold'); ?></span></td>
+                                <td class="text-right font-bold text-stone-800">₹<?php echo number_format($r['total_amount'], 2); ?></td>
+                                <td class="text-center">
+                                    <span class="text-[10px] uppercase font-bold px-2 py-0.5 rounded <?php echo $r['payment_status']==='paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'; ?>">
+                                        <?php echo htmlspecialchars($r['payment_status']); ?>
+                                    </span>
+                                </td>
+                                <td class="text-center text-xs text-stone-500"><?php echo date('d M Y', strtotime($r['created_at'])); ?></td>
+                                <td class="text-center">
+                                    <a href="view_pdf.php?invoice_no=<?php echo urlencode($r['invoice_no']); ?>" target="_blank" class="btn-jewel" style="padding:3px 10px;font-size:10px;border-radius:14px;text-decoration:none;">
+                                        View Bill
+                                    </a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php endif; ?>
+            </div>
+
             <!-- Advance Credit Detail Collapse -->
-            <div id="detailUnpaid" class="detail-collapse">
+            <div id="detailAdvance" class="detail-collapse">
                 <div class="flex items-center justify-between mb-3">
                     <h4 class="font-bold text-sm" style="color:#92400e;">✨ Advance Credit Bookings & Deposits</h4>
                     <span class="text-xs font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-lg">Total Active Balance: ₹<?php echo number_format($adv_summary['total_adv_available'] ?? 0, 2); ?></span>
@@ -1349,7 +1494,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 <div class="stat-card-gst p-5">
                     <div class="flex justify-between items-center mb-3">
                         <span class="font-bold text-sm" style="color:#134e4a;"> GST Bills</span>
-                        <span class="text-2xl font-black" style="color:#0f766e;"><?php echo $gst_summary['gst_count']; ?> bills</span>
+                        <span class="text-2xl font-black" style="color:#0f766e;"><?php echo intval($gst_summary['gst_count'] ?? 0); ?> bills</span>
                     </div>
                     <div class="space-y-2 text-sm">
                         <div class="flex justify-between py-1" style="border-bottom:1px solid rgba(20,184,166,0.2);">
@@ -1364,8 +1509,14 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                             <span style="color:#0d9488;"> SGST (1.5%)</span>
                             <strong style="color:#0f766e;">₹<?php echo number_format($sgst,2); ?></strong>
                         </div>
+                        <?php if(!empty($gst_summary['gst_old_gold']) && floatval($gst_summary['gst_old_gold']) > 0): ?>
+                        <div class="flex justify-between py-1" style="border-bottom:1px solid rgba(20,184,166,0.2);">
+                            <span style="color:#7c3aed;"><i class="fas fa-coins text-amber-500 mr-1"></i> Old Gold Adjusted</span>
+                            <strong style="color:#6b21a8;">₹<?php echo number_format(floatval($gst_summary['gst_old_gold']),2); ?></strong>
+                        </div>
+                        <?php endif; ?>
                         <div class="flex justify-between py-2 px-3 rounded-xl mt-1" style="background:rgba(52,211,153,0.15);">
-                            <span class="font-bold" style="color:#134e4a;"> Total GST</span>
+                            <span class="font-bold" style="color:#134e4a;"> Total GST Collected</span>
                             <strong class="text-lg" style="color:#0f766e;">₹<?php echo number_format($actual_gst,2); ?></strong>
                         </div>
                     </div>
@@ -1374,13 +1525,23 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 <div class="stat-card-nongst p-5">
                     <div class="flex justify-between items-center mb-3">
                         <span class="font-bold text-sm" style="color:#475569;"> Non-GST Bills</span>
-                        <span class="text-2xl font-black" style="color:#334155;"><?php echo $gst_summary['nongst_count']; ?> bills</span>
+                        <span class="text-2xl font-black" style="color:#334155;"><?php echo intval($gst_summary['nongst_count'] ?? 0); ?> bills</span>
                     </div>
                     <div class="space-y-2 text-sm">
                         <div class="flex justify-between py-1" style="border-bottom:1px solid #e2e8f0;">
-                            <span style="color:#64748b;"> Total Sale Amount</span>
-                            <strong style="color:#334155;">₹<?php echo number_format($gst_summary['nongst_amt'],2); ?></strong>
+                            <span style="color:#64748b;"> Net Sale Amount</span>
+                            <strong style="color:#334155;">₹<?php echo number_format(floatval($gst_summary['nongst_amt'] ?? 0), 2); ?></strong>
                         </div>
+                        <?php if(!empty($gst_summary['nongst_old_gold']) && floatval($gst_summary['nongst_old_gold']) > 0): ?>
+                        <div class="flex justify-between py-1" style="border-bottom:1px solid #e2e8f0;">
+                            <span style="color:#7c3aed;"><i class="fas fa-coins text-amber-500 mr-1"></i> Old Gold Adjusted</span>
+                            <strong style="color:#6b21a8;">₹<?php echo number_format(floatval($gst_summary['nongst_old_gold']), 2); ?></strong>
+                        </div>
+                        <div class="flex justify-between py-1" style="border-bottom:1px solid #e2e8f0;">
+                            <span style="color:#64748b;"> Gross Sales Value</span>
+                            <strong style="color:#1e293b;">₹<?php echo number_format(floatval($gst_summary['nongst_amt'] ?? 0) + floatval($gst_summary['nongst_old_gold']), 2); ?></strong>
+                        </div>
+                        <?php endif; ?>
                         <div class="flex justify-between py-1" style="border-bottom:1px solid #e2e8f0;">
                             <span style="color:#64748b;"> Tax Rate</span>
                             <strong style="color:#475569;">0% (No GST)</strong>
@@ -1439,9 +1600,11 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 <div>
                     <label class="filter-label"> GST Type</label>
                     <select name="filter_gst" class="jewel-input w-full" onchange="this.form.submit()">
-                        <option value="" <?php if(!$filter_gst) echo 'selected'; ?>>All</option>
-                        <option value="gst"     <?php if($filter_gst==='gst')     echo 'selected'; ?>> GST</option>
-                        <option value="non_gst" <?php if($filter_gst==='non_gst') echo 'selected'; ?>> Non-GST</option>
+                        <option value="" <?php if(!$filter_gst || $filter_gst==='gst') echo 'selected'; ?>>All GST Bills</option>
+                        <option value="gst_3" <?php if($filter_gst==='gst_3') echo 'selected'; ?>>GST (3%)</option>
+                        <option value="gst_18" <?php if($filter_gst==='gst_18') echo 'selected'; ?>>GST (18%)</option>
+                        <option value="non_gst" <?php if($filter_gst==='non_gst') echo 'selected'; ?>>Non-GST Memos</option>
+                        <option value="all" <?php if($filter_gst==='all') echo 'selected'; ?>>All (GST + Non-GST)</option>
                     </select>
                 </div>
                 <div class="col-span-2 sm:col-span-3 lg:col-span-5 flex gap-3">
@@ -1453,11 +1616,20 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
             <!-- Summary chips -->
             <div class="flex flex-wrap gap-2 mb-4">
                 <span class="chip chip-yellow">Total Bills: <strong><?php echo $total_bills_count; ?></strong></span>
-                <span class="chip chip-green">Total Amount: <strong>₹<?php echo number_format($total_bills_amount,2); ?></strong></span>
+                <span class="chip chip-green">Net Amount: <strong>₹<?php echo number_format($total_bills_amount,2); ?></strong></span>
+                <?php if($total_bills_old_gold > 0): ?>
+                <span class="chip" style="background:#f3e8ff;color:#6b21a8;border:1px solid #d8b4fe;">
+                    <i class="fas fa-coins text-amber-500 mr-1"></i> Old Gold Exchanged: <strong>₹<?php echo number_format($total_bills_old_gold, 2); ?></strong>
+                </span>
+                <span class="chip" style="background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;">
+                    Gross Total: <strong>₹<?php echo number_format($total_bills_amount + $total_bills_old_gold, 2); ?></strong>
+                </span>
+                <?php endif; ?>
                 <?php
-                $gst_filtered    = count(array_filter($bills_rows, fn($b)=>$b['gst_type']==='gst'));
-                $nongst_filtered = count(array_filter($bills_rows, fn($b)=>$b['gst_type']!=='gst'));
-                $total_gst_collected = array_sum(array_column(array_filter($bills_rows, fn($b)=>$b['gst_type']==='gst'), 'gst_amount'));
+                $is_gst_row_check = fn($b) => (!empty($b['gst_type']) && strpos($b['gst_type'], 'gst') === 0) || floatval($b['gst_amount'] ?? 0) > 0;
+                $gst_filtered    = count(array_filter($bills_rows, $is_gst_row_check));
+                $nongst_filtered = count(array_filter($bills_rows, fn($b) => !$is_gst_row_check($b)));
+                $total_gst_collected = array_sum(array_column(array_filter($bills_rows, $is_gst_row_check), 'gst_amount'));
                 $total_cgst = round($total_gst_collected/2, 2);
                 $total_sgst = round($total_gst_collected/2, 2);
                 ?>
@@ -1479,7 +1651,8 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                             <th>Invoice No</th>
                             <th>Customer</th>
                             <th>Mobile</th>
-                            <th class="text-right">Amount (₹)</th>
+                            <th class="text-right">Net Amount (₹)</th>
+                            <th class="text-right">Old Gold (₹)</th>
                             <th class="text-right">Paid</th>
                             <th class="text-right">Due</th>
                             <th class="text-center">GST</th>
@@ -1490,11 +1663,12 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                     </thead>
                     <tbody>
                     <?php if(empty($bills_rows)): ?>
-                        <tr><td colspan="11" class="text-center py-10" style="color:#7a4e0a;">No bills found.</td></tr>
+                        <tr><td colspan="12" class="text-center py-10" style="color:#7a4e0a;">No bills found.</td></tr>
                     <?php else: foreach($bills_rows as $i => $bill):
                         $balance   = floatval($bill['balance_amount'] ?? 0);
                         $paid_show = floatval($bill['paid_amount'] ?? 0);
                         $gst_amt   = floatval($bill['gst_amount'] ?? 0);
+                        $og_amt    = floatval($bill['old_gold_amount'] ?? 0);
                         $cgst_amt  = round($gst_amt/2, 2);
                         $sgst_amt  = round($gst_amt/2, 2);
                         $gstin     = trim($bill['customer_gstin'] ?? '');
@@ -1508,7 +1682,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                         <td style="color:#7a4e0a;"><?php echo $i+1; ?></td>
                         <td class="font-mono text-xs" style="color:#d68b16;"><?php echo htmlspecialchars($bill['invoice_no']); ?></td>
 
-                        <!--  UPDATED: Customer name + GSTIN tag below -->
+                        <!-- Customer name + GSTIN tag below -->
                         <td>
                             <span class="font-semibold" style="color:#800020;"><?php echo htmlspecialchars($bill['customer_name']); ?></span>
                             <?php if($gstin !== ''): ?>
@@ -1517,7 +1691,20 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                         </td>
 
                         <td style="color:#6b7280;"><?php echo htmlspecialchars($bill['customer_mobile']); ?></td>
-                        <td class="text-right font-bold" style="color:#16a34a;">₹<?php echo number_format($bill['total_amount'],2); ?></td>
+                        <td class="text-right font-bold" style="color:#16a34a;">
+                            ₹<?php echo number_format($bill['total_amount'],2); ?>
+                            <?php if($og_amt > 0): ?>
+                                <div style="font-size:9px;color:#78716c;font-weight:normal;">Gross: ₹<?php echo number_format($bill['total_amount'] + $og_amt, 2); ?></div>
+                            <?php endif; ?>
+                        </td>
+                        <td class="text-right font-bold" style="color:#7c3aed;">
+                            <?php if($og_amt > 0): ?>
+                                ₹<?php echo number_format($og_amt, 2); ?>
+                                <div style="font-size:9px;color:#a855f7;font-weight:normal;"><?php echo htmlspecialchars($bill['old_gold_type'] ?: 'Old Gold'); ?></div>
+                            <?php else: ?>
+                                <span style="color:#d1d5db;font-weight:normal;">-</span>
+                            <?php endif; ?>
+                        </td>
                         <td class="text-right" style="color:#15803d;">₹<?php echo number_format($paid_show,2); ?></td>
                         <td class="text-right font-bold" style="color:<?php echo $balance>0?'#dc2626':'#9ca3af'; ?>">
                             <?php echo $balance>0 ? '₹'.number_format($balance,2) : '-'; ?>
@@ -1525,7 +1712,7 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                         <td class="text-center">
                             <?php
                             $is_gst_row = (strpos($bill['gst_type'] ?? '', 'gst') === 0 || $gst_amt > 0);
-                            $taxable_row = floatval($bill['total_amount'] ?? 0) - $gst_amt;
+                            $taxable_row = floatval($bill['total_amount'] ?? 0) + $og_amt - $gst_amt;
                             $is_18_row = ($bill['gst_type'] === 'gst_18' || ($taxable_row > 0 && ($gst_amt / $taxable_row) > 0.10));
                             $gst_label_row = $is_18_row ? 'GST (18%)' : 'GST (3%)';
                             ?>
@@ -1696,17 +1883,19 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
             const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
             return `${dy}-${months[parseInt(mo)-1]}-${yr.slice(2)}`;
         };
-        const totalAmt     = billsData.reduce((s,b) => s + parseFloat(b.total_amount||0), 0);
-        const totalPaid    = billsData.reduce((s,b) => s + parseFloat(b.paid_amount||0), 0);
-        const totalBalance = billsData.reduce((s,b) => s + parseFloat(b.balance_amount||0), 0);
-        const totalGST     = billsData.reduce((s,b) => s + parseFloat(b.gst_amount||0), 0);
+        const totalAmt       = billsData.reduce((s,b) => s + parseFloat(b.total_amount||0), 0);
+        const totalOldGold   = billsData.reduce((s,b) => s + parseFloat(b.old_gold_amount||0), 0);
+        const totalPaid      = billsData.reduce((s,b) => s + parseFloat(b.paid_amount||0), 0);
+        const totalBalance   = billsData.reduce((s,b) => s + parseFloat(b.balance_amount||0), 0);
+        const totalGST       = billsData.reduce((s,b) => s + parseFloat(b.gst_amount||0), 0);
         const totalWeightSum = billsData.reduce((s,b) => s + parseFloat(b.total_weight||0), 0);
         const isGstBill    = b => (b.gst_type && (b.gst_type.startsWith('gst') || b.gst_type === 'gst')) || parseFloat(b.gst_amount||0) > 0;
         const getGstTypeLabel = b => {
             if (!isGstBill(b)) return 'Non-GST';
             const tot = parseFloat(b.total_amount || 0);
+            const og  = parseFloat(b.old_gold_amount || 0);
             const gst = parseFloat(b.gst_amount || 0);
-            const tax = tot - gst;
+            const tax = tot + og - gst;
             if (b.gst_type === 'gst_18' || (tax > 0 && (gst / tax) > 0.10)) {
                 return 'GST (18%)';
             }
@@ -1722,15 +1911,16 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
 
         // Sheet 1 - All Bills
         const aoa1 = [];
-        aoa1.push([' MAA GOURI JEWELLERS', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
-        aoa1.push(['All Bills Report - Generated: ' + today, '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+        aoa1.push([' MAA GOURI JEWELLERS', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
+        aoa1.push(['All Bills & Tax Report - Generated: ' + today, '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '']);
         aoa1.push([]);
-        aoa1.push(['Total Bills', billsData.length, '', 'Total Amount', inrFmt(totalAmt), '', 'Total Weight', totalWeightSum.toFixed(3) + 'g', '', 'Total GST Collected', inrFmt(totalGST), '', 'Balance Due', inrFmt(totalBalance), '']);
-        aoa1.push(['Full Paid', paidBills, '', 'Part Payment', partBills, '', 'Unpaid', unpaidBills, '', 'GST Bills', gstBills, '']);
+        aoa1.push(['Total Bills', billsData.length, '', 'Net Payable', inrFmt(totalAmt), '', 'Old Gold Exchanged', inrFmt(totalOldGold), '', 'Gross Value', inrFmt(totalAmt + totalOldGold), '', 'Total GST Collected', inrFmt(totalGST), '', 'Balance Due', inrFmt(totalBalance)]);
+        aoa1.push(['Full Paid', paidBills, '', 'Part Payment', partBills, '', 'Unpaid', unpaidBills, '', 'Total Weight', totalWeightSum.toFixed(3) + 'g', '', 'GST Bills', gstBills, '', 'Non-GST', nonGstBills]);
         aoa1.push([]);
-        //  UPDATED: Added Products / Items and Weight (g) columns
-        aoa1.push(['#', 'Invoice No', 'Customer Name', 'GSTIN', 'Mobile', 'Address', 'Products / Items', 'Weight (g)', 'Total Amount (₹)', 'Paid Amount (₹)', 'Balance Due (₹)', 'GST Type', 'GST Amount (₹)', 'Payment Status', 'Date']);
+        aoa1.push(['#', 'Invoice No', 'Customer Name', 'GSTIN', 'Mobile', 'Address', 'Products / Items', 'Weight (g)', 'Gross Bill (₹)', 'Old Gold (₹)', 'Net Payable (₹)', 'Paid Amount (₹)', 'Balance Due (₹)', 'GST Type', 'GST Amount (₹)', 'Payment Status', 'Date']);
         billsData.forEach((b, i) => {
+            const ogVal = parseFloat(b.old_gold_amount || 0);
+            const totVal = parseFloat(b.total_amount || 0);
             aoa1.push([
                 i + 1,
                 b.invoice_no,
@@ -1740,7 +1930,9 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 b.customer_address || '',
                 b.product_names || '',
                 b.item_weights || (parseFloat(b.total_weight||0) > 0 ? parseFloat(b.total_weight).toFixed(3) + 'g' : '0.000g'),
-                parseFloat(b.total_amount||0),
+                ogVal > 0 ? (totVal + ogVal) : totVal,
+                ogVal,
+                totVal,
                 parseFloat(b.paid_amount||0),
                 parseFloat(b.balance_amount||0),
                 getGstTypeLabel(b),
@@ -1749,49 +1941,53 @@ $logo_paths = ['assets/images/moti-removebg-preview.png', 'images/moti-removebg-
                 fmtDate(b.created_at)
             ]);
         });
-        aoa1.push(['', 'TOTAL', '', '', '', '', '', totalWeightSum, billsData.reduce((s,b)=>s+parseFloat(b.total_amount||0),0), billsData.reduce((s,b)=>s+parseFloat(b.paid_amount||0),0), totalBalance, '', totalGST, '', '']);
+        aoa1.push(['', 'TOTAL', '', '', '', '', '', totalWeightSum, (totalAmt + totalOldGold), totalOldGold, totalAmt, totalPaid, totalBalance, '', totalGST, '', '']);
 
         const ws1 = XLSX.utils.aoa_to_sheet(aoa1);
-        ws1['!cols'] = [{wch:5},{wch:20},{wch:22},{wch:20},{wch:14},{wch:28},{wch:35},{wch:20},{wch:18},{wch:18},{wch:18},{wch:12},{wch:16},{wch:14},{wch:14}];
-        ws1['!merges'] = [{s:{r:0,c:0},e:{r:0,c:14}},{s:{r:1,c:0},e:{r:1,c:14}}];
+        ws1['!cols'] = [{wch:5},{wch:18},{wch:22},{wch:18},{wch:14},{wch:28},{wch:34},{wch:18},{wch:16},{wch:16},{wch:16},{wch:16},{wch:16},{wch:12},{wch:16},{wch:14},{wch:14}];
+        ws1['!merges'] = [{s:{r:0,c:0},e:{r:0,c:16}},{s:{r:1,c:0},e:{r:1,c:16}}];
         XLSX.utils.book_append_sheet(wb, ws1, 'All Bills');
 
         // Sheet 2 - Payment Summary
         const aoa2 = [];
-        aoa2.push([' MAA GOURI JEWELLERS - Payment Summary']);
+        aoa2.push([' MAA GOURI JEWELLERS - Payment & Settlement Summary']);
         aoa2.push(['Generated: ' + today]);
         aoa2.push([]);
         aoa2.push(['Category', 'Count', 'Amount (₹)']);
         aoa2.push(['Full Paid', paidBills, totalPaid]);
         aoa2.push(['Part Payment', partBills, billsData.filter(b=>b.payment_status==='part').reduce((s,b)=>s+parseFloat(b.total_amount||0),0)]);
         aoa2.push(['Unpaid (Credit)', unpaidBills, billsData.filter(b=>b.payment_status==='unpaid').reduce((s,b)=>s+parseFloat(b.total_amount||0),0)]);
-        aoa2.push(['TOTAL', billsData.length, totalAmt]);
+        aoa2.push(['Old Gold Adjusted', billsData.filter(b=>parseFloat(b.old_gold_amount||0)>0).length, totalOldGold]);
+        aoa2.push(['TOTAL NET PAYABLE', billsData.length, totalAmt]);
+        aoa2.push(['GROSS BUSINESS VALUE (with Old Gold)', billsData.length, (totalAmt + totalOldGold)]);
         aoa2.push([]);
         aoa2.push(['Total Items Weight', '', totalWeightSum.toFixed(3) + 'g']);
+        aoa2.push(['Old Gold Exchanged', '', totalOldGold]);
         aoa2.push(['Balance Due', '', totalBalance]);
         aoa2.push(['Total GST Collected', '', totalGST]);
         aoa2.push(['CGST (1.5%)', '', totalGST/2]);
         aoa2.push(['SGST (1.5%)', '', totalGST/2]);
         const ws2 = XLSX.utils.aoa_to_sheet(aoa2);
-        ws2['!cols'] = [{wch:28},{wch:12},{wch:20}];
+        ws2['!cols'] = [{wch:35},{wch:12},{wch:20}];
         XLSX.utils.book_append_sheet(wb, ws2, 'Payment Summary');
 
         // Sheet 3 - Pending
         const pendingData = billsData.filter(b => b.payment_status !== 'paid' && parseFloat(b.balance_amount||0) > 0);
-        const aoa3 = [['#','Invoice No','Customer','GSTIN','Mobile','Products / Items','Weight (g)','Bill Total (₹)','Paid (₹)','Balance Due (₹)','Status','Date']];
+        const aoa3 = [['#','Invoice No','Customer','GSTIN','Mobile','Products / Items','Weight (g)','Old Gold (₹)','Bill Net (₹)','Paid (₹)','Balance Due (₹)','Status','Date']];
         pendingData.forEach((b,i) => aoa3.push([
             i+1, b.invoice_no, b.customer_name, b.customer_gstin||'', b.customer_mobile,
             b.product_names || '',
             b.item_weights || (parseFloat(b.total_weight || 0) > 0 ? parseFloat(b.total_weight).toFixed(3) + 'g' : '0.000g'),
+            parseFloat(b.old_gold_amount||0),
             parseFloat(b.total_amount||0), parseFloat(b.paid_amount||0), parseFloat(b.balance_amount||0),
             b.payment_status==='part'?'Part Payment':'Unpaid', fmtDate(b.created_at)
         ]));
-        if(!pendingData.length) aoa3.push(['','No pending payments! ','','','','','','','','','','']);
+        if(!pendingData.length) aoa3.push(['','No pending payments! ','','','','','','','','','','','']);
         const ws3 = XLSX.utils.aoa_to_sheet(aoa3);
-        ws3['!cols'] = [{wch:5},{wch:20},{wch:22},{wch:20},{wch:14},{wch:35},{wch:14},{wch:18},{wch:16},{wch:18},{wch:14},{wch:14}];
+        ws3['!cols'] = [{wch:5},{wch:18},{wch:22},{wch:18},{wch:14},{wch:32},{wch:14},{wch:16},{wch:16},{wch:16},{wch:16},{wch:14},{wch:14}];
         XLSX.utils.book_append_sheet(wb, ws3, 'Pending Payments');
 
-        XLSX.writeFile(wb, `MAA GOURIJewellers_Report_${todayFile}.xlsx`);
+        XLSX.writeFile(wb, `MAA_GOURI_Jewellers_Report_${todayFile}.xlsx`);
     }
 
     let currentDeleteInvoiceNo = '';
