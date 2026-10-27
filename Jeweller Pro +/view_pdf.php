@@ -479,6 +479,8 @@ $net_payable_before_old_gold = max(0, $subtotal_with_gst - $discount - $advance_
 $refund_amount = 0;
 if ($old_gold > $net_payable_before_old_gold) {
     $refund_amount = round($old_gold - $net_payable_before_old_gold, 2);
+} elseif (!empty($inv['refund_amount']) && floatval($inv['refund_amount']) > 0) {
+    $refund_amount = floatval($inv['refund_amount']);
 }
 
 // Ensure net total deducts old_gold_amount if DB stored pre-deduction total

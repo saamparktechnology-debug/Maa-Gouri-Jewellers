@@ -1125,6 +1125,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && (isset($_POST['create_invoice']) || i
         'applied_advance_id' => ($adv_id_val !== null ? $adv_id_val : 'NULL'),
         'discount'           => $discount,
         'refund_amount'      => $refund_amount,
+        'refund_mode'        => ($refund_amount > 0 ? "'$payment_method'" : "NULL"),
     ];
 
     $insert_cols = [];
@@ -2646,6 +2647,10 @@ function submitPayment() {
                                     </div>
                                     <input type="number" id="oldGoldAmountInput" value="" step="1" min="0" placeholder="0" class="jewel-input rounded-lg px-2 py-1 text-sm text-right w-28 border-red-300 font-bold" oninput="calculateTotal()">
                                 </div>
+                                <div id="oldGoldExcessHint" class="text-[11px] font-semibold text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-300 flex justify-between items-center" style="display:none;">
+                                    <span class="flex items-center gap-1"><i class="fas fa-arrow-down text-emerald-600"></i> Excess to Return to Customer:</span>
+                                    <strong id="oldGoldExcessAmt" class="text-emerald-700">&#8377;0.00</strong>
+                                </div>
                                 <div class="flex justify-between text-sm" style="color:#b91c1c;display:none;" id="oldGoldRow">
                                     <span id="oldGoldLabel">Old Gold Deduction</span><span id="oldGoldDisplayAmount">- &#8377;0.00</span>
                                 </div>
@@ -2658,6 +2663,21 @@ function submitPayment() {
                                 <div style="height:1px;background:rgba(181,115,14,0.25);margin:8px 0;"></div>
                                 <div class="flex justify-between font-bold text-xl" style="color:#800020;">
                                     <span>Grand Total</span><span id="grandTotal">&#8377;0.00</span>
+                                </div>
+
+                                <!-- Old Gold Return / Refund to Customer Display Row (Shown when Old Gold > Purchase Value) -->
+                                <div id="oldGoldReturnRow" style="display:none;" class="mt-2.5 p-2.5 rounded-xl bg-emerald-50 border-2 border-emerald-400 shadow-sm">
+                                    <div class="flex justify-between items-center text-sm font-bold text-emerald-950">
+                                        <span class="flex items-center gap-1.5">
+                                            <i class="fas fa-hand-holding-usd text-emerald-600 text-base"></i>
+                                            <span>Return / Refund to Customer:</span>
+                                        </span>
+                                        <span id="oldGoldReturnDisplay" class="font-black text-lg text-emerald-700">&#8377;0.00</span>
+                                    </div>
+                                    <div id="oldGoldReturnWordsRow" class="text-[11px] font-semibold text-emerald-800 mt-1.5 pt-1 border-t border-emerald-200 flex justify-between items-center" style="display:none;">
+                                        <span class="text-stone-500 font-medium text-[10px]">In Words:</span>
+                                        <span id="oldGoldReturnWords" class="text-right italic"></span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2676,6 +2696,7 @@ function submitPayment() {
                     <input type="hidden" name="discount" id="hiddenDiscount" value="0">
                     <input type="hidden" name="old_gold_amount" id="hiddenOldGold" value="0">
                     <input type="hidden" name="old_gold_type" id="hiddenOldGoldType" value="Old Gold">
+                    <input type="hidden" name="refund_amount" id="hiddenRefundAmount" value="0">
                     <input type="hidden" name="cash_paid" id="hiddenCashPaid" value="0">
                     <input type="hidden" name="upi_paid" id="hiddenUpiPaid" value="0">
                     <input type="hidden" name="is_split_payment" id="hiddenIsSplit" value="0">
@@ -2810,6 +2831,20 @@ function submitPayment() {
                         <div id="balanceDisplay" style="display:none;" class="mt-2 p-3 rounded-lg text-sm"
                             style="background:rgba(251,191,36,0.1);border:1px solid rgba(251,191,36,0.3);">
                             <span style="color:#d97706;">&#9888;&#65039; Balance Amount: <strong id="balanceAmt">&#8377;0.00</strong></span>
+                        </div>
+
+                        <!-- Customer Return Due Box in Payment Section (when Old Gold > Bill Amount) -->
+                        <div id="oldGoldRefundPaymentBanner" style="display:none;" class="mt-2.5 p-3 rounded-xl bg-emerald-50 border-2 border-emerald-400 text-xs shadow-sm">
+                            <div class="flex items-center justify-between text-emerald-950 font-extrabold pb-1.5 border-b border-emerald-200">
+                                <span class="flex items-center gap-1.5">
+                                    <i class="fas fa-hand-holding-usd text-emerald-600 text-sm"></i>
+                                    <span>💵 Customer Return Due:</span>
+                                </span>
+                                <span id="paymentRefundBadge" class="font-black text-xs text-emerald-800 bg-emerald-200 px-2 py-0.5 rounded">&#8377;0.00</span>
+                            </div>
+                            <div class="text-[11.5px] text-emerald-900 mt-1.5 font-medium">
+                                Old gold value exceeds purchase amount. Shop will pay/return <strong id="paymentRefundTextAmt" class="text-emerald-800 font-bold">&#8377;0.00</strong> to customer via <strong id="paymentRefundMethodLabel" class="text-emerald-900 underline">Cash</strong>.
+                            </div>
                         </div>
                         <button type="button" id="reminderButton" onclick="sendPaymentReminder()"
                             class="btn-b mt-3 py-2 px-4 rounded-lg font-semibold"
@@ -4591,6 +4626,40 @@ function populateHuidOptions() {
 }
 
 
+function num2wordsIndian(amount) {
+    let n = Math.round(parseFloat(amount) || 0);
+    if (n <= 0) return 'Zero Rupees Only';
+    const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
+        'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    function convert2Digits(num) {
+        if (num < 20) return ones[num];
+        return tens[Math.floor(num / 10)] + (num % 10 ? ' ' + ones[num % 10] : '');
+    }
+    function convert3Digits(num) {
+        let str = '';
+        if (Math.floor(num / 100) > 0) {
+            str += ones[Math.floor(num / 100)] + ' Hundred ';
+            num %= 100;
+        }
+        if (num > 0) str += convert2Digits(num);
+        return str.trim();
+    }
+    let res = '';
+    const crore = Math.floor(n / 10000000);
+    n %= 10000000;
+    const lakh = Math.floor(n / 100000);
+    n %= 100000;
+    const thousand = Math.floor(n / 1000);
+    n %= 1000;
+    const hundred = n;
+    if (crore > 0) res += convert3Digits(crore) + ' Crore ';
+    if (lakh > 0) res += convert3Digits(lakh) + ' Lakh ';
+    if (thousand > 0) res += convert3Digits(thousand) + ' Thousand ';
+    if (hundred > 0) res += convert3Digits(hundred) + ' ';
+    return res.trim() + ' Rupees Only';
+}
+
 function calculateTotal() {
     const subtotal = items.reduce((sum, item) => sum + item.total, 0);
     const makingAmt = items.reduce((sum, item) => sum + (item.making_charge || 0), 0);
@@ -4658,7 +4727,9 @@ function calculateTotal() {
     }
     appliedAdvanceAmount = parseFloat(calculatedAdvDeduct.toFixed(2));
 
-    const grand = Math.max(0, netPayableBeforeAdv - Math.min(netPayableBeforeAdv, appliedAdvanceAmount) - oldGold);
+    const netPayableBeforeOldGold = Math.max(0, netPayableBeforeAdv - Math.min(netPayableBeforeAdv, appliedAdvanceAmount));
+    const oldGoldRefund = (oldGold > netPayableBeforeOldGold) ? parseFloat((oldGold - netPayableBeforeOldGold).toFixed(2)) : 0;
+    const grand = Math.max(0, netPayableBeforeOldGold - oldGold);
     
     const fmt = v => '\u20B9' + v.toFixed(2);
     if (document.getElementById('totalWeightDisplay')) {
@@ -4742,6 +4813,47 @@ function calculateTotal() {
     if(document.getElementById('oldGoldDisplayAmount')) {
         document.getElementById('oldGoldDisplayAmount').textContent = '- ' + fmt(oldGold);
         document.getElementById('oldGoldRow').style.display = (oldGold > 0) ? '' : 'none';
+    }
+
+    // --- OLD GOLD RETURN / REFUND TO CUSTOMER LIVE DISPLAY ---
+    const returnRow = document.getElementById('oldGoldReturnRow');
+    const returnDisplay = document.getElementById('oldGoldReturnDisplay');
+    const returnWordsRow = document.getElementById('oldGoldReturnWordsRow');
+    const returnWords = document.getElementById('oldGoldReturnWords');
+    const excessHint = document.getElementById('oldGoldExcessHint');
+    const excessAmt = document.getElementById('oldGoldExcessAmt');
+    const paymentRefundBanner = document.getElementById('oldGoldRefundPaymentBanner');
+    const paymentRefundBadge = document.getElementById('paymentRefundBadge');
+    const paymentRefundTextAmt = document.getElementById('paymentRefundTextAmt');
+    const paymentRefundMethodLabel = document.getElementById('paymentRefundMethodLabel');
+    const currentPayMethod = document.getElementById('paymentMethod')?.value || 'Cash';
+
+    if (oldGoldRefund > 0) {
+        if (returnRow) returnRow.style.display = 'block';
+        if (returnDisplay) returnDisplay.textContent = fmt(oldGoldRefund);
+        if (returnWordsRow && returnWords) {
+            returnWords.textContent = num2wordsIndian(oldGoldRefund) + ' (Refundable / Return to Customer)';
+            returnWordsRow.style.display = 'flex';
+        }
+        if (excessHint && excessAmt) {
+            excessAmt.textContent = fmt(oldGoldRefund);
+            excessHint.style.display = 'flex';
+        }
+        if (paymentRefundBanner) {
+            paymentRefundBanner.style.display = 'block';
+            if (paymentRefundBadge) paymentRefundBadge.textContent = fmt(oldGoldRefund);
+            if (paymentRefundTextAmt) paymentRefundTextAmt.textContent = fmt(oldGoldRefund);
+            if (paymentRefundMethodLabel) paymentRefundMethodLabel.textContent = currentPayMethod;
+        }
+    } else {
+        if (returnRow) returnRow.style.display = 'none';
+        if (returnWordsRow) returnWordsRow.style.display = 'none';
+        if (excessHint) excessHint.style.display = 'none';
+        if (paymentRefundBanner) paymentRefundBanner.style.display = 'none';
+    }
+
+    if (document.getElementById('hiddenRefundAmount')) {
+        document.getElementById('hiddenRefundAmount').value = oldGoldRefund.toFixed(2);
     }
     document.getElementById('cgstAmount').textContent     = fmt(cgst);
     document.getElementById('sgstAmount').textContent     = fmt(sgst);
@@ -5168,6 +5280,8 @@ function toggleSplitPayment() {
         document.getElementById('hiddenCashPaid').value = 0;
         document.getElementById('hiddenUpiPaid').value  = 0;
     }
+    const refundMethodLabel = document.getElementById('paymentRefundMethodLabel');
+    if (refundMethodLabel) refundMethodLabel.textContent = method;
     togglePartPayment();
 }
 
@@ -5540,6 +5654,14 @@ function updateBalanceFromPart() {
     const partDiv = document.getElementById('partAmountDiv');
     const balDiv  = document.getElementById('balanceDisplay');
     let balance = 0;
+
+    const refundAmt = parseFloat(document.getElementById('hiddenRefundAmount')?.value) || 0;
+    if (refundAmt > 0 && grand <= 0.005) {
+        if (balDiv) balDiv.style.display = 'none';
+        if (partDiv) partDiv.style.display = 'none';
+        updateReminderButtonVisibility();
+        return;
+    }
 
     if(method === 'Split') {
         const cash = parseFloat(document.getElementById('cashAmount').value) || 0;

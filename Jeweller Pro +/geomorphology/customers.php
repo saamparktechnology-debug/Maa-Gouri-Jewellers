@@ -76,6 +76,10 @@ if(isset($_GET['action']) && $_GET['action'] === 'get_orders') {
 // AJAX: Bulk Import Non-GST Customers from Excel/JSON
 if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['action'] === 'import_customers') {
     header('Content-Type: application/json');
+    @ini_set('max_execution_time', '300');
+    @set_time_limit(300);
+    @ini_set('memory_limit', '256M');
+
     $raw_input = file_get_contents('php://input');
     $data = json_decode($raw_input, true);
     if(!$data || !isset($data['rows']) || !is_array($data['rows'])) {
@@ -90,50 +94,83 @@ if($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['act
     $skipped = 0;
     $errors = [];
 
-    foreach($rows as $idx => $r) {
-        $name    = trim($r['name'] ?? '');
-        $mobile  = preg_replace('/[^0-9]/', '', trim($r['mobile'] ?? ''));
-        if(strlen($mobile) === 12 && substr($mobile, 0, 2) === '91') {
-            $mobile = substr($mobile, 2);
+    // Pre-fetch existing mobiles in this batch
+    $mobiles_to_check = [];
+    foreach($rows as $r) {
+        $m = preg_replace('/[^0-9]/', '', trim((string)($r['mobile'] ?? '')));
+        if(strlen($m) === 12 && substr($m, 0, 2) === '91') $m = substr($m, 2);
+        if(strlen($m) === 11 && substr($m, 0, 1) === '0')  $m = substr($m, 1);
+        if(strlen($m) >= 10) {
+            $mobiles_to_check[] = "'" . mysqli_real_escape_string($conn, $m) . "'";
         }
-        $email   = trim($r['email'] ?? '');
-        $address = trim($r['address'] ?? '');
+    }
 
-        if(empty($name) || empty($mobile) || strlen($mobile) < 10) {
-            $skipped++;
-            continue;
+    $existing_map = [];
+    if(!empty($mobiles_to_check)) {
+        $unique_mobiles = array_unique($mobiles_to_check);
+        $chk_res = mysqli_query($conn, "SELECT id, mobile FROM customers WHERE mobile IN (" . implode(',', $unique_mobiles) . ")");
+        if($chk_res) {
+            while($crow = mysqli_fetch_assoc($chk_res)) {
+                $existing_map[$crow['mobile']] = intval($crow['id']);
+            }
         }
+    }
 
-        $e_name    = mysqli_real_escape_string($conn, $name);
-        $e_mobile  = mysqli_real_escape_string($conn, $mobile);
-        $e_email   = mysqli_real_escape_string($conn, $email);
-        $e_address = mysqli_real_escape_string($conn, $address);
+    mysqli_begin_transaction($conn);
+    try {
+        foreach($rows as $idx => $r) {
+            $name    = trim($r['name'] ?? '');
+            $mobile  = preg_replace('/[^0-9]/', '', trim((string)($r['mobile'] ?? '')));
+            if(strlen($mobile) === 12 && substr($mobile, 0, 2) === '91') {
+                $mobile = substr($mobile, 2);
+            }
+            if(strlen($mobile) === 11 && substr($mobile, 0, 1) === '0') {
+                $mobile = substr($mobile, 1);
+            }
+            $email   = trim($r['email'] ?? '');
+            $address = trim($r['address'] ?? '');
 
-        $chk = mysqli_query($conn, "SELECT id FROM customers WHERE mobile = '$e_mobile' LIMIT 1");
-        if($chk && mysqli_num_rows($chk) > 0) {
-            if($update_existing) {
-                $exist_id = mysqli_fetch_assoc($chk)['id'];
-                $update_fields = ["name = '$e_name'"];
-                if(!empty($email))   $update_fields[] = "email = '$e_email'";
-                if(!empty($address)) $update_fields[] = "address = '$e_address'";
-                $u_sql = "UPDATE customers SET " . implode(', ', $update_fields) . " WHERE id = $exist_id";
-                if(mysqli_query($conn, $u_sql)) {
-                    $updated++;
+            if(empty($name) || empty($mobile) || strlen($mobile) < 10) {
+                $skipped++;
+                continue;
+            }
+
+            $e_name    = mysqli_real_escape_string($conn, $name);
+            $e_mobile  = mysqli_real_escape_string($conn, $mobile);
+            $e_email   = mysqli_real_escape_string($conn, $email);
+            $e_address = mysqli_real_escape_string($conn, $address);
+
+            if(isset($existing_map[$mobile])) {
+                if($update_existing) {
+                    $exist_id = $existing_map[$mobile];
+                    $update_fields = ["name = '$e_name'"];
+                    if(!empty($email))   $update_fields[] = "email = '$e_email'";
+                    if(!empty($address)) $update_fields[] = "address = '$e_address'";
+                    $u_sql = "UPDATE customers SET " . implode(', ', $update_fields) . " WHERE id = $exist_id";
+                    if(mysqli_query($conn, $u_sql)) {
+                        $updated++;
+                    } else {
+                        $errors[] = "Error updating $name ($mobile): " . mysqli_error($conn);
+                    }
                 } else {
-                    $errors[] = "Error updating $name ($mobile): " . mysqli_error($conn);
+                    $skipped++;
                 }
             } else {
-                $skipped++;
-            }
-        } else {
-            $ins_sql = "INSERT INTO customers (name, mobile, email, address, created_at)
-                        VALUES ('$e_name', '$e_mobile', '$e_email', '$e_address', NOW())";
-            if(mysqli_query($conn, $ins_sql)) {
-                $added++;
-            } else {
-                $errors[] = "Error inserting $name ($mobile): " . mysqli_error($conn);
+                $ins_sql = "INSERT INTO customers (name, mobile, email, address, created_at)
+                            VALUES ('$e_name', '$e_mobile', '$e_email', '$e_address', NOW())";
+                if(mysqli_query($conn, $ins_sql)) {
+                    $added++;
+                    $existing_map[$mobile] = mysqli_insert_id($conn);
+                } else {
+                    $errors[] = "Error inserting $name ($mobile): " . mysqli_error($conn);
+                }
             }
         }
+        mysqli_commit($conn);
+    } catch(Exception $ex) {
+        mysqli_rollback($conn);
+        echo json_encode(['success' => false, 'message' => $ex->getMessage()]);
+        exit();
     }
 
     echo json_encode([
@@ -731,6 +768,21 @@ $total_due_all = array_sum(array_column($customers, 'total_due'));
                     </div>
                 </div>
 
+                <!-- Progress Bar (shown during import) -->
+                <div id="geoImportProgressBarContainer" style="display:none;" class="p-3 bg-amber-50 rounded-xl border border-amber-300">
+                    <div class="flex justify-between items-center text-xs font-bold text-amber-950 mb-1.5">
+                        <span id="geoImportProgressText"><i class="fas fa-spinner fa-spin text-emerald-600 mr-1.5"></i> Importing customers...</span>
+                        <span id="geoImportProgressPercent" class="font-mono text-emerald-700">0%</span>
+                    </div>
+                    <div class="w-full bg-stone-200 h-2.5 rounded-full overflow-hidden">
+                        <div id="geoImportProgressBar" class="bg-gradient-to-r from-emerald-500 to-green-600 h-full transition-all duration-150" style="width: 0%;"></div>
+                    </div>
+                    <div class="text-[10.5px] text-stone-500 mt-1.5 flex justify-between">
+                        <span id="geoImportProgressCounts">Processing...</span>
+                        <span class="text-amber-700 font-semibold">Please keep this window open</span>
+                    </div>
+                </div>
+
                 <!-- Step 5: Modal Actions -->
                 <div class="flex justify-end gap-2 pt-2 border-t border-gray-100">
                     <button type="button" onclick="closeGeoImportModal()" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg font-semibold text-gray-700">Cancel</button>
@@ -926,41 +978,86 @@ $total_due_all = array_sum(array_column($customers, 'total_due'));
             reader.readAsArrayBuffer(file);
         }
 
-        function executeGeoCustomerImport() {
+        async function executeGeoCustomerImport() {
             if (!parsedGeoImportRows || parsedGeoImportRows.length === 0) {
                 alert('Please select and parse an Excel file first.');
                 return;
             }
             const updateExisting = document.getElementById('geoImportUpdateExisting').checked;
             const confirmBtn = document.getElementById('btnConfirmGeoImport');
-            confirmBtn.disabled = true;
-            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Importing...';
+            const cancelBtn = confirmBtn.previousElementSibling;
+            const progressContainer = document.getElementById('geoImportProgressBarContainer');
+            const progressBar = document.getElementById('geoImportProgressBar');
+            const progressPercent = document.getElementById('geoImportProgressPercent');
+            const progressText = document.getElementById('geoImportProgressText');
+            const progressCounts = document.getElementById('geoImportProgressCounts');
 
-            fetch('customers.php?action=import_customers', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    action: 'import_customers',
-                    rows: parsedGeoImportRows,
-                    update_existing: updateExisting
-                })
-            })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    alert(`🎉 Customer Import Successful!\n\nAdded: ${data.added} new customers\nUpdated: ${data.updated} existing customers\nSkipped: ${data.skipped}`);
-                    window.location.reload();
-                } else {
-                    alert('Import failed: ' + (data.message || 'Unknown error'));
-                    confirmBtn.disabled = false;
-                    confirmBtn.innerHTML = '<i class="fas fa-check mr-1"></i> Confirm Import';
+            confirmBtn.disabled = true;
+            if (cancelBtn) cancelBtn.style.display = 'none';
+            if (progressContainer) progressContainer.style.display = 'block';
+
+            const totalRows = parsedGeoImportRows.length;
+            const BATCH_SIZE = 100;
+            const totalBatches = Math.ceil(totalRows / BATCH_SIZE);
+
+            let totalAdded = 0;
+            let totalUpdated = 0;
+            let totalSkipped = 0;
+
+            try {
+                for (let b = 0; b < totalBatches; b++) {
+                    const start = b * BATCH_SIZE;
+                    const end = Math.min(start + BATCH_SIZE, totalRows);
+                    const batchRows = parsedGeoImportRows.slice(start, end);
+
+                    const pct = Math.round((start / totalRows) * 100);
+                    if (progressBar) progressBar.style.width = pct + '%';
+                    if (progressPercent) progressPercent.textContent = pct + '%';
+                    if (progressText) progressText.innerHTML = `<i class="fas fa-spinner fa-spin text-emerald-600 mr-1.5"></i> Importing batch ${b + 1} of ${totalBatches}...`;
+                    if (progressCounts) progressCounts.textContent = `Processed ${start} of ${totalRows} (${totalAdded} added, ${totalUpdated} updated)`;
+                    confirmBtn.innerHTML = `<i class="fas fa-spinner fa-spin mr-1"></i> Importing (${pct}%)...`;
+
+                    const resp = await fetch('customers.php?action=import_customers', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            action: 'import_customers',
+                            rows: batchRows,
+                            update_existing: updateExisting
+                        })
+                    });
+
+                    const respText = await resp.text();
+                    let data;
+                    try {
+                        data = JSON.parse(respText);
+                    } catch (err) {
+                        throw new Error(`Server returned invalid response on batch ${b + 1} (HTTP ${resp.status}): ${respText.substring(0, 150) || 'Empty response'}`);
+                    }
+
+                    if (!data.success) {
+                        throw new Error(data.message || `Batch ${b + 1} failed.`);
+                    }
+
+                    totalAdded += (data.added || 0);
+                    totalUpdated += (data.updated || 0);
+                    totalSkipped += (data.skipped || 0);
                 }
-            })
-            .catch(err => {
-                alert('Network or server error during import: ' + err.message);
+
+                if (progressBar) progressBar.style.width = '100%';
+                if (progressPercent) progressPercent.textContent = '100%';
+                if (progressText) progressText.innerHTML = `<i class="fas fa-check-circle text-emerald-600 mr-1.5"></i> Import Complete!`;
+                if (progressCounts) progressCounts.textContent = `Completed ${totalRows} customers (${totalAdded} added, ${totalUpdated} updated, ${totalSkipped} skipped)`;
+                confirmBtn.innerHTML = '<i class="fas fa-check mr-1"></i> Done';
+
+                alert(`🎉 Customer Import Successful!\n\nTotal Processed: ${totalRows}\nAdded: ${totalAdded} new customers\nUpdated: ${totalUpdated} existing customers\nSkipped: ${totalSkipped}`);
+                window.location.reload();
+            } catch (err) {
+                alert('Import error: ' + err.message);
                 confirmBtn.disabled = false;
-                confirmBtn.innerHTML = '<i class="fas fa-check mr-1"></i> Confirm Import';
-            });
+                confirmBtn.innerHTML = '<i class="fas fa-check mr-1"></i> Retry Import';
+                if (cancelBtn) cancelBtn.style.display = '';
+            }
         }
 
         /* ---------- Standard Modals ---------- */
