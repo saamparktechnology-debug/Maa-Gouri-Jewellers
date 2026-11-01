@@ -3094,14 +3094,19 @@ function submitPayment() {
 
 <!-- JAVASCRIPT -->
 <script>
-const ALL_PRODUCTS = <?php echo json_encode($all_products, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
-const itemTypeOptions = <?php echo json_encode($itemTypeOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+const ALL_PRODUCTS = (<?php echo json_encode($all_products, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>) || [];
+const itemTypeOptions = (<?php echo json_encode($itemTypeOptions, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>) || {};
 
 // Global rate tracking objects (defined at top to avoid Temporal Dead Zone ReferenceError)
 var shopRates = { gold24:0, gold22:0, gold18:0, gold12:0, gold9:0, silver:0, diamond:0 };
 var shopDisplayIds = { gold24:'shopGold24Display', gold22:'shopGold22Display', gold18:'shopGold18Display', gold12:'shopGold12Display', gold9:'shopGold9Display', silver:'shopSilverDisplay', diamond:'shopDiamondDisplay' };
 var shopInputIds   = { gold24:'shopGold24Input',   gold22:'shopGold22Input',   gold18:'shopGold18Input',   gold12:'shopGold12Input',   gold9:'shopGold9Input',   silver:'shopSilverInput',   diamond:'shopDiamondInput'   };
 var metalRates = { gold24:0, gold22:0, gold18:0, gold12:0, gold9:0, silver:0, platinum:0 };
+
+// Global search & billing state variables (defined at top to prevent TDZ ReferenceError)
+var liveSearchTimer = null;
+var searchResultsData = { customers: [], bills: [] };
+window.searchResultsData = searchResultsData;
 
 // Global billing state variables (defined at top to prevent TDZ ReferenceError)
 var items = [];
@@ -3115,7 +3120,7 @@ var currentAdvanceId = 0;
 var currentAdvanceReceipt = '';
 var advanceAdjustmentMode = 'none';
 var appliedAdvanceAmount = 0;
-var allAdvanceCustomers = <?php echo json_encode($active_advance_customers); ?>;
+var allAdvanceCustomers = <?php echo json_encode($active_advance_customers); ?> || [];
 
 const defaultItemTypeOptions = {
     'Gold 22K': ['Necklace','Chur','Bala','Chain','Tops','Single Loket','Double Loket','Churi','Jhuladul','Jhumka','Ladies Ring','Gold Choker','Gents Ring','Gents Breslet','Ladies Breslet','Tika','Takti','Mantasa','Pearl Choker','Bauti Chur','Soket Bauti','Breslet Noya','Stell Noya','Baby Ring','Bali','Pitaring','Baby Breslet','Pearl Sitahar','Nose Pin','Other'],
@@ -3126,24 +3131,28 @@ const defaultItemTypeOptions = {
 };
 const mergedItemTypeOptions = {};
 Object.keys(defaultItemTypeOptions).forEach(category => {
-    const dbOptions = Array.isArray(itemTypeOptions[category]) ? itemTypeOptions[category] : [];
+    const dbOptions = (itemTypeOptions && Array.isArray(itemTypeOptions[category])) ? itemTypeOptions[category] : [];
     mergedItemTypeOptions[category] = Array.from(new Set([...dbOptions, ...defaultItemTypeOptions[category]]));
 });
-Object.keys(itemTypeOptions).forEach(category => {
-    if(!mergedItemTypeOptions[category]) {
-        mergedItemTypeOptions[category] = itemTypeOptions[category];
-    }
-});
+if (itemTypeOptions && typeof itemTypeOptions === 'object') {
+    Object.keys(itemTypeOptions).forEach(category => {
+        if(!mergedItemTypeOptions[category]) {
+            mergedItemTypeOptions[category] = itemTypeOptions[category];
+        }
+    });
+}
 // Also add any custom item_names from ALL_PRODUCTS that aren't already included
-ALL_PRODUCTS.forEach(p => {
-    const cat = p.category || '';
-    const name = (p.item_name || p.name || '').trim();
-    if (!cat || !name) return;
-    if (!mergedItemTypeOptions[cat]) mergedItemTypeOptions[cat] = [];
-    if (!mergedItemTypeOptions[cat].includes(name)) {
-        mergedItemTypeOptions[cat].push(name);
-    }
-});
+if (Array.isArray(ALL_PRODUCTS)) {
+    ALL_PRODUCTS.forEach(p => {
+        const cat = p.category || '';
+        const name = (p.item_name || p.name || '').trim();
+        if (!cat || !name) return;
+        if (!mergedItemTypeOptions[cat]) mergedItemTypeOptions[cat] = [];
+        if (!mergedItemTypeOptions[cat].includes(name)) {
+            mergedItemTypeOptions[cat].push(name);
+        }
+    });
+}
 
 // Tab switching
 function switchMainTab(tab) {
@@ -5844,9 +5853,10 @@ function showNotif(msg, type) {
     setTimeout(() => { d.style.opacity='0'; d.style.transition='opacity 0.3s'; setTimeout(()=>d.remove(),300); }, 3500);
 }
 
-// Customer & Bills Search by Phone or Name
-let liveSearchTimer = null;
-let searchResultsData = { customers: [], bills: [] };
+// Customer & Bills Search by Phone or Name (declared at top with var to prevent TDZ)
+window.searchResultsData = window.searchResultsData || { customers: [], bills: [] };
+var searchResultsData = window.searchResultsData;
+var liveSearchTimer = window.liveSearchTimer || null;
 
 function handleCustomerLiveSearch(val) {
     const q = val.trim();
@@ -5867,6 +5877,7 @@ function handleCustomerLiveSearch(val) {
                     return;
                 }
                 searchResultsData = data;
+                window.searchResultsData = data;
                 renderLiveDropdown(data.customers, data.bills, q);
             })
             .catch(() => {
@@ -5978,6 +5989,7 @@ function searchBillsByMobile() {
             }
 
             searchResultsData = data;
+            window.searchResultsData = data;
             const customers = data.customers || [];
             const bills = data.bills || [];
 
@@ -6119,14 +6131,16 @@ function searchBillsByMobile() {
 }
 
 function selectAndFillCustomerByIndex(idx, source) {
-    if (!searchResultsData || !searchResultsData.customers || !searchResultsData.customers[idx]) return;
-    const c = searchResultsData.customers[idx];
+    const sData = window.searchResultsData || searchResultsData;
+    if (!sData || !sData.customers || !sData.customers[idx]) return;
+    const c = sData.customers[idx];
     applyCustomerToBillingForm(c);
 }
 
 function selectAndFillBillByIndex(idx) {
-    if (!searchResultsData || !searchResultsData.bills || !searchResultsData.bills[idx]) return;
-    const b = searchResultsData.bills[idx];
+    const sData = window.searchResultsData || searchResultsData;
+    if (!sData || !sData.bills || !sData.bills[idx]) return;
+    const b = sData.bills[idx];
     applyCustomerToBillingForm({
         name: b.customer_name || '',
         mobile: b.customer_mobile || '',
